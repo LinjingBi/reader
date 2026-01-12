@@ -1,0 +1,18 @@
+[project]
+name = "news-agent"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "beautifulsoup4>=4.14.3",
+    "requests>=2.32.5",
+    "trafilatura>=2.0.0",
+    "sentence-transformers>=2.0.0",
+    "scikit-learn>=1.0.0",
+    "matplotlib>=3.5.0",
+    "numpy>=1.20.0",
+    "httpx>=0.24.0",
+    "umap-learn>=0.5.5",
+    "numba>=0.59.0",
+]
