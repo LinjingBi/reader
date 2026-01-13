@@ -1,0 +1,1 @@
+- [ ] move the embed+clustering evalutation steps in scripts/embed_cluster_test.py under reader as part of the pipeline.

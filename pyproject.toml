@@ -16,3 +16,11 @@ dependencies = [
     "umap-learn>=0.5.5",
     "numba>=0.59.0",
 ]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pandas>=2.0.0",
+]
