@@ -36,11 +36,30 @@ class Embedder:
         normalize_embeddings=True makes cosine similarity straightforward.
         """
         self.model = SentenceTransformer(model_name)
+    
+    def encode_texts(self, ps: List[Paper], mode: str, top_n: int = 10, batch_size: int = 32) -> np.ndarray:
+        """
+        mode:
+        - "A": title + summary
+        - "B": title + summary + top_n keywords
+        - "C": title + summary + all keywords
+        """
+        texts = []
+        for p in ps:
+            base = f"TITLE: {p.title}\nSUMMARY: {p.summary}".strip()
 
-    def encode(self, texts: List[str], batch_size: int = 32) -> np.ndarray:
-        """
-        embeds a list of texts -> returns numpy array [num_docs, dim]
-        """
+            if mode == "A":
+                texts.append(base)
+
+            if mode == "B":
+                kws = p.keywords[:top_n]
+                texts.append(base + "\nKEYWORDS: " + ", ".join(kws))
+
+            if mode == "C":
+                texts.append(base + "\nKEYWORDS: " + ", ".join(p.keywords))
+
+            raise ValueError(f"Unknown mode: {mode}")
+        
         embeddings = self.model.encode(
             texts,
             batch_size=batch_size,
@@ -48,6 +67,7 @@ class Embedder:
             normalize_embeddings=True,  # cosine-friendly
         )
         return np.asarray(embeddings, dtype=np.float32)
+        
 
 if __name__ == "__main__":
     # mini usage test

@@ -1,1 +1,3 @@
-- [ ] move the embed+clustering evalutation steps in scripts/embed_cluster_test.py under reader as part of the pipeline.
+- [x] move the embed+clustering evalutation steps in scripts/embed_cluster_test.py under reader as part of the pipeline.
+- [ ] prepare the prompt template for llm to summary
+- [ ] integrate with sqlite for storage

@@ -112,17 +112,17 @@ def save_papers_to_file(results, output_json='papers_report.json', output_txt='p
                 f.write("\n")
 
 
-def _brief():
-    with open('papers_report.json') as f:
-        d = json.load(f)
-    for month, ps in d['papers'].items():
-        ak = []
-        for p in ps:
-            ak.append(len(p['paper'].get('ai_keywords', [])))
-            kw_str = ",".join(p['paper'].get('ai_keywords', []))
-            kw_len = len(kw_str)
-            ts_len =len(p['paper']['title']+p['paper']['summary'])
-            p_kw_ratio = kw_len/ts_len
-            print(f"keywords/summary ratio: {p_kw_ratio} k: {kw_len} s: {ts_len}")
-        print(f"{month} average keywords: {sum(ak)/len(ak)}")
+# def _brief():
+#     with open('papers_report.json') as f:
+#         d = json.load(f)
+#     for month, ps in d['papers'].items():
+#         ak = []
+#         for p in ps:
+#             ak.append(len(p['paper'].get('ai_keywords', [])))
+#             kw_str = ",".join(p['paper'].get('ai_keywords', []))
+#             kw_len = len(kw_str)
+#             ts_len =len(p['paper']['title']+p['paper']['summary'])
+#             p_kw_ratio = kw_len/ts_len
+#             print(f"keywords/summary ratio: {p_kw_ratio} k: {kw_len} s: {ts_len}")
+#         print(f"{month} average keywords: {sum(ak)/len(ak)}")
 

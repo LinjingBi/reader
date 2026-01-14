@@ -287,7 +287,7 @@ def write_best_clustering_report(
 ):
     """
     Print a human-readable report for a chosen clustering:
-    - cluster sizes
+    - cluster sizes 
     - optional TF-IDF keyword hints
     - each paper: title + (truncated) summary + url
     """
