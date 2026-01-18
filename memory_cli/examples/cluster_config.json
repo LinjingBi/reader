@@ -1,0 +1,25 @@
+{
+  "cluster_config_id": "kmeans|k=4|v1",
+  "json_payload": {
+    "algorithm": "kmeans",
+    "k": 4,
+    "init": "k-means++",
+    "n_init": 20,
+    "max_iter": 300,
+    "random_state": 42,
+    "distance": "cosine (via normalized embeddings)",
+    "evaluation": {
+      "silhouette": "cosine",
+      "davies_bouldin": true,
+      "cluster_cohesion": true,
+      "avg_kw_entropy": true,
+      "scoring_weights": {
+        "silhouette_cosine": 1.5,
+        "avg_cluster_cohesion": 2.0,
+        "worst_cluster_cohesion": 1.0,
+        "davies_bouldin": -0.7,
+        "avg_kw_entropy": -0.3
+      }
+    }
+  }
+}

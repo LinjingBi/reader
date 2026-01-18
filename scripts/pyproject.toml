@@ -1,8 +1,0 @@
-[project]
-name = "news-agent-scripts"
-version = "0.1.0"
-description = "Scripts for news agent project"
-requires-python = ">=3.8"
-dependencies = [
-    "playwright>=1.40.0",
-]

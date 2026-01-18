@@ -1,0 +1,12 @@
+{
+  "embed_config_id": "e5-small-v2|title+summary+kw|v1",
+  "json_payload": {
+    "model": "intfloat/e5-small-v2",
+    "revision": "main",
+    "text_template_version": "v1",
+    "text_template": "title: {title}\nsummary: {summary}\nkeywords: {keywords}",
+    "normalize_embeddings": true,
+    "keywords_mode": "top10",
+    "notes": "MVP default for scientific paper clustering"
+  }
+}

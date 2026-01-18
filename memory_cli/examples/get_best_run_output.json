@@ -1,0 +1,29 @@
+{
+  "snapshot_id": "hf_monthly|2025-01-01|2025-01-31",
+  "cluster_run_id": "hf_monthly|2025-01-01|2025-01-31|e5-small-v2|kmeans|hf_batch",
+  "source": "hf_monthly",
+  "period_start": "2025-01-01",
+  "period_end": "2025-01-31",
+  "embed_config_id": "e5-small-v2|title+summary+kw|v1",
+  "cluster_config_id": "kmeans|k=4|v1",
+  "score_json": "{\"score\": 1.23, \"silhouette_cosine\": 0.12}",
+  "clusters": [
+    {
+      "cluster_id": "...",
+      "cluster_index": 0,
+      "size": 1,
+      "cohesion": 0.77,
+      "papers": [
+        {
+          "paper_id": "arxiv:2501.00001",
+          "title": "Example Paper A",
+          "summary": "This is an example abstract or summary.",
+          "keywords": ["llm", "training"],
+          "url": "https://arxiv.org/abs/2501.00001",
+          "rank_in_cluster": 0,
+          "sim_to_centroid": 0.77
+        }
+      ]
+    }
+  ]
+}

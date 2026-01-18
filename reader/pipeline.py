@@ -6,8 +6,6 @@ import os
 from typing import List, Dict, Tuple
 import numpy as np
 import pandas as pd
-from collections import defaultdict
-from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 """

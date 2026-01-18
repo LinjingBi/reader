@@ -1,0 +1,59 @@
+{
+  "source": "hf_monthly",
+  "period_start": "2025-01-01",
+  "period_end": "2025-01-31",
+  "raw_json": "{\"note\":\"optional raw HF response\"}",
+  "embed_config": {
+    "embed_config_id": "e5-small-v2|title+summary+kw|v1",
+    "json_payload": {
+      "model": "intfloat/e5-small-v2",
+      "text_template_version": "v1",
+      "normalize_embeddings": true
+    }
+  },
+  "cluster_config": {
+    "cluster_config_id": "kmeans|k=4|v1",
+    "json_payload": {
+      "algorithm": "kmeans",
+      "k": 4,
+      "random_state": 42
+    }
+  },
+  "score_json": "{\"score\": 1.23, \"silhouette_cosine\": 0.12}",
+  "papers": [
+    {
+      "paper_id": "arxiv:2501.00001",
+      "title": "Example Paper A",
+      "summary": "This is an example abstract or summary.",
+      "keywords": ["llm", "training"],
+      "url": "https://arxiv.org/abs/2501.00001",
+      "published_at": "2025-01-02"
+    },
+    {
+      "paper_id": "arxiv:2501.00002",
+      "title": "Example Paper B",
+      "summary": "Another example abstract or summary.",
+      "keywords": ["robot", "control"],
+      "url": "https://arxiv.org/abs/2501.00002",
+      "published_at": "2025-01-03"
+    }
+  ],
+  "clusters": [
+    {
+      "cluster_index": 0,
+      "size": 1,
+      "cohesion": 0.77,
+      "members": [
+        {"paper_id": "arxiv:2501.00001", "rank_in_cluster": 0, "sim_to_centroid": 0.77}
+      ]
+    },
+    {
+      "cluster_index": 1,
+      "size": 1,
+      "cohesion": 0.74,
+      "members": [
+        {"paper_id": "arxiv:2501.00002", "rank_in_cluster": 0, "sim_to_centroid": 0.74}
+      ]
+    }
+  ]
+}
