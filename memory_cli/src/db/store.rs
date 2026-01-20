@@ -55,7 +55,6 @@ impl<'a> Store<'a> {
             &req.embed_config.embed_config_id,
             &req.cluster_config.cluster_config_id,
             &role,
-            &req.score_json,
             &now,
         )?;
 
@@ -96,14 +95,14 @@ impl<'a> Store<'a> {
     pub fn get_best_run(&self, source: &str, period_start: &str, period_end: &str, top_n: usize) -> Result<GetBestRunResponse> {
         let snapshot_id = format!("{}|{}|{}", source, period_start, period_end);
 
-        let (cluster_run_id, embed_config_id, cluster_config_id, score_json) = self.conn.query_row(
-            "SELECT cluster_run_id, embed_config_id, cluster_config_id, score_json
+        let (cluster_run_id, embed_config_id, cluster_config_id) = self.conn.query_row(
+            "SELECT cluster_run_id, embed_config_id, cluster_config_id
              FROM cluster_run
              WHERE snapshot_id=?1 AND role='hf_batch' AND selected_best=1
              ORDER BY created_at DESC
              LIMIT 1",
             params![snapshot_id],
-            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, String>(2)?, row.get::<_, String>(3)?)),
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, String>(2)?)),
         ).with_context(|| format!("no selected best run found for snapshot_id={snapshot_id}"))?;
 
         // Load clusters
@@ -138,7 +137,6 @@ impl<'a> Store<'a> {
             period_end: period_end.to_string(),
             embed_config_id,
             cluster_config_id,
-            score_json,
             clusters,
         })
     }
@@ -228,14 +226,13 @@ impl<'a> Store<'a> {
         Ok(())
     }
 
-    fn upsert_cluster_run(&self, tx: &Transaction, cluster_run_id: &str, snapshot_id: &str, embed_config_id: &str, cluster_config_id: &str, role: &str, score_json: &str, now: &str) -> Result<()> {
+    fn upsert_cluster_run(&self, tx: &Transaction, cluster_run_id: &str, snapshot_id: &str, embed_config_id: &str, cluster_config_id: &str, role: &str, now: &str) -> Result<()> {
         tx.execute(
-            "INSERT INTO cluster_run(cluster_run_id, snapshot_id, embed_config_id, cluster_config_id, role, selected_best, score_json, created_at)
-             VALUES(?1, ?2, ?3, ?4, ?5, 1, ?6, ?7)
+            "INSERT INTO cluster_run(cluster_run_id, snapshot_id, embed_config_id, cluster_config_id, role, selected_best, created_at)
+             VALUES(?1, ?2, ?3, ?4, ?5, 1, ?6)
              ON CONFLICT(cluster_run_id) DO UPDATE SET
-               selected_best=1,
-               score_json=excluded.score_json",
-            params![cluster_run_id, snapshot_id, embed_config_id, cluster_config_id, role, score_json, now],
+               selected_best=1",
+            params![cluster_run_id, snapshot_id, embed_config_id, cluster_config_id, role, now],
         )?;
         Ok(())
     }

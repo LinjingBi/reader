@@ -93,7 +93,6 @@ CREATE TABLE IF NOT EXISTS cluster_run (
   cluster_config_id TEXT NOT NULL,
   role              TEXT NOT NULL,   -- 'hf_batch' (MVP), future: 'reader_view'
   selected_best     INTEGER NOT NULL DEFAULT 0, -- 1 if chosen as best clustering for the snapshot
-  score_json        TEXT NOT NULL,   -- silhouette/dbi/cohesion/entropy + composite score
   created_at        TEXT NOT NULL,
   FOREIGN KEY (snapshot_id)       REFERENCES source_snapshot(snapshot_id)       ON DELETE CASCADE,
   FOREIGN KEY (embed_config_id)   REFERENCES embed_config(embed_config_id)      ON DELETE RESTRICT,

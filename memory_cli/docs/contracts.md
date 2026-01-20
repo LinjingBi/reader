@@ -14,7 +14,6 @@ Top-level fields:
 - `raw_json`: optional string. Original HF API response serialized as JSON.
 - `embed_config`: object with `embed_config_id` and `json_payload`.
 - `cluster_config`: object with `cluster_config_id` and `json_payload`.
-- `score_json`: stringified JSON with evaluation metrics and composite score.
 - `papers`: array of paper objects
 - `clusters`: array of clusters, each containing ordered members
 - `role`: optional string. Defaults to `hf_batch`.

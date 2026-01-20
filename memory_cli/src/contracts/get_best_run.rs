@@ -10,7 +10,6 @@ pub struct GetBestRunResponse {
     pub period_end: String,
     pub embed_config_id: String,
     pub cluster_config_id: String,
-    pub score_json: String,
     pub clusters: Vec<ClusterCard>,
 }
 

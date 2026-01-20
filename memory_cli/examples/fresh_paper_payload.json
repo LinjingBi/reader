@@ -2,9 +2,8 @@
   "source": "hf_monthly",
   "period_start": "2025-01-01",
   "period_end": "2025-01-31",
-  "raw_json": "{\"note\":\"optional raw HF response\"}",
   "embed_config": {
-    "embed_config_id": "e5-small-v2|title+summary+kw|v1",
+    "embed_config_id": "pkg_name|pkg_version",
     "json_payload": {
       "model": "intfloat/e5-small-v2",
       "text_template_version": "v1",
@@ -12,14 +11,13 @@
     }
   },
   "cluster_config": {
-    "cluster_config_id": "kmeans|k=4|v1",
+    "cluster_config_id": "pkg_name|pkg_version",
     "json_payload": {
       "algorithm": "kmeans",
       "k": 4,
       "random_state": 42
     }
   },
-  "score_json": "{\"score\": 1.23, \"silhouette_cosine\": 0.12}",
   "papers": [
     {
       "paper_id": "arxiv:2501.00001",

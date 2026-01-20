@@ -6,7 +6,6 @@
   "period_end": "2025-01-31",
   "embed_config_id": "e5-small-v2|title+summary+kw|v1",
   "cluster_config_id": "kmeans|k=4|v1",
-  "score_json": "{\"score\": 1.23, \"silhouette_cosine\": 0.12}",
   "clusters": [
     {
       "cluster_id": "...",

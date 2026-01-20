@@ -3,6 +3,7 @@ import asyncio
 import json
 from dataclasses import dataclass
 from typing import List, Dict
+from datetime import datetime
 
 """
 | Parameter | Format           | Meaning                                |                       |
@@ -24,6 +25,7 @@ class Paper:
     summary: str
     keywords: List[str]
     url: str = ""
+    published_at: str = ""
 
 async def fetch_papers(client, url, params):
     """Fetch papers for a given month asynchronously"""
@@ -75,13 +77,28 @@ async def get_monthly_report():
     return results
 
 def serialize_to_paper_objects(papers: List[Dict]) -> List[Paper]:
-    return [Paper(
-        pid=paper['paper']['id'],
-        title=paper['paper']['title'],
-        summary=paper['paper']['summary'],
-        keywords=paper['paper'].get('ai_keywords', []),
-        url=f"{hf_paper_url}{paper['paper']['id']}"
-    ) for paper in papers]
+    result = []
+    for paper in papers:
+        # Extract published_at and convert to YYYY-MM-DD format
+        published_at = ""
+        pub_date_str = paper['paper'].get('publishedAt', "")
+        if pub_date_str:
+            try:
+                # Parse ISO format: "2025-01-22T15:19:35.000Z"
+                dt = datetime.fromisoformat(pub_date_str.replace('Z', '+00:00'))
+                published_at = dt.strftime('%Y-%m-%d')
+            except (ValueError, AttributeError):
+                pass
+        
+        result.append(Paper(
+            pid=paper['paper']['id'],
+            title=paper['paper']['title'],
+            summary=paper['paper']['summary'],
+            keywords=paper['paper'].get('ai_keywords', []),
+            url=f"{hf_paper_url}{paper['paper']['id']}",
+            published_at=published_at
+        ))
+    return result
 
 def save_papers_to_file(results, output_json='papers_report.json', output_txt='papers_report.txt'):
     """Save papers to file in the specified format"""

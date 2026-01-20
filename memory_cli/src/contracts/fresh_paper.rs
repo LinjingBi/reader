@@ -12,7 +12,6 @@ pub struct FreshPaperRequest {
     pub raw_json: Option<String>,
     pub embed_config: EmbedConfig,
     pub cluster_config: ClusterConfig,
-    pub score_json: String,
     pub papers: Vec<PaperInput>,
     pub clusters: Vec<ClusterInput>,
     pub role: Option<String>,
