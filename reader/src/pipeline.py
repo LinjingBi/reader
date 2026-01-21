@@ -10,6 +10,31 @@ from algo_lib.clustering.ordering import order_cluster_members_by_centroid_simil
 from algo_lib.typing import PaperLike
 
 
+## configs
+# fetch
+"""
+target_month = "month=2025-01"
+fetch_url = 'https://huggingface.co/api/daily_papers'
+hf_paper_url = 'https://huggingface.co/papers/'
+output_json = 'papers_report.json' # for save_papers_to_file only
+"""
+# embed+clustering
+"""
+#embedding parameters
+embed_model_name = "BAAI/bge-small-en-v1.5"
+MODES = ["B", "C"]
+top_n_keywords = 10
+
+# kmeans clustering parameters
+ks = [4, 5]
+seed = 42
+
+# output
+cluster_report_dir = f'best_clustering_reports_{target_month}.md'
+"""
+
+
+
 """
 # embedding text modes
 
@@ -32,14 +57,7 @@ embed_model_name = "BAAI/bge-small-en-v1.5"
 
 # kmeans clustering parameters
 ks = [4, 5]
-
 seed = 42
-
-
-
-# Functions moved to algo_lib.clustering:
-# - write_best_clustering_report -> algo_lib.clustering.reporting
-# - get_best_clustering -> algo_lib.clustering.selection
 
 
 def extract_period_dates(month_key: str) -> tuple[str, str]:

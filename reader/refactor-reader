@@ -1,0 +1,21 @@
+monthly pipeline
+    fetch(hf api for now)
+
+    embed+clustering(algo_lib)
+        save to db(memo fresh-paper)
+
+        get clustering from db(memo get-best-clustering)
+    llm enrichment
+
+    user pick one topic[start with one]
+        save to db(memo fresh-topic)
+    
+        load topic history from db(memo get-topic-metadata)
+    llm writes the report
+         save to db(memo fresh-report)
+
+evolution pipeline(TBD)
+
+
+todo:
+[ ] - port configs out!!!!!
