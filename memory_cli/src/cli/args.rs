@@ -25,6 +25,10 @@ pub struct Args {
     #[arg(long)]
     pub out_dir: Option<String>,
 
+    /// Dry-run mode: validate inputs without performing DB operations. false by default.
+    #[arg(long)]
+    pub dry_run: bool,
+
     #[command(subcommand)]
     pub cmd: Command,
 }

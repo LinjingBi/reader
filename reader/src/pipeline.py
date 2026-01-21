@@ -22,7 +22,9 @@ C: title + summary + all keywords
 MODES = ["B", "C"]
 top_n_keywords = 10
 
-cluster_report_dir = 'best_clustering_reports.md'
+# Target month to process (e.g., "month=2025-01")
+target_month = "month=2025-01"
+cluster_report_dir = f'best_clustering_reports_{target_month}.md'
 # usually monthly report
 papers_report_file = 'papers_report.json'
 
@@ -33,8 +35,7 @@ ks = [4, 5]
 
 seed = 42
 
-# Target month to process (e.g., "month=2025-01")
-target_month = "month=2025-01"
+
 
 # Functions moved to algo_lib.clustering:
 # - write_best_clustering_report -> algo_lib.clustering.reporting
@@ -149,7 +150,9 @@ def generate_fresh_paper_payload(
         Dictionary matching fresh_paper_payload.json format
     """
     if output_path is None:
-        output_path = 'fresh_paper_payload.json'
+        output_path = f'fresh_paper_payload-{period_start}-{period_end}.json'
+    
+    print(f"Generating {output_path}")
     
     # Get ordered cluster members
     clusters = order_cluster_members_by_centroid_similarity(embeddings, labels)
@@ -232,6 +235,8 @@ def run_pipeline():
     if os.path.exists(cluster_report_dir):
         os.remove(cluster_report_dir)
     
+    
+    
     # Step 0: Load papers_report_file
     with open(papers_report_file, "r") as f:
         data = json.load(f)
@@ -276,7 +281,6 @@ def run_pipeline():
     )
     
     # Step 3: Generate JSON payload
-    print(f"Generating fresh_paper_payload.json")
     generate_fresh_paper_payload(
         papers=papers,
         labels=best_labels,
