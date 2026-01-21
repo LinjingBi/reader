@@ -1,0 +1,32 @@
+run:
+  month_key: "month=2025-01"                 # keep the exact query key shape
+  max_papers: 50
+  artifacts_dir: "artifacts"
+  log_level: "INFO"
+
+sources:
+  hf:
+    daily_papers_api: "https://huggingface.co/api/daily_papers"
+    paper_page_base_url: "https://huggingface.co/papers/"
+    output_json: "papers_report.json"        # used only for optional dump
+
+algos:
+  embedding:
+    model: "BAAI/bge-small-en-v1.5"
+    modes: ["B", "C"]
+    top_n_keywords: 10
+
+  clustering:
+    method: "kmeans"
+    k_candidates: [4, 5]
+    random_seed: 42
+
+outputs:
+  best_cluster_report_path_template: "best_clustering_reports_{month_key}.md"
+
+memo:
+  enabled: false                    # Set to true to enable memo CLI integration
+  bin: "./memo"
+  db_path: "./memo.db"
+  timeout_sec: 60
+

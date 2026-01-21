@@ -2,6 +2,8 @@ use crate::contracts::FreshPaperRequest;
 use crate::commands::validation::{self, ValidationResult};
 use crate::db;
 use anyhow::Result;
+use std::fs;
+use std::path::Path;
 
 #[derive(serde::Serialize)]
 struct FreshPaperResponse {
@@ -69,7 +71,7 @@ fn validate_fresh_paper(input_path: &str, db_path: &str, schema_path: &str) -> (
     (validation, req)
 }
 
-pub fn handle(dry_run: bool, db_path: &str, schema_path: &str, input_path: &str) -> Result<()> {
+pub fn handle(dry_run: bool, db_path: &str, schema_path: &str, input_path: &str, out_dir: Option<&str>) -> Result<()> {
     let (validation, req) = validate_fresh_paper(input_path, db_path, schema_path);
 
     if !validation.is_all_passed() {
@@ -89,8 +91,22 @@ pub fn handle(dry_run: bool, db_path: &str, schema_path: &str, input_path: &str)
     let store = db::store::Store::new(&conn);
     let (snapshot_id, cluster_run_id) = store.fresh_paper(&req)?;
 
-    let resp = FreshPaperResponse { snapshot_id, cluster_run_id };
+    let resp = FreshPaperResponse { snapshot_id: snapshot_id.clone(), cluster_run_id: cluster_run_id.clone() };
     let out = serde_json::to_string_pretty(&resp)?;
-    println!("{out}");
+    
+    if let Some(dir) = out_dir {
+        // Create directory if it doesn't exist
+        fs::create_dir_all(dir)?;
+        
+        // Create filename: fresh_paper_{snapshot_id}_{cluster_run_id}.json
+        let filename = format!("fresh_paper_{}_{}.json", snapshot_id, cluster_run_id);
+        let file_path = Path::new(dir).join(&filename);
+        
+        fs::write(&file_path, &out)?;
+        println!("Result JSON written to: {}", file_path.display());
+    } else {
+        println!("{out}");
+    }
+    
     Ok(())
 }

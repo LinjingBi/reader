@@ -10,10 +10,10 @@ pub use validation::ValidationResult;
 pub fn dispatch(args: Args) -> Result<()> {
     match args.cmd {
         Command::FreshPaper { input } => {
-            fresh_paper::handle(args.dry_run, &args.db, &args.schema, &input)
+            fresh_paper::handle(args.dry_run, &args.db, &args.schema, &input, args.out_dir.as_deref())
         }
         Command::GetBestRun { source, period_start, period_end, top_n } => {
-            get_best_run::handle(args.dry_run, &args.db, &args.schema, &source, &period_start, &period_end, top_n)
+            get_best_run::handle(args.dry_run, &args.db, &args.schema, &source, &period_start, &period_end, top_n, args.out_dir.as_deref())
         }
     }
 }

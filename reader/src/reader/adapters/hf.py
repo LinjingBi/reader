@@ -1,34 +1,27 @@
+"""HuggingFace API adapter"""
+
 import httpx
 import asyncio
 import json
-from dataclasses import dataclass
 from typing import List, Dict
 from datetime import datetime
 
-"""
-| Parameter | Format           | Meaning                                |                       |
-| --------- | ---------------- | -------------------------------------- | --------------------- |
-| **date**  | `YYYY-MM-DD`     | Fetch papers for a *specific day*      |                       |
-| **month** | `YYYY-MM`        | Fetch papers for the *entire month*    |                       |
-| **week**  | e.g., `2025-W22` | Fetch papers for the *entire ISO week* | ([Ismena website][1]) |
+from reader.models import Paper
+from reader.config import ReaderConfig
 
-[1]: https://www.ismena.com/custom-connectors/hugging-face-connector/?utm_source=chatgpt.com "Hugging Face Connector - Ismena website"
 
-"""
-fetch_url = 'https://huggingface.co/api/daily_papers'
-hf_paper_url = 'https://huggingface.co/papers/'
-
-@dataclass
-class Paper:
-    pid: str
-    title: str
-    summary: str
-    keywords: List[str]
-    url: str = ""
-    published_at: str = ""
-
-async def fetch_papers(client, url, params):
-    """Fetch papers for a given month asynchronously"""
+async def fetch_papers(client: httpx.AsyncClient, url: str, params: str) -> List[Dict]:
+    """
+    Fetch papers for a given month asynchronously.
+    
+    Args:
+        client: httpx AsyncClient instance
+        url: Base API URL
+        params: Query parameters (e.g., "month=2025-01")
+        
+    Returns:
+        List of paper dictionaries
+    """
     url_with_params = f'{url}?{params}'
     try:
         r = await client.get(url_with_params, headers={"User-Agent":"daily-ai-briefing/0.1"}, timeout=30.0)
@@ -43,12 +36,20 @@ async def fetch_papers(client, url, params):
             papers = []
         return papers
     except Exception as e:
-        print(f"Error fetching papers for {params}: {e}. hf err: {r.text}")
+        print(f"Error fetching papers for {params}: {e}. hf err: {r.text if 'r' in locals() else 'N/A'}")
         return []
 
 
-async def get_monthly_report():
-    """Fetch papers for all 12 months concurrently"""
+async def get_monthly_report(config: ReaderConfig) -> Dict:
+    """
+    Fetch papers for all 12 months concurrently.
+    
+    Args:
+        config: ReaderConfig instance
+        
+    Returns:
+        Dictionary with 'papers' and 'metadata' keys
+    """
     results = {
         'papers': {},
         'metadata': {
@@ -60,10 +61,12 @@ async def get_monthly_report():
         # Create tasks for all 12 months
         tasks = []
         months = []
+        # Extract year from month_key (e.g., "month=2025-01" -> 2025)
+        year = int(config.run.month_key.split('=')[1].split('-')[0])
         for m in range(1, 13):
-            month = f'month=2025-{m:02d}'
+            month = f'month={year}-{m:02d}'
             months.append(month)
-            task = fetch_papers(client, fetch_url, month)
+            task = fetch_papers(client, config.sources.hf.daily_papers_api, month)
             tasks.append(task)
         
         # Fetch all months concurrently
@@ -76,7 +79,18 @@ async def get_monthly_report():
     
     return results
 
-def serialize_to_paper_objects(papers: List[Dict]) -> List[Paper]:
+
+def parse_papers(papers: List[Dict], config: ReaderConfig) -> List[Paper]:
+    """
+    Parse paper dictionaries into Paper objects.
+    
+    Args:
+        papers: List of paper dictionaries from API
+        config: ReaderConfig instance
+        
+    Returns:
+        List of Paper objects
+    """
     result = []
     for paper in papers:
         # Extract published_at and convert to YYYY-MM-DD format
@@ -95,13 +109,23 @@ def serialize_to_paper_objects(papers: List[Dict]) -> List[Paper]:
             title=paper['paper']['title'],
             summary=paper['paper']['summary'],
             keywords=paper['paper'].get('ai_keywords', []),
-            url=f"{hf_paper_url}{paper['paper']['id']}",
+            url=f"{config.sources.hf.paper_page_base_url}{paper['paper']['id']}",
             published_at=published_at
         ))
     return result
 
-def save_papers_to_file(results, output_json='papers_report.json', output_txt='papers_report.txt'):
-    """Save papers to file in the specified format"""
+
+def save_papers_to_file(results: Dict, config: ReaderConfig, output_txt: str = 'papers_report.txt') -> None:
+    """
+    Save papers to file in the specified format.
+    
+    Args:
+        results: Results dictionary with 'papers' key
+        config: ReaderConfig instance
+        output_txt: Optional path for text output file
+    """
+    output_json = config.sources.hf.output_json
+    
     with open(output_json, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
 
@@ -127,19 +151,3 @@ def save_papers_to_file(results, output_json='papers_report.json', output_txt='p
                 f.write(f"   id: {paper_id}\n")
                 f.write(f"   ai_summary: {ai_summary}\n")
                 f.write("\n")
-
-
-# def _brief():
-#     with open('papers_report.json') as f:
-#         d = json.load(f)
-#     for month, ps in d['papers'].items():
-#         ak = []
-#         for p in ps:
-#             ak.append(len(p['paper'].get('ai_keywords', [])))
-#             kw_str = ",".join(p['paper'].get('ai_keywords', []))
-#             kw_len = len(kw_str)
-#             ts_len =len(p['paper']['title']+p['paper']['summary'])
-#             p_kw_ratio = kw_len/ts_len
-#             print(f"keywords/summary ratio: {p_kw_ratio} k: {kw_len} s: {ts_len}")
-#         print(f"{month} average keywords: {sum(ak)/len(ak)}")
-

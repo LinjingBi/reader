@@ -1,6 +1,8 @@
 use crate::commands::validation::{self, ValidationResult};
 use crate::db;
 use anyhow::Result;
+use std::fs;
+use std::path::Path;
 
 fn validate_get_best_run(period_start: &str, period_end: &str, db_path: &str, schema_path: &str) -> ValidationResult {
     let mut validation = ValidationResult::new();
@@ -43,7 +45,7 @@ fn validate_get_best_run(period_start: &str, period_end: &str, db_path: &str, sc
     validation
 }
 
-pub fn handle(dry_run: bool, db_path: &str, schema_path: &str, source: &str, period_start: &str, period_end: &str, top_n: usize) -> Result<()> {
+pub fn handle(dry_run: bool, db_path: &str, schema_path: &str, source: &str, period_start: &str, period_end: &str, top_n: usize, out_dir: Option<&str>) -> Result<()> {
     let validation = validate_get_best_run(period_start, period_end, db_path, schema_path);
 
     if !validation.is_all_passed() {
@@ -61,6 +63,20 @@ pub fn handle(dry_run: bool, db_path: &str, schema_path: &str, source: &str, per
     let store = db::store::Store::new(&conn);
     let resp = store.get_best_run(source, period_start, period_end, top_n)?;
     let out = serde_json::to_string_pretty(&resp)?;
-    println!("{out}");
+    
+    if let Some(dir) = out_dir {
+        // Create directory if it doesn't exist
+        fs::create_dir_all(dir)?;
+        
+        // Create filename: best_run_{source}_{period_start}_{period_end}.json
+        let filename = format!("best_run_{}_{}_{}.json", source, period_start, period_end);
+        let file_path = Path::new(dir).join(&filename);
+        
+        fs::write(&file_path, &out)?;
+        println!("Result JSON written to: {}", file_path.display());
+    } else {
+        println!("{out}");
+    }
+    
     Ok(())
 }

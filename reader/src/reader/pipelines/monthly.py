@@ -1,63 +1,19 @@
+"""Monthly pipeline orchestration"""
+
 import json
-from fetch import Paper, serialize_to_paper_objects
 import os
-from typing import List, Dict, Sequence, Optional
-import numpy as np
 import calendar
+from pathlib import Path
+from typing import Dict, Sequence, Optional
+import numpy as np
 
 from algo_lib.clustering import get_best_clustering, write_best_clustering_report
 from algo_lib.clustering.ordering import order_cluster_members_by_centroid_similarity
 from algo_lib.typing import PaperLike
 
-
-## configs
-# fetch
-"""
-target_month = "month=2025-01"
-fetch_url = 'https://huggingface.co/api/daily_papers'
-hf_paper_url = 'https://huggingface.co/papers/'
-output_json = 'papers_report.json' # for save_papers_to_file only
-"""
-# embed+clustering
-"""
-#embedding parameters
-embed_model_name = "BAAI/bge-small-en-v1.5"
-MODES = ["B", "C"]
-top_n_keywords = 10
-
-# kmeans clustering parameters
-ks = [4, 5]
-seed = 42
-
-# output
-cluster_report_dir = f'best_clustering_reports_{target_month}.md'
-"""
-
-
-
-"""
-# embedding text modes
-
-A: title + summary
-
-B: title + summary + top N keywords
-
-C: title + summary + all keywords
-"""
-MODES = ["B", "C"]
-top_n_keywords = 10
-
-# Target month to process (e.g., "month=2025-01")
-target_month = "month=2025-01"
-cluster_report_dir = f'best_clustering_reports_{target_month}.md'
-# usually monthly report
-papers_report_file = 'papers_report.json'
-
-embed_model_name = "BAAI/bge-small-en-v1.5"
-
-# kmeans clustering parameters
-ks = [4, 5]
-seed = 42
+from reader.config import ReaderConfig, render_best_cluster_report_path
+from reader.adapters.hf import get_monthly_report, parse_papers, save_papers_to_file
+from reader.adapters.memo import fresh_paper
 
 
 def extract_period_dates(month_key: str) -> tuple[str, str]:
@@ -142,6 +98,7 @@ def generate_fresh_paper_payload(
     best_k: int,
     top_n_keywords: int,
     seed: int,
+    config: ReaderConfig,
     raw_json: str = "",
     output_path: Optional[str] = None,
 ) -> Dict:
@@ -161,8 +118,9 @@ def generate_fresh_paper_payload(
         best_k: Best k value selected
         top_n_keywords: Number of top keywords used
         seed: Random seed used
+        config: ReaderConfig instance
         raw_json: Optional raw JSON string
-        output_path: Path for JSON output file (default: 'fresh_paper_payload.json')
+        output_path: Path for JSON output file (default: auto-generated)
     
     Returns:
         Dictionary matching fresh_paper_payload.json format
@@ -246,59 +204,85 @@ def generate_fresh_paper_payload(
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
     
+    # Optionally call memo adapter if enabled
+    if config.memo.enabled:
+        memo_result = fresh_paper(payload, config)
+        if memo_result:
+            print(f"Memo ingest successful: snapshot_id={memo_result.get('snapshot_id')}, cluster_run_id={memo_result.get('cluster_run_id')}")
+    
     return payload
 
 
-def run_pipeline():
-    if os.path.exists(cluster_report_dir):
-        os.remove(cluster_report_dir)
+def run_monthly(cfg: ReaderConfig) -> None:
+    """
+    Run the monthly pipeline for the configured month.
     
+    Args:
+        cfg: ReaderConfig instance
+    """
+    import asyncio
     
+    month_key = cfg.run.month_key
+    papers_report_file = cfg.sources.hf.output_json
     
-    # Step 0: Load papers_report_file
+    # Check if papers_report.json exists, generate if missing
+    if not Path(papers_report_file).exists():
+        print(f"{papers_report_file} not found, generating from HF API...")
+        results = asyncio.run(get_monthly_report(cfg))
+        save_papers_to_file(results, cfg)
+        print(f"Generated {papers_report_file}")
+    
+    # Load papers_report_file
     with open(papers_report_file, "r") as f:
         data = json.load(f)
     papers_data = data['papers']
     
-    # Step 1: Process single month
-    if target_month not in papers_data:
-        raise ValueError(f"Month {target_month} not found in papers_data. Available months: {list(papers_data.keys())}")
+    # Process single month
+    if month_key not in papers_data:
+        raise ValueError(f"Month {month_key} not found in papers_data. Available months: {list(papers_data.keys())}")
     
-    papers_list = papers_data[target_month]
-    print(f"Processing {target_month}")
+    papers_list = papers_data[month_key]
+    print(f"Processing {month_key}")
     
     # Extract period dates from month key
-    period_start, period_end = extract_period_dates(target_month)
+    period_start, period_end = extract_period_dates(month_key)
     print(f"Period: {period_start} to {period_end}")
     
     # Create Paper objects from JSON data
-    papers = serialize_to_paper_objects(papers_list)
+    papers = parse_papers(papers_list, cfg)
     
-    # Step 2: Get best clustering with enhanced metadata
+    # Get best clustering with enhanced metadata
     df_best, best_labels, best_embed, cluster_cohesion_dict, member_similarities = get_best_clustering(
         papers=papers,
-        embed_model_name=embed_model_name,
-        ks=ks,
-        top_n_keywords=top_n_keywords,
-        modes=MODES,
-        seed=seed
+        embed_model_name=cfg.algos.embedding.model,
+        ks=cfg.algos.clustering.k_candidates,
+        top_n_keywords=cfg.algos.embedding.top_n_keywords,
+        modes=cfg.algos.embedding.modes,
+        seed=cfg.algos.clustering.random_seed
     )
     
     # Generate best clustering report
-    print(f"\n{target_month} Top choice:", df_best)
-    print(f"Appending {target_month} best clustering report to {cluster_report_dir}")
+    print(f"\n{month_key} Top choice:", df_best)
     
-    # Step 3: Write text report
+    # Render report path from template
+    cluster_report_dir = render_best_cluster_report_path(cfg, month_key)
+    print(f"Appending {month_key} best clustering report to {cluster_report_dir}")
+    
+    # Remove existing report if it exists
+    if os.path.exists(cluster_report_dir):
+        os.remove(cluster_report_dir)
+    
+    # Write text report
     write_best_clustering_report(
         papers=papers,
         labels=best_labels,
         embeddings=best_embed,
-        header=f"# {target_month} BEST CLUSTERING (mode={df_best['mode']}, k={df_best['k']})",
+        header=f"# {month_key} BEST CLUSTERING (mode={df_best['mode']}, k={df_best['k']})",
         max_summary_chars=350,
         report_dir=cluster_report_dir,
     )
     
-    # Step 3: Generate JSON payload
+    # Generate JSON payload
     generate_fresh_paper_payload(
         papers=papers,
         labels=best_labels,
@@ -307,13 +291,11 @@ def run_pipeline():
         cluster_cohesion_dict=cluster_cohesion_dict,
         period_start=period_start,
         period_end=period_end,
-        embed_model_name=embed_model_name,
+        embed_model_name=cfg.algos.embedding.model,
         best_mode=df_best['mode'],
         best_k=df_best['k'],
-        top_n_keywords=top_n_keywords,
-        seed=seed,
+        top_n_keywords=cfg.algos.embedding.top_n_keywords,
+        seed=cfg.algos.clustering.random_seed,
+        config=cfg,
         raw_json="",  # Optional: can be set to actual raw JSON if available
     )
-
-if __name__ == "__main__":
-    run_pipeline()
