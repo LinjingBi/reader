@@ -23,6 +23,7 @@ class Embedder:
         BAAI/bge-small-en-v1.5 is fast and strong for general embeddings.
         normalize_embeddings=True makes cosine similarity straightforward.
         """
+        self.model_name = model_name
         self.model = SentenceTransformer(model_name)
     
     def _build_embedding_texts(self,

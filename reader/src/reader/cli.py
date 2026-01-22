@@ -2,7 +2,6 @@
 
 import argparse
 import sys
-from pathlib import Path
 
 from reader.config import load_config
 from reader.pipelines.monthly import run_monthly
@@ -22,13 +21,6 @@ def main():
         help='Path to YAML config file (e.g., configs/reader.yaml)',
     )
     
-    parser.add_argument(
-        '--month-key',
-        type=str,
-        default=None,
-        help='Override month key from config (e.g., "month=2025-01")',
-    )
-    
     args = parser.parse_args()
     
     # Load config
@@ -40,10 +32,6 @@ def main():
     except ValueError as e:
         print(f"Error loading config: {e}", file=sys.stderr)
         sys.exit(1)
-    
-    # Override month_key if provided
-    if args.month_key:
-        config.run.month_key = args.month_key
     
     # Run pipeline
     try:

@@ -3,7 +3,7 @@ Clustering metrics computation.
 """
 
 from __future__ import annotations
-from typing import Dict, Sequence
+from typing import Dict, List, Sequence
 import numpy as np
 from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
 
@@ -135,4 +135,29 @@ def keyword_entropy_per_cluster(
         probs = np.array([v / total for v in counts.values()], dtype=np.float32)
         ent[int(c)] = float(-np.sum(probs * np.log(probs + 1e-12)))
     return ent
+
+
+def cluster_members_ordered(
+    member_similarities: Dict[int, Dict[int, float]],
+) -> Dict[int, List[int]]:
+    """
+    Order cluster members by similarity to centroid (most representative first).
+    
+    Derived from member_similarities, similar to how cluster_cohesion is computed.
+    
+    Args:
+        member_similarities: Dict[cluster_id] -> Dict[paper_idx] -> similarity to centroid
+    
+    Returns:
+        Dictionary mapping cluster_id -> list of paper indices sorted by similarity (descending)
+    """
+    out: Dict[int, List[int]] = {}
+    for c, similarities in member_similarities.items():
+        if similarities:
+            # Sort paper indices by similarity (descending order)
+            sorted_papers = sorted(similarities.items(), key=lambda x: x[1], reverse=True)
+            out[int(c)] = [int(paper_idx) for paper_idx, _ in sorted_papers]
+        else:
+            out[int(c)] = []
+    return out
 

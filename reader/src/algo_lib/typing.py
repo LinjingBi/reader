@@ -5,8 +5,8 @@ Defines PaperLike Protocol to decouple algorithms from fetch.Paper.
 """
 
 from __future__ import annotations
-from typing import Protocol
-
+from typing import Protocol, Dict, List
+from dataclasses import dataclass
 
 class PaperLike(Protocol):
     """
@@ -22,3 +22,16 @@ class PaperLike(Protocol):
     url: str
     published_at: str
 
+
+@dataclass
+class BestClusteringResult:
+    """
+    Result of best clustering selection.
+    
+    Used as return type for clustering selection functions.
+    """
+    mode: str
+    k: int
+    cluster_members_ordered: Dict[int, List[int]]  # cluster_label -> list of paper indices
+    cluster_members_similarities: Dict[int, Dict[int, float]]  # cluster_label -> paper_index -> similarity to centroid
+    cluster_cohesion: Dict[int, float]  # cluster_label -> cohesion

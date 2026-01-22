@@ -1,7 +1,7 @@
 """Configuration loader for reader package"""
 
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 import yaml
 from pydantic import BaseModel, Field
 
@@ -48,9 +48,13 @@ class AlgosConfig(BaseModel):
 
 class OutputsConfig(BaseModel):
     """Outputs configuration"""
-    best_cluster_report_path_template: str = Field(
-        ..., 
-        description="Template for best cluster report path (use {month_key} placeholder)"
+    best_cluster_text_report_path_template: Optional[str] = Field(
+        default=None,
+        description="Template for best cluster text report path (use {month_key} placeholder). If not provided, no text report will be created."
+    )
+    best_cluster_report_path_template: Optional[str] = Field(
+        default=None,
+        description="Template for best cluster JSON report path (use {month_key} placeholder). If not provided, no JSON report will be created."
     )
 
 
@@ -98,15 +102,33 @@ def load_config(path: str) -> ReaderConfig:
         raise ValueError(f"Invalid configuration: {e}") from e
 
 
-def render_best_cluster_report_path(cfg: ReaderConfig, month_key: str) -> str:
+def render_best_cluster_text_report_path(cfg: ReaderConfig, month_key: str) -> Optional[str]:
     """
-    Render the best cluster report path template with month_key.
+    Render the best cluster text report path template with month_key.
     
     Args:
         cfg: ReaderConfig instance
         month_key: Month key to substitute (e.g., "month=2025-01")
         
     Returns:
-        Rendered path string
+        Rendered path string, or None if template is not configured
     """
+    if cfg.outputs.best_cluster_text_report_path_template is None:
+        return None
+    return cfg.outputs.best_cluster_text_report_path_template.format(month_key=month_key)
+
+
+def render_best_cluster_report_path(cfg: ReaderConfig, month_key: str) -> Optional[str]:
+    """
+    Render the best cluster JSON report path template with month_key.
+    
+    Args:
+        cfg: ReaderConfig instance
+        month_key: Month key to substitute (e.g., "month=2025-01")
+        
+    Returns:
+        Rendered path string, or None if template is not configured
+    """
+    if cfg.outputs.best_cluster_report_path_template is None:
+        return None
     return cfg.outputs.best_cluster_report_path_template.format(month_key=month_key)
