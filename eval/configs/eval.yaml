@@ -1,0 +1,28 @@
+dataset:
+  months: ["2025-01"]
+  input_dir: "data/monthly_clusters"
+
+packers:
+  variants: ["P0"]
+
+prompts:
+  variants:
+    - id: "enrich_p0"
+      path: "prompts/enrich_p0.txt"
+
+llm:
+  provider: "openai"  # Required: "openai" or "gemini"
+  model: "gpt-4o-mini"
+  temperature: 0.2
+  max_tokens: 2500
+  api_key_env: "OPENAI_API_KEY"  # Environment variable name for API key
+
+judge:
+  schema_path: "schemas/p0_output_json_schema.json"
+  use_llm_judge: false  # Future: LLM judge not in MVP
+
+logging:
+  level: "INFO"  # INFO for console, DEBUG for file
+  console: true
+  file: true
+

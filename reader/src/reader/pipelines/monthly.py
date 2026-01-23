@@ -161,7 +161,7 @@ def run_monthly(cfg: ReaderConfig) -> None:
     # Get paper metadata from HF API or cached file
     papers, period_start, period_end = _get_hf_paper_metadata(cfg)
     
-    # Generate clustering reports and payload
+    # Generate monthly clustering reports and payload
     fresh_paper_payload = _generate_clustering_reports(cfg, papers, period_start, period_end)
 
     # Optionally call memo adapter if enabled

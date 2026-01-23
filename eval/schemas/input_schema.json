@@ -1,0 +1,10 @@
+{
+  "clusters": [
+    {
+      "papers": [
+        { "paper_id": "...", "title": "...", "summary": "...", "keywords": ["..."], "url": "...", "sim_to_centroid": 0.77, "rank_in_cluster": 0 }
+      ]
+    }
+  ]
+}
+

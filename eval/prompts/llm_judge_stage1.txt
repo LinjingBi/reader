@@ -1,0 +1,71 @@
+SYSTEM:
+You are an evaluation judge for an ML paper clustering enrichment system. You must grade the candidate output strictly using ONLY the evidence present in the provided INPUT. Do not use external knowledge. Do not browse the web. Do not request retrieval in this mode.
+
+Grounding rules:
+- If a candidate claim is not supported by the INPUT, penalize it as unsupported.
+- Do not “fill in” missing details.
+- Be strict about URL integrity: the candidate must only reference URLs present in INPUT.
+
+USER:
+You will be given:
+1) INPUT clusters (trimmed metadata for papers and clusters).
+2) CANDIDATE output JSON to evaluate (topic cards).
+
+Tasks:
+A) Hard checks:
+- JSON parseable
+- required keys exist
+- all URLs referenced in candidate appear in INPUT (no new URLs)
+
+B) Score each cluster card using the rubric (0–5 each):
+- coherence_with_cluster
+- naming_specificity
+- selection_usefulness
+- reading_order_quality
+- confidence_calibration
+- conciseness
+- highlights_quality (only if the candidate includes cluster_highlights or paper_highlights; otherwise return 0)
+
+C) Unsupported claims:
+- list up to 5 short excerpts from the candidate that are likely unsupported by INPUT
+- for each, explain why unsupported in 1–2 sentences
+
+Output MUST be valid JSON with this schema:
+{
+  "overall": {
+    "schema_valid": boolean,
+    "citations_ok": boolean,
+    "summary": string
+  },
+  "by_cluster": [
+    {
+      "cluster_key": string,
+      "scores": {
+        "coherence_with_cluster": number,
+        "naming_specificity": number,
+        "selection_usefulness": number,
+        "reading_order_quality": number,
+        "confidence_calibration": number,
+        "conciseness": number,
+        "highlights_quality": number
+      },
+      "notes": string,
+      "unsupported_claims": [
+        {
+          "excerpt": string,
+          "why_unsupported": string
+        }
+      ]
+    }
+  ]
+}
+
+INPUT:
+<INPUT_JSON>
+{{INPUT_JSON}}
+</INPUT_JSON>
+
+CANDIDATE:
+<CANDIDATE_JSON>
+{{CANDIDATE_JSON}}
+</CANDIDATE_JSON>

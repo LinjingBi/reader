@@ -22,7 +22,8 @@ algos:
     random_seed: 42
 
 outputs:
-  best_cluster_report_path_template: "best_clustering_reports_{month_key}.md"
+  # best_cluster_text_report_path_template: "best_clustering_md_reports_{month_key}.md"
+  best_cluster_report_path_template: "best_clustering_json_reports_{month_key}.json"
 
 memo:
   enabled: false                    # Set to true to enable memo CLI integration
