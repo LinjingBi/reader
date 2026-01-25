@@ -7,15 +7,17 @@ packers:
 
 prompts:
   variants:
-    - id: "enrich_p0"
-      path: "prompts/enrich_p0.txt"
+    - id: "enrich_p0_per_cluster"
+      path: "prompts/enrich_p0_per_cluster.txt"
 
 llm:
-  provider: "openai"  # Required: "openai" or "gemini"
-  model: "gpt-4o-mini"
+  provider: "gemini"  # Required: "openai" or "gemini"
+  models: 
+    - "models/gemini-2.5-flash-lite"
+    # - "models/gemini-2.5-flash"
   temperature: 0.2
   max_tokens: 2500
-  api_key_env: "OPENAI_API_KEY"  # Environment variable name for API key
+  api_key_env: "GEMINI_API_KEY"  # Environment variable name for API key
 
 judge:
   schema_path: "schemas/p0_output_json_schema.json"
@@ -25,4 +27,3 @@ logging:
   level: "INFO"  # INFO for console, DEBUG for file
   console: true
   file: true
-

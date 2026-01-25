@@ -1,0 +1,122 @@
+INSTRUCTION
+You are a technical research analyst.
+
+You will be given **ONE cluster of machine learning papers** as a JSON object.
+Each paper includes: `paper_id`, `title`, `summary`, `keywords`, `url`, `sim_to_centroid`, `rank_in_cluster`.
+
+Your job is to synthesize this cluster into:
+
+* **(A)** a human-readable Markdown report, and
+* **(B)** a compact JSON index suitable for database storage.
+
+---
+
+HARD RULES (must always hold)
+
+* Use **ONLY** the provided titles, summaries, and keywords.
+  Do **NOT** invent methods, results, datasets, numbers, or claims.
+* If the cluster is thematically mixed or weakly coherent, state this explicitly and lower confidence.
+* When referencing a paper, cite it using its `paper_id` (e.g. `[paper_123]`).
+* Keep the output compact, factual, and decision-oriented.
+* If uncertain, reflect uncertainty via `confidence` and `confidence_rationale` — **do not guess**.
+* The JSON index **must be consistent** with the Markdown report.
+
+---
+
+TASK
+
+Produce the following two sections **in order**.
+
+---
+
+SECTION A — Human-readable report (Markdown)
+
+Output **exactly ONE cluster card**, formatted as a single Markdown block, with the following fields **in this exact order**:
+
+1. **title**
+
+   * Max 12 words
+   * Title Case
+   * No colon
+
+2. **one_liner**
+
+   * Max 25 words
+   * Plain English summary
+
+3. **what_this_cluster_is_about**
+
+   * 80–140 words
+   * Describe the shared theme using only provided information
+
+4. **why_it_matters**
+
+   * 60–120 words
+   * Practical and research significance
+   * No hype or speculation
+
+5. **confidence**
+
+   * One of: `HIGH`, `MEDIUM`, `LOW`
+
+6. **confidence_rationale**
+
+   * 2–4 bullet points
+   * Each bullet ≤ 18 words
+   * Justify confidence using cluster size, cohesion, and evidence quality
+
+7. **representative_papers**
+
+   * 2–5 items
+   * Format: `[paper_id] title`
+   * Include the most central papers first (lowest `rank_in_cluster` when possible)
+
+8. **reading_order**
+
+   * 3–7 items
+   * Format: `[paper_id] + reason`
+   * Reason ≤ 12 words
+   * Progress from most central/accessible to more detailed papers
+
+9. **search_query_seed**
+
+    * One line
+    * 2–5 key terms
+    * Must be usable on arXiv / Google Scholar
+
+10. **notes**
+
+    * Up to 5 bullet points
+    * Each ≤ 20 words
+    * Include warnings about mixed themes, missing information, or ambiguity when applicable
+
+---
+
+SECTION B — JSON index (for database storage)
+
+Append a JSON object with **exactly** these keys:
+
+```json
+{
+  "title": string,
+  "summary": string,
+  "keyword_list": string[]
+}
+```
+
+Constraints for SECTION B:
+
+* `title` must **exactly match** the SECTION A title.
+* `summary` must be **60–110 words**, derived from
+  `what_this_cluster_is_about` + `why_it_matters`.
+* `keyword_list` must contain **5–12 items**, deduplicated,
+  each 1–3 words. Extract keywords from the provided paper keywords and the cluster's thematic content. Keywords should capture the main topics, methods, or domains covered by the papers in this cluster. Do not include hashtags.
+* Do not introduce new concepts or claims.
+* If the cluster is thematically mixed, the summary must narrow scope and confidence should be MEDIUM or LOW.
+
+---
+
+INPUT (JSON)
+
+{{CLUSTER_JSON}}
+

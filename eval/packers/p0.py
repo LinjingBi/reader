@@ -1,7 +1,5 @@
 """P0 packer: transforms monthly clustering data to LLM input format"""
 
-from typing import Dict, List, Any
-
 
 def build_input(cluster_data: dict, config: dict = None) -> dict:
     """
@@ -63,9 +61,10 @@ def build_input(cluster_data: dict, config: dict = None) -> dict:
             
             cluster_papers.append(paper_obj)
         
-        # Add cluster with papers array (no cluster metadata per schema)
+        # Add cluster with papers array and preserve cluster_index for mapping
         output_clusters.append({
-            "papers": cluster_papers
+            "papers": cluster_papers,
+            "cluster_index": cluster.get("cluster_index")  # Preserve for later use
         })
     
     result = {

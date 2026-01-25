@@ -2,19 +2,105 @@
 
 import json
 from pathlib import Path
-from typing import Dict, List, Any, Set
+from typing import Dict, List, Any, Set, Optional, Tuple
 
 from jsonschema import validate, ValidationError
+from pydantic import ValidationError as PydanticValidationError
+
+# Import output models for Pydantic validation
+# Use absolute import from eval directory
+import sys
+from pathlib import Path
+eval_dir = Path(__file__).parent.parent
+if str(eval_dir) not in sys.path:
+    sys.path.insert(0, str(eval_dir))
+from schemas.output_models import OutputSchema
+
+
+def _validate_schema_pydantic(output_json: dict) -> tuple[bool, list[str]]:
+    """
+    Validate output using Pydantic models (primary validation method).
+    
+    Returns:
+        Tuple of (passed: bool, errors: List[str])
+    """
+    try:
+        OutputSchema.model_validate(output_json)
+        return True, []
+    except PydanticValidationError as e:
+        errors = []
+        for error in e.errors():
+            field_path = " -> ".join(str(loc) for loc in error["loc"])
+            errors.append(f"{field_path}: {error['msg']}")
+        return False, errors
+    except Exception as e:
+        return False, [f"Pydantic validation error: {str(e)}"]
+
+
+def _validate_schema_jsonschema(output_json: dict, schema_path: Path) -> tuple[bool, list[str]]:
+    """
+    Validate output using JSON schema (fallback validation method).
+    
+    Returns:
+        Tuple of (passed: bool, errors: List[str])
+    """
+    try:
+        with open(schema_path, 'r', encoding='utf-8') as f:
+            schema = json.load(f)
+        validate(instance=output_json, schema=schema)
+        return True, []
+    except ValidationError as e:
+        return False, [str(e)]
+    except Exception as e:
+        return False, [f"JSON schema validation error: {str(e)}"]
+
+
+def _validate_citations(output_json: dict, input_data: dict) -> tuple[bool, list[str]]:
+    """
+    Validate that all cited paper_ids exist in input data.
+    
+    Returns:
+        Tuple of (passed: bool, invalid_citations: List[str])
+    """
+    input_paper_ids = _extract_input_paper_ids(input_data)
+    output_paper_ids = _extract_output_paper_ids(output_json)
+    
+    invalid_citations = []
+    for paper_id in output_paper_ids:
+        if paper_id not in input_paper_ids:
+            invalid_citations.append(paper_id)
+    
+    return len(invalid_citations) == 0, invalid_citations
+
+
+def _validate_lengths(output_json: dict) -> tuple[bool, list[str]]:
+    """
+    Validate length constraints (kept for compatibility, but Pydantic should cover most).
+    
+    Returns:
+        Tuple of (passed: bool, violations: List[str])
+    """
+    violations = []
+    cluster_cards = output_json.get("cluster_cards", [])
+    
+    for i, card in enumerate(cluster_cards):
+        # Most length checks are now handled by Pydantic, but keep some for edge cases
+        # Only check fields that might not be fully covered
+        notes = card.get("notes", "")
+        if len(notes) > 600:
+            violations.append(f"cluster_cards[{i}].notes: {len(notes)} chars (max 600)")
+    
+    return len(violations) == 0, violations
 
 
 def judge_output(output_json: dict, input_data: dict, schema_path: Path) -> dict:
     """
-    Judge LLM output using heuristic validation gates.
+    Judge LLM output using Pydantic validation (primary) and heuristic checks.
     
     Args:
         output_json: Parsed LLM output JSON
         input_data: Original input data (for citation validation)
-        schema_path: Path to JSON schema file
+        schema_path: Path to JSON schema file (fallback validation)
     
     Returns:
         Dict with validation results:
@@ -32,102 +118,35 @@ def judge_output(output_json: dict, input_data: dict, schema_path: Path) -> dict
         "scores": {"name_generic_penalty": 0.0}
     }
     
-    # 1. Schema validation
-    try:
-        with open(schema_path, 'r', encoding='utf-8') as f:
-            schema = json.load(f)
-        
-        validate(instance=output_json, schema=schema)
-        results["schema_valid"]["passed"] = True
-    except ValidationError as e:
-        results["schema_valid"]["errors"] = [str(e)]
-    except Exception as e:
-        results["schema_valid"]["errors"] = [f"Schema validation error: {str(e)}"]
+    # 1. Schema validation - try Pydantic first (takes precedence)
+    pydantic_passed, pydantic_errors = _validate_schema_pydantic(output_json)
     
-    # 2. Citation validation
+    if pydantic_passed:
+        results["schema_valid"]["passed"] = True
+    else:
+        # Fall back to JSON schema validation
+        jsonschema_passed, jsonschema_errors = _validate_schema_jsonschema(output_json, schema_path)
+        if jsonschema_passed:
+            results["schema_valid"]["passed"] = True
+            results["schema_valid"]["errors"] = pydantic_errors  # Still report Pydantic errors
+        else:
+            results["schema_valid"]["errors"] = pydantic_errors + jsonschema_errors
+    
+    # 2. Citation validation (only if schema is valid)
     if not results["schema_valid"]["passed"]:
-        # Skip citation validation if schema is invalid
         return results
     
-    input_paper_ids = _extract_input_paper_ids(input_data)
-    output_paper_ids = _extract_output_paper_ids(output_json)
-    
-    invalid_citations = []
-    for paper_id in output_paper_ids:
-        if paper_id not in input_paper_ids:
-            invalid_citations.append(paper_id)
-    
-    results["citations_ok"]["passed"] = len(invalid_citations) == 0
+    citations_passed, invalid_citations = _validate_citations(output_json, input_data)
+    results["citations_ok"]["passed"] = citations_passed
     results["citations_ok"]["invalid_citations"] = invalid_citations
     
-    # 3. Length validation
-    violations = []
-    
-    cluster_cards = output_json.get("cluster_cards", [])
-    for i, card in enumerate(cluster_cards):
-        # topic_name: <= 100 chars
-        topic_name = card.get("topic_name", "")
-        if len(topic_name) > 100:
-            violations.append(f"cluster_cards[{i}].topic_name: {len(topic_name)} chars (max 100)")
-        
-        # one_liner: <= 220 chars
-        one_liner = card.get("one_liner", "")
-        if len(one_liner) > 220:
-            violations.append(f"cluster_cards[{i}].one_liner: {len(one_liner)} chars (max 220)")
-        
-        # tags: 3-7 items, each <= 40 chars
-        tags = card.get("tags", [])
-        if len(tags) < 3:
-            violations.append(f"cluster_cards[{i}].tags: {len(tags)} items (min 3)")
-        if len(tags) > 7:
-            violations.append(f"cluster_cards[{i}].tags: {len(tags)} items (max 7)")
-        for j, tag in enumerate(tags):
-            if len(tag) > 40:
-                violations.append(f"cluster_cards[{i}].tags[{j}]: {len(tag)} chars (max 40)")
-        
-        # what_this_cluster_is_about: <= 1200 chars
-        what_about = card.get("what_this_cluster_is_about", "")
-        if len(what_about) > 1200:
-            violations.append(f"cluster_cards[{i}].what_this_cluster_is_about: {len(what_about)} chars (max 1200)")
-        
-        # why_it_matters: <= 1200 chars
-        why_matters = card.get("why_it_matters", "")
-        if len(why_matters) > 1200:
-            violations.append(f"cluster_cards[{i}].why_it_matters: {len(why_matters)} chars (max 1200)")
-        
-        # confidence_rationale: <= 300 chars
-        confidence_rationale = card.get("confidence_rationale", "")
-        if len(confidence_rationale) > 300:
-            violations.append(f"cluster_cards[{i}].confidence_rationale: {len(confidence_rationale)} chars (max 300)")
-        
-        # representative_papers: check reason_representative <= 300 chars
-        rep_papers = card.get("representative_papers", [])
-        for j, paper in enumerate(rep_papers):
-            reason = paper.get("reason_representative", "")
-            if len(reason) > 300:
-                violations.append(f"cluster_cards[{i}].representative_papers[{j}].reason_representative: {len(reason)} chars (max 300)")
-        
-        # reading_order: check why_read_next <= 220 chars
-        reading_order = card.get("reading_order", [])
-        for j, item in enumerate(reading_order):
-            why_read = item.get("why_read_next", "")
-            if len(why_read) > 220:
-                violations.append(f"cluster_cards[{i}].reading_order[{j}].why_read_next: {len(why_read)} chars (max 220)")
-        
-        # search_query_seed: <= 200 chars
-        search_query = card.get("search_query_seed", "")
-        if len(search_query) > 200:
-            violations.append(f"cluster_cards[{i}].search_query_seed: {len(search_query)} chars (max 200)")
-        
-        # notes: <= 600 chars
-        notes = card.get("notes", "")
-        if len(notes) > 600:
-            violations.append(f"cluster_cards[{i}].notes: {len(notes)} chars (max 600)")
-    
-    results["length_ok"]["passed"] = len(violations) == 0
+    # 3. Length validation (mostly covered by Pydantic, but check edge cases)
+    length_passed, violations = _validate_lengths(output_json)
+    results["length_ok"]["passed"] = length_passed
     results["length_ok"]["violations"] = violations
     
-    # 4. Score features
+    # 4. Score features (heuristic scoring)
+    cluster_cards = output_json.get("cluster_cards", [])
     results["scores"]["name_generic_penalty"] = _compute_name_generic_penalty(cluster_cards)
     
     return results

@@ -16,8 +16,10 @@ sub(issue, bug level)
 [x] - [reader] manual test after refactor.  
 
 [...] - [reader] implement step 3 - llm enrichment for monthly clusterings  
-[x] - [eval] implement step 3 - setup eval pipeline for llm enrichment: metadata, prompt template.
-[ ] - [eval] test eval pipeline.
+[x] - [eval] implement step 3 - setup eval pipeline for llm enrichment: metadata, prompt template.  
+[ ] - [eval] refactor logging in eval pipeline...  
+[ ] - [eval] set minimum functional requirements to force coding agent follow them while refactoring.
+[ ] - [reader,eval] port llm request logic out of eval to reader.
 
 [ ] - [chat,memo] check before implementing step4. do i need both topic_event and topic_lineage?  
 [ ] - [reader,memo] implement step 4 - prompt user to choose one topic from step 3, and save to memo  

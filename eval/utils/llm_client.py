@@ -1,8 +1,23 @@
 """LLM client supporting OpenAI and Gemini APIs"""
 
-import json
 import re
-from typing import Optional, Tuple
+import json
+import logging
+
+from google import genai
+import openai
+from typing import Optional, Tuple, TypeVar, Type
+from pydantic import BaseModel
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    retry_if_exception_message,
+    before_sleep_log,
+)
+
+T = TypeVar('T', bound=BaseModel)
 
 
 class LLMClient:
@@ -33,20 +48,12 @@ class LLMClient:
         
         # Initialize provider-specific client
         if provider == "openai":
-            try:
-                import openai
-                self.client = openai.OpenAI(api_key=api_key)
-                self.api_uri = "https://api.openai.com/v1/chat/completions"
-            except ImportError:
-                raise ImportError("openai package not installed. Install with: pip install openai")
+            self.client = openai.OpenAI(api_key=api_key)
+            self.api_uri = "https://api.openai.com/v1/chat/completions"
+
         elif provider == "gemini":
-            try:
-                import google.generativeai as genai
-                genai.configure(api_key=api_key)
-                self.client = genai
-                self.api_uri = "https://generativelanguage.googleapis.com/v1beta/models"
-            except ImportError:
-                raise ImportError("google-generativeai package not installed. Install with: pip install google-generativeai")
+            self.client = genai.Client(api_key=api_key)
+            self.api_uri = "https://generativelanguage.googleapis.com/v1beta/models"
     
     def _parse_prompt(self, prompt: str) -> Tuple[Optional[str], str]:
         """
@@ -68,9 +75,38 @@ class LLMClient:
         
         return system_prompt, user_prompt
     
+    def _extract_json_from_markdown(self, text: str) -> str:
+        """
+        Extract JSON from markdown code blocks if present.
+        
+        Args:
+            text: Text that may contain JSON wrapped in markdown code blocks
+            
+        Returns:
+            Extracted JSON string, or original text if no code blocks found
+        """
+        # Try to extract JSON from markdown code blocks (```json ... ```)
+        json_match = re.search(r"```(?:json|JSON)?\s*\n([\s\S]*?)\n```", text, re.DOTALL)
+        if json_match:
+            return json_match.group(1).strip()
+        
+        # If no code blocks, return original text
+        return text.strip()
+    
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=4),
+        retry=(
+            retry_if_exception_type(openai.RateLimitError) |
+            retry_if_exception_type(openai.APITimeoutError) |
+            retry_if_exception_message(match=r".*(timeout|connection|network|dns|rate limit|rate_limit|429|quota|resource exhausted|503|502|500|internal server error|service unavailable).*")
+        ),
+        before_sleep=before_sleep_log(logging.getLogger(__name__), logging.INFO),
+        reraise=True,
+    )
     def call(self, prompt: str) -> str:
         """
-        Call LLM with prompt.
+        Call LLM with prompt and retry logic.
         
         Args:
             prompt: Full prompt string (will be parsed for SYSTEM/USER sections)
@@ -79,7 +115,7 @@ class LLMClient:
             Raw response text from LLM
         
         Raises:
-            Exception: If API call fails
+            Exception: If API call fails after all retries
         """
         system_prompt, user_prompt = self._parse_prompt(prompt)
         
@@ -106,17 +142,114 @@ class LLMClient:
             else:
                 full_prompt = user_prompt
             
-            model = self.client.GenerativeModel(self.model)
-            generation_config = {
+            # Use the new google.genai API
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=full_prompt,
+                config={
+                    "temperature": self.temperature,
+                    "max_output_tokens": self.max_tokens,
+                }
+            )
+            return response.text or ""
+    
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=4),
+        retry=(
+            retry_if_exception_type(openai.RateLimitError) |
+            retry_if_exception_type(openai.APITimeoutError) |
+            retry_if_exception_message(match=r".*(timeout|connection|network|dns|rate limit|rate_limit|429|quota|resource exhausted|503|502|500|internal server error|service unavailable).*")
+        ),
+        before_sleep=before_sleep_log(logging.getLogger(__name__), logging.INFO),
+        reraise=True,
+    )
+    def call_structured(self, prompt: str, response_model: Type[T]) -> T:
+        """
+        Call LLM with structured output using Gemini's structured output API.
+        
+        Args:
+            prompt: Full prompt string (will be parsed for SYSTEM/USER sections)
+            response_model: Pydantic model class for response validation
+        
+        Returns:
+            Parsed Pydantic model instance
+        
+        Raises:
+            ValueError: If provider is not "gemini" (structured output only supported for Gemini)
+            Exception: If API call fails after all retries
+        """
+        if self.provider != "gemini":
+            raise ValueError(f"Structured output only supported for Gemini, got {self.provider}")
+        
+        system_prompt, user_prompt = self._parse_prompt(prompt)
+        
+        # Combine system and user prompts
+        full_prompt = ""
+        if system_prompt:
+            full_prompt = f"{system_prompt}\n\n{user_prompt}"
+        else:
+            full_prompt = user_prompt
+        
+        # Use Gemini's structured output API
+        response = self.client.models.generate_content(
+            model=self.model,
+            contents=full_prompt,
+            config={
                 "temperature": self.temperature,
                 "max_output_tokens": self.max_tokens,
+                "response_mime_type": "application/json",
+                "response_json_schema": response_model.model_json_schema(),
             }
-            
-            response = model.generate_content(
-                full_prompt,
-                generation_config=generation_config
-            )
-            return response.text
+        )
+        
+        # Parse JSON response
+        data = json.loads(response.text)
+        
+        # Validate and return Pydantic model
+        return response_model.model_validate(data)
+    
+    def call_structured_raw(self, prompt: str, response_model: Type[T]) -> dict:
+        """
+        Call LLM with structured output and return raw JSON dict before validation.
+        
+        Args:
+            prompt: Full prompt string (will be parsed for SYSTEM/USER sections)
+            response_model: Pydantic model class for response schema (used for API call only)
+        
+        Returns:
+            Raw JSON dict from LLM (not validated)
+        
+        Raises:
+            ValueError: If provider is not "gemini" (structured output only supported for Gemini)
+            Exception: If API call fails after all retries
+        """
+        if self.provider != "gemini":
+            raise ValueError(f"Structured output only supported for Gemini, got {self.provider}")
+        
+        system_prompt, user_prompt = self._parse_prompt(prompt)
+        
+        # Combine system and user prompts
+        full_prompt = ""
+        if system_prompt:
+            full_prompt = f"{system_prompt}\n\n{user_prompt}"
+        else:
+            full_prompt = user_prompt
+        
+        # Use Gemini's structured output API
+        response = self.client.models.generate_content(
+            model=self.model,
+            contents=full_prompt,
+            config={
+                "temperature": self.temperature,
+                "max_output_tokens": self.max_tokens,
+                "response_mime_type": "application/json",
+                "response_json_schema": response_model.model_json_schema(),
+            }
+        )
+        
+        # Parse JSON response but don't validate
+        return json.loads(response.text)
     
     def get_api_args(self) -> dict:
         """Get API arguments for logging"""

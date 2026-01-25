@@ -67,18 +67,24 @@ def render_template(
     return rendered
 
 
-def get_preview(prompt: str, max_chars: int = 200) -> str:
+def render_template_per_cluster(
+    template_content: str,
+    cluster_data: dict
+) -> str:
     """
-    Get preview of rendered prompt.
+    Render template for a single cluster by replacing {{CLUSTER_JSON}} placeholder.
     
     Args:
-        prompt: Rendered prompt string
-        max_chars: Maximum characters for preview
+        template_content: Template string with {{CLUSTER_JSON}} placeholder
+        cluster_data: Single cluster dict with papers array
     
     Returns:
-        Preview string (truncated if needed)
+        Rendered prompt string
     """
-    if len(prompt) <= max_chars:
-        return prompt
-    return prompt[:max_chars] + "..."
+    rendered = template_content.replace(
+        "{{CLUSTER_JSON}}",
+        json.dumps(cluster_data, indent=2, ensure_ascii=False)
+    )
+    
+    return rendered
 
