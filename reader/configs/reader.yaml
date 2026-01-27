@@ -1,5 +1,5 @@
 run:
-  month_key: "month=2025-01"                 # keep the exact query key shape
+  month_key: "month=2025-08"                 # keep the exact query key shape
   max_papers: 50
   artifacts_dir: "artifacts"
   log_level: "INFO"

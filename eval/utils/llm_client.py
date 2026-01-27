@@ -209,16 +209,16 @@ class LLMClient:
         # Validate and return Pydantic model
         return response_model.model_validate(data)
     
-    def call_structured_raw(self, prompt: str, response_model: Type[T]) -> dict:
+    def call_structured_raw(self, prompt: str, response_model: Type[T]) -> str:
         """
-        Call LLM with structured output and return raw JSON dict before validation.
+        Call LLM with structured output and return raw text response.
         
         Args:
             prompt: Full prompt string (will be parsed for SYSTEM/USER sections)
             response_model: Pydantic model class for response schema (used for API call only)
         
         Returns:
-            Raw JSON dict from LLM (not validated)
+            Raw text response from LLM (may contain JSON in markdown code blocks or raw JSON)
         
         Raises:
             ValueError: If provider is not "gemini" (structured output only supported for Gemini)
@@ -248,8 +248,8 @@ class LLMClient:
             }
         )
         
-        # Parse JSON response but don't validate
-        return json.loads(response.text)
+        # Return raw text response (JSON extraction will be handled by caller)
+        return response.text or ""
     
     def get_api_args(self) -> dict:
         """Get API arguments for logging"""

@@ -70,7 +70,7 @@ class Embedder:
         *,
         mode: str,
         top_n: int = 10,
-        batch_size: int = 32,
+        batch_size: int = 50,
     ) -> np.ndarray:
         """
         Encode papers into embeddings.

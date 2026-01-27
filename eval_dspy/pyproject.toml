@@ -1,0 +1,10 @@
+[project]
+name = "eval-dspy"
+version = "0.1.0"
+description = "DSPy evaluation for cluster topic reports"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.0.0",
+    "dspy-ai",
+]
+

@@ -44,10 +44,13 @@ Output **exactly ONE cluster card**, formatted as a single Markdown block, with 
    * Max 25 words
    * Plain English summary
 
-3. **what_this_cluster_is_about**
+3. **what_this_topic_is_about**
 
    * 80–140 words
    * Describe the shared theme using only provided information
+   * Explain how multiple papers relate
+   * Include inline citations [paper_id]
+   * Use the word “topic”, not “cluster”
 
 4. **why_it_matters**
 
@@ -90,6 +93,16 @@ Output **exactly ONE cluster card**, formatted as a single Markdown block, with 
     * Each ≤ 20 words
     * Include warnings about mixed themes, missing information, or ambiguity when applicable
 
+11. **keyword_list**
+
+    * 5–12 items
+    * Each 1–3 words
+    * Deduplicated
+    * Automatically lowercased
+    * Extract keywords from the provided paper keywords and the cluster's thematic content
+    * Keywords should capture the main topics, methods, or domains covered by the papers in this cluster
+    * Do not include hashtags
+
 ---
 
 SECTION B — JSON index (for database storage)
@@ -99,8 +112,7 @@ Append a JSON object with **exactly** these keys:
 ```json
 {
   "title": string,
-  "summary": string,
-  "keyword_list": string[]
+  "summary": string
 }
 ```
 
@@ -109,8 +121,6 @@ Constraints for SECTION B:
 * `title` must **exactly match** the SECTION A title.
 * `summary` must be **60–110 words**, derived from
   `what_this_cluster_is_about` + `why_it_matters`.
-* `keyword_list` must contain **5–12 items**, deduplicated,
-  each 1–3 words. Extract keywords from the provided paper keywords and the cluster's thematic content. Keywords should capture the main topics, methods, or domains covered by the papers in this cluster. Do not include hashtags.
 * Do not introduce new concepts or claims.
 * If the cluster is thematically mixed, the summary must narrow scope and confidence should be MEDIUM or LOW.
 

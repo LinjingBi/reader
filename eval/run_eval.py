@@ -21,7 +21,7 @@ from pydantic import BaseModel
 sys.path.insert(0, str(Path(__file__).parent))
 
 from packers.p0 import build_input, get_packer_stats
-from judges.heuristics import judge_output
+from judges.heuristics import judge_output, JudgeOutput
 from utils.llm_client import LLMClient
 from utils.logger import EvalLogger
 from utils.template_loader import load_template, compute_template_hash, render_template, render_template_per_cluster
@@ -231,8 +231,29 @@ def _call_llm_per_cluster(
     # Log call metadata at INFO level
     logger._log("llm.call", f"model={model}, cluster_size={len(cluster_data.get('papers', []))}, args={llm_client.get_api_args()}", level=logging.INFO)
     
-    # Get raw response first (so we can save it even if validation fails)
-    raw_response = llm_client.call_structured_raw(prompt, ClusterReport)
+    # Get raw response text (so we can save it even if validation fails)
+    raw_response_text = llm_client.call_structured_raw(prompt, ClusterReport)
+    
+    # Parse JSON from raw text
+    try:
+        raw_response_dict = extract_json(raw_response_text)
+    except Exception as e:
+        # Save raw response with parse error
+        if run_results_dir and cluster_index is not None:
+            try:
+                sanitized_model = model.replace("/", "_")
+                raw_response_path = run_results_dir / f"raw_response_{sanitized_model}_cluster_{cluster_index}.json"
+                with open(raw_response_path, 'w', encoding='utf-8') as f:
+                    json.dump({
+                        "model": model,
+                        "cluster_index": cluster_index,
+                        "raw_response_text": raw_response_text,
+                        "parse_error": str(e)
+                    }, f, indent=2, ensure_ascii=False)
+                logger._log("llm.raw_saved", f"Raw response saved with parse error to {raw_response_path}", level=logging.INFO)
+            except Exception:
+                pass
+        raise ValueError(f"Failed to parse JSON from raw response: {str(e)}")
     
     # Save raw response if we have a directory (before validation)
     if run_results_dir and cluster_index is not None:
@@ -243,15 +264,16 @@ def _call_llm_per_cluster(
                 json.dump({
                     "model": model,
                     "cluster_index": cluster_index,
-                    "raw_response": raw_response
+                    "raw_response_text": raw_response_text,
+                    "parsed_response": raw_response_dict
                 }, f, indent=2, ensure_ascii=False)
             logger._log("llm.raw_saved", f"Raw response saved to {raw_response_path}", level=logging.DEBUG)
         except Exception as save_error:
             logger._log("llm.raw_save_failed", f"Failed to save raw response: {str(save_error)}", level=logging.WARNING)
     
-    # Validate raw response
+    # Validate parsed response
     try:
-        cluster_report = ClusterReport.model_validate(raw_response)
+        cluster_report = ClusterReport.model_validate(raw_response_dict)
         
         # Log response content at DEBUG level only
         logger._log("llm.response", cluster_report.model_dump_json(indent=2, ensure_ascii=False), level=logging.DEBUG)
@@ -267,7 +289,8 @@ def _call_llm_per_cluster(
                     json.dump({
                         "model": model,
                         "cluster_index": cluster_index,
-                        "raw_response": raw_response,
+                        "raw_response_text": raw_response_text,
+                        "parsed_response": raw_response_dict,
                         "validation_error": str(e)
                     }, f, indent=2, ensure_ascii=False)
                 logger._log("llm.raw_updated", f"Raw response updated with validation error at {raw_response_path}", level=logging.INFO)
@@ -337,39 +360,36 @@ def _map_cluster_report_to_card(
     Returns:
         Dict matching ClusterCard structure
     """
-    section_a = cluster_report.section_a
-    section_b = cluster_report.section_b
-    
     # Map representative papers
     representative_papers = [
         {
             "paper_id": paper.paper_id,
             "reason_representative": paper.title  # Using title as reason for now
         }
-        for paper in section_a.representative_papers
+        for paper in cluster_report.representative_papers
     ]
     
     # Enrich reading order with URLs
-    reading_order = _enrich_reading_order(section_a.reading_order, papers_lookup)
+    reading_order = _enrich_reading_order(cluster_report.reading_order, papers_lookup)
     
     # Format notes from list to string
-    notes_str = "\n".join(f"- {note}" for note in section_a.notes) if section_a.notes else ""
+    notes_str = "\n".join(f"- {note}" for note in cluster_report.notes) if cluster_report.notes else ""
     
-    # Use keywords from section_b (5-12 items), take up to 7 to match output schema constraint (3-7)
-    tags = section_b.keyword_list[:7] if len(section_b.keyword_list) > 7 else section_b.keyword_list
+    # Use keywords (5-12 items), take up to 7 to match output schema constraint (3-7)
+    tags = cluster_report.keyword_list[:7] if len(cluster_report.keyword_list) > 7 else cluster_report.keyword_list
     
     return {
         "cluster_key": f"cluster_index:{cluster_index}",
-        "topic_name": section_a.title,
-        "one_liner": section_a.one_liner,
+        "topic_name": cluster_report.title,
+        "one_liner": cluster_report.one_liner,
         "tags": tags,
-        "what_this_cluster_is_about": section_a.what_this_cluster_is_about,
-        "why_it_matters": section_a.why_it_matters,
-        "confidence": _normalize_confidence(section_a.confidence),
-        "confidence_rationale": _format_confidence_rationale(section_a.confidence_rationale),
+        "what_this_cluster_is_about": cluster_report.what_this_cluster_is_about,
+        "why_it_matters": cluster_report.why_it_matters,
+        "confidence": _normalize_confidence(cluster_report.confidence),
+        "confidence_rationale": _format_confidence_rationale(cluster_report.confidence_rationale),
         "representative_papers": representative_papers,
         "reading_order": reading_order,
-        "search_query_seed": section_a.search_query_seed,
+        "search_query_seed": cluster_report.search_query_seed,
         "notes": notes_str
     }
 
@@ -490,7 +510,7 @@ def _process_clusters_parallel(
     return output
 
 
-def _judge_output(output_json: dict, monthly_data: dict, schema_path: Path, response_file_path: Path, logger: EvalLogger) -> Tuple[Optional[dict], Optional[dict]]:
+def _judge_output(output_json: dict, monthly_data: dict, schema_path: Path, response_file_path: Path, logger: EvalLogger) -> Tuple[Optional[JudgeOutput], Optional[OutputSchema]]:
     """Judge output: validate using Pydantic and heuristics"""
     # Save output JSON to file
     response_file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -501,27 +521,37 @@ def _judge_output(output_json: dict, monthly_data: dict, schema_path: Path, resp
         json.dump({"model": model_name, **output_json}, f, indent=2, ensure_ascii=False)
     
     try:
-        # Call judge (now handles Pydantic validation internally)
-        judge_result = judge_output(
-            output_json=output_json,
+        # Convert dict to JSON string for judge_output
+        output_json_str = json.dumps(output_json, ensure_ascii=False)
+        
+        # Call judge (now returns tuple of JudgeOutput and Optional[OutputSchema])
+        judge_result, validated_output = judge_output(
+            raw_text=output_json_str,
             input_data=monthly_data,
             schema_path=schema_path
         )
         
-        # Save judge result
+        # Save judge result (convert to dict for JSON serialization)
         judge_result_path = response_file_path.parent / f"judge_result_{model_name}.json"
+        judge_result_dict = {
+            "model": model_name,
+            "sub_scores": judge_result.sub_scores,
+            "overall": judge_result.overall,
+            "reasons": judge_result.reasons
+        }
         with open(judge_result_path, 'w', encoding='utf-8') as f:
-            json.dump({"model": model_name, **judge_result}, f, indent=2, ensure_ascii=False)
+            json.dump(judge_result_dict, f, indent=2, ensure_ascii=False)
         
         # Log judge results at INFO level
         logger._log("judge.results", 
-                   f"schema_valid={'pass' if judge_result['schema_valid']['passed'] else 'fail'}, "
-                   f"citations_ok={'pass' if judge_result['citations_ok']['passed'] else 'fail'}, "
-                   f"length_ok={'pass' if judge_result['length_ok']['passed'] else 'fail'}, "
-                   f"name_generic_penalty={judge_result['scores']['name_generic_penalty']}",
+                   f"json_valid={'pass' if judge_result.sub_scores.get('json_valid', 0.0) == 1.0 else 'fail'}, "
+                   f"schema_valid={'pass' if judge_result.sub_scores.get('schema_valid', 0.0) == 1.0 else 'fail'}, "
+                   f"citations_ok={'pass' if judge_result.sub_scores.get('citations_ok', 0.0) == 1.0 else 'fail'}, "
+                   f"name_generic_score={judge_result.sub_scores.get('name_generic_penalty', 0.0):.3f}, "
+                   f"overall={judge_result.overall:.3f}",
                    level=logging.INFO)
         
-        return judge_result, output_json
+        return judge_result, validated_output
         
     except Exception as e:
         # Log error at ERROR level
@@ -534,17 +564,26 @@ def _judge_output(output_json: dict, monthly_data: dict, schema_path: Path, resp
 def _generate_summary(run_id: str, snapshot_id: str, month: str, packing_variant: str, prompt_variant: str, template_hash: str, models: List[str], model_results: List[dict], response_file_paths: Dict[str, str], run_results_dir: Path, logger: EvalLogger) -> dict:
     """Generate summary of evaluation results"""
     # Aggregate scores across all models
+    # Bool fields (json_valid, schema_valid, citations_ok): 1 only if all are true, else 0
+    # Score fields (name_generic_penalty): average
     if model_results:
+        # Bool fields: all must be true for 1, else 0
+        json_valid_values = [r["scores"].get("json_valid", 0.0) for r in model_results]
+        schema_valid_values = [r["scores"].get("schema_valid", 0.0) for r in model_results]
+        citations_ok_values = [r["scores"].get("citations_ok", 0.0) for r in model_results]
+        
         aggregate_scores = {
-            "schema_valid": sum(r["scores"]["schema_valid"] for r in model_results) / len(model_results),
-            "citations_ok": sum(r["scores"]["citations_ok"] for r in model_results) / len(model_results),
-            "length_ok": sum(r["scores"]["length_ok"] for r in model_results) / len(model_results),
+            "json_valid": 1.0 if all(v == 1.0 for v in json_valid_values) else 0.0,
+            "schema_valid": 1.0 if all(v == 1.0 for v in schema_valid_values) else 0.0,
+            "citations_ok": 1.0 if all(v == 1.0 for v in citations_ok_values) else 0.0,
+            "name_generic_penalty": sum(r["scores"].get("name_generic_penalty", 0.0) for r in model_results) / len(model_results),
         }
     else:
         aggregate_scores = {
+            "json_valid": 0.0,
             "schema_valid": 0.0,
             "citations_ok": 0.0,
-            "length_ok": 0.0,
+            "name_generic_penalty": 0.0,
         }
     
     # Add response file paths to model results
@@ -650,7 +689,7 @@ def _process_single_model(
         )
         
         # Step 5: Judge output (validates using Pydantic and heuristics)
-        judge_result, parsed_output = _judge_output(
+        judge_result, validated_output = _judge_output(
             output_json=output_json,
             monthly_data=monthly_data,
             schema_path=schema_path,
@@ -661,15 +700,17 @@ def _process_single_model(
         # Compute overall scores
         if judge_result:
             overall_scores = {
-                "schema_valid": 1.0 if judge_result["schema_valid"]["passed"] else 0.0,
-                "citations_ok": 1.0 if judge_result["citations_ok"]["passed"] else 0.0,
-                "length_ok": 1.0 if judge_result["length_ok"]["passed"] else 0.0,
+                "json_valid": judge_result.sub_scores.get("json_valid", 0.0),
+                "schema_valid": judge_result.sub_scores.get("schema_valid", 0.0),
+                "citations_ok": judge_result.sub_scores.get("citations_ok", 0.0),
+                "name_generic_penalty": judge_result.sub_scores.get("name_generic_penalty", 0.0),
             }
         else:
             overall_scores = {
+                "json_valid": 0.0,
                 "schema_valid": 0.0,
                 "citations_ok": 0.0,
-                "length_ok": 0.0,
+                "name_generic_penalty": 0.0,
             }
         
         duration = time.time() - model_start_time
@@ -682,7 +723,7 @@ def _process_single_model(
             "model": model,
             "scores": overall_scores,
             "duration": duration,
-            "parsed_output": parsed_output is not None
+            "parsed_output": validated_output is not None
         }, response_file_rel
         
     except Exception as e:
@@ -695,7 +736,7 @@ def _process_single_model(
         
         return {
             "model": model,
-            "scores": {"schema_valid": 0.0, "citations_ok": 0.0, "length_ok": 0.0},
+            "scores": {"json_valid": 0.0, "schema_valid": 0.0, "citations_ok": 0.0, "name_generic_penalty": 0.0},
             "duration": duration,
             "parsed_output": False,
             "error": str(e)
@@ -837,7 +878,7 @@ def run_evaluation(config_path: Path, month: str, dry_run: bool) -> None:
                 response_file_paths[model] = response_file_rel
                 model_results.append({
                     "model": model,
-                    "scores": {"schema_valid": 0.0, "citations_ok": 0.0, "length_ok": 0.0},
+                    "scores": {"json_valid": 0.0, "schema_valid": 0.0, "citations_ok": 0.0, "name_generic_penalty": 0.0},
                     "duration": 0.0,
                     "parsed_output": False,
                     "error": str(e)

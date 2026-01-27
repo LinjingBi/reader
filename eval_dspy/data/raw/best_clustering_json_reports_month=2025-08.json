@@ -1,0 +1,1273 @@
+{
+  "source": "hf_monthly",
+  "period_start": "2025-08-01",
+  "period_end": "2025-08-31",
+  "raw_json": "",
+  "embed_config": {
+    "embed_config_id": "algo_lib.embedding|0.1.0",
+    "json_payload": {
+      "model_name": "BAAI/bge-small-en-v1.5",
+      "mode": "C",
+      "top_n_keywords": 10
+    }
+  },
+  "cluster_config": {
+    "cluster_config_id": "algo_lib.clustering|0.1.0",
+    "json_payload": {
+      "k": 5,
+      "seed": 42,
+      "algorithm": "kmeans"
+    }
+  },
+  "papers": [
+    {
+      "paper_id": "hf:2508.10104",
+      "title": "DINOv3",
+      "summary": "Self-supervised learning holds the promise of eliminating the need for manual\ndata annotation, enabling models to scale effortlessly to massive datasets and\nlarger architectures. By not being tailored to specific tasks or domains, this\ntraining paradigm has the potential to learn visual representations from\ndiverse sources, ranging from natural to aerial images -- using a single\nalgorithm. This technical report introduces DINOv3, a major milestone toward\nrealizing this vision by leveraging simple yet effective strategies. First, we\nleverage the benefit of scaling both dataset and model size by careful data\npreparation, design, and optimization. Second, we introduce a new method called\nGram anchoring, which effectively addresses the known yet unsolved issue of\ndense feature maps degrading during long training schedules. Finally, we apply\npost-hoc strategies that further enhance our models' flexibility with respect\nto resolution, model size, and alignment with text. As a result, we present a\nversatile vision foundation model that outperforms the specialized state of the\nart across a broad range of settings, without fine-tuning. DINOv3 produces\nhigh-quality dense features that achieve outstanding performance on various\nvision tasks, significantly surpassing previous self- and weakly-supervised\nfoundation models. We also share the DINOv3 suite of vision models, designed to\nadvance the state of the art on a wide spectrum of tasks and data by providing\nscalable solutions for diverse resource constraints and deployment scenarios.",
+      "keywords": [
+        "self-supervised learning",
+        "DINOv3",
+        "data preparation",
+        "design",
+        "optimization",
+        "Gram anchoring",
+        "dense feature maps",
+        "post-hoc strategies",
+        "vision foundation model",
+        "high-quality dense features",
+        "vision tasks",
+        "weakly-supervised foundation models",
+        "scalable solutions",
+        "deployment scenarios"
+      ],
+      "url": "https://huggingface.co/papers/2508.10104",
+      "published_at": "2025-08-13"
+    },
+    {
+      "paper_id": "hf:2508.02324",
+      "title": "Qwen-Image Technical Report",
+      "summary": "We present Qwen-Image, an image generation foundation model in the Qwen\nseries that achieves significant advances in complex text rendering and precise\nimage editing. To address the challenges of complex text rendering, we design a\ncomprehensive data pipeline that includes large-scale data collection,\nfiltering, annotation, synthesis, and balancing. Moreover, we adopt a\nprogressive training strategy that starts with non-text-to-text rendering,\nevolves from simple to complex textual inputs, and gradually scales up to\nparagraph-level descriptions. This curriculum learning approach substantially\nenhances the model's native text rendering capabilities. As a result,\nQwen-Image not only performs exceptionally well in alphabetic languages such as\nEnglish, but also achieves remarkable progress on more challenging logographic\nlanguages like Chinese. To enhance image editing consistency, we introduce an\nimproved multi-task training paradigm that incorporates not only traditional\ntext-to-image (T2I) and text-image-to-image (TI2I) tasks but also\nimage-to-image (I2I) reconstruction, effectively aligning the latent\nrepresentations between Qwen2.5-VL and MMDiT. Furthermore, we separately feed\nthe original image into Qwen2.5-VL and the VAE encoder to obtain semantic and\nreconstructive representations, respectively. This dual-encoding mechanism\nenables the editing module to strike a balance between preserving semantic\nconsistency and maintaining visual fidelity. Qwen-Image achieves\nstate-of-the-art performance, demonstrating its strong capabilities in both\nimage generation and editing across multiple benchmarks.",
+      "keywords": [
+        "data pipeline",
+        "progressive training",
+        "curriculum learning",
+        "text-to-image",
+        "text-image-to-image",
+        "image-to-image",
+        "latent representations",
+        "dual-encoding mechanism",
+        "semantic consistency",
+        "visual fidelity"
+      ],
+      "url": "https://huggingface.co/papers/2508.02324",
+      "published_at": "2025-08-04"
+    },
+    {
+      "paper_id": "hf:2508.15763",
+      "title": "Intern-S1: A Scientific Multimodal Foundation Model",
+      "summary": "In recent years, a plethora of open-source foundation models have emerged,\nachieving remarkable progress in some widely attended fields, with performance\nbeing quite close to that of closed-source models. However, in high-value but\nmore challenging scientific professional fields, either the fields still rely\non expert models, or the progress of general foundation models lags\nsignificantly compared to those in popular areas, far from sufficient for\ntransforming scientific research and leaving substantial gap between\nopen-source models and closed-source models in these scientific domains. To\nmitigate this gap and explore a step further toward Artificial General\nIntelligence (AGI), we introduce Intern-S1, a specialized generalist equipped\nwith general understanding and reasoning capabilities with expertise to analyze\nmultiple science modal data. Intern-S1 is a multimodal Mixture-of-Experts (MoE)\nmodel with 28 billion activated parameters and 241 billion total parameters,\ncontinually pre-trained on 5T tokens, including over 2.5T tokens from\nscientific domains. In the post-training stage, Intern-S1 undergoes offline and\nthen online reinforcement learning (RL) in InternBootCamp, where we propose\nMixture-of-Rewards (MoR) to synergize the RL training on more than 1000 tasks\nsimultaneously. Through integrated innovations in algorithms, data, and\ntraining systems, Intern-S1 achieved top-tier performance in online RL\ntraining.On comprehensive evaluation benchmarks, Intern-S1 demonstrates\ncompetitive performance on general reasoning tasks among open-source models and\nsignificantly outperforms open-source models in scientific domains, surpassing\nclosed-source state-of-the-art models in professional tasks, such as molecular\nsynthesis planning, reaction condition prediction, predicting thermodynamic\nstabilities for crystals. Our models are available at\nhttps://huggingface.co/internlm/Intern-S1.",
+      "keywords": [
+        "Mixture-of-Experts (MoE)",
+        "reinforcement learning (RL)",
+        "Mixture-of-Rewards (MoR)",
+        "molecular synthesis planning",
+        "reaction condition prediction",
+        "thermodynamic stabilities"
+      ],
+      "url": "https://huggingface.co/papers/2508.15763",
+      "published_at": "2025-08-21"
+    },
+    {
+      "paper_id": "hf:2508.01191",
+      "title": "Is Chain-of-Thought Reasoning of LLMs a Mirage? A Data Distribution Lens",
+      "summary": "Chain-of-Thought (CoT) prompting has been shown to improve Large Language\nModel (LLM) performance on various tasks. With this approach, LLMs appear to\nproduce human-like reasoning steps before providing answers (a.k.a., CoT\nreasoning), which often leads to the perception that they engage in deliberate\ninferential processes. However, some initial findings suggest that CoT\nreasoning may be more superficial than it appears, motivating us to explore\nfurther. In this paper, we study CoT reasoning via a data distribution lens and\ninvestigate if CoT reasoning reflects a structured inductive bias learned from\nin-distribution data, allowing the model to conditionally generate reasoning\npaths that approximate those seen during training. Thus, its effectiveness is\nfundamentally bounded by the degree of distribution discrepancy between the\ntraining data and the test queries. With this lens, we dissect CoT reasoning\nvia three dimensions: task, length, and format. To investigate each dimension,\nwe design DataAlchemy, an isolated and controlled environment to train LLMs\nfrom scratch and systematically probe them under various distribution\nconditions. Our results reveal that CoT reasoning is a brittle mirage that\nvanishes when it is pushed beyond training distributions. This work offers a\ndeeper understanding of why and when CoT reasoning fails, emphasizing the\nongoing challenge of achieving genuine and generalizable reasoning.",
+      "keywords": [
+        "Chain-of-Thought",
+        "Large Language Model",
+        "CoT reasoning",
+        "inductive bias",
+        "DataAlchemy",
+        "distribution discrepancy",
+        "reasoning paths",
+        "generalizable reasoning"
+      ],
+      "url": "https://huggingface.co/papers/2508.01191",
+      "published_at": "2025-08-02"
+    },
+    {
+      "paper_id": "hf:2508.18265",
+      "title": "InternVL3.5: Advancing Open-Source Multimodal Models in Versatility,\n  Reasoning, and Efficiency",
+      "summary": "We introduce InternVL 3.5, a new family of open-source multimodal models that\nsignificantly advances versatility, reasoning capability, and inference\nefficiency along the InternVL series. A key innovation is the Cascade\nReinforcement Learning (Cascade RL) framework, which enhances reasoning through\na two-stage process: offline RL for stable convergence and online RL for\nrefined alignment. This coarse-to-fine training strategy leads to substantial\nimprovements on downstream reasoning tasks, e.g., MMMU and MathVista. To\noptimize efficiency, we propose a Visual Resolution Router (ViR) that\ndynamically adjusts the resolution of visual tokens without compromising\nperformance. Coupled with ViR, our Decoupled Vision-Language Deployment (DvD)\nstrategy separates the vision encoder and language model across different GPUs,\neffectively balancing computational load. These contributions collectively\nenable InternVL3.5 to achieve up to a +16.0\\% gain in overall reasoning\nperformance and a 4.05times inference speedup compared to its predecessor,\ni.e., InternVL3. In addition, InternVL3.5 supports novel capabilities such as\nGUI interaction and embodied agency. Notably, our largest model, i.e.,\nInternVL3.5-241B-A28B, attains state-of-the-art results among open-source MLLMs\nacross general multimodal, reasoning, text, and agentic tasks -- narrowing the\nperformance gap with leading commercial models like GPT-5. All models and code\nare publicly released.",
+      "keywords": [
+        "Cascade RL",
+        "offline RL",
+        "online RL",
+        "Visual Resolution Router",
+        "ViR",
+        "Decoupled Vision-Language Deployment",
+        "DvD",
+        "multimodal models",
+        "reasoning performance",
+        "inference speedup",
+        "GUI interaction",
+        "embodied agency"
+      ],
+      "url": "https://huggingface.co/papers/2508.18265",
+      "published_at": "2025-08-25"
+    },
+    {
+      "paper_id": "hf:2508.06471",
+      "title": "GLM-4.5: Agentic, Reasoning, and Coding (ARC) Foundation Models",
+      "summary": "We present GLM-4.5, an open-source Mixture-of-Experts (MoE) large language\nmodel with 355B total parameters and 32B activated parameters, featuring a\nhybrid reasoning method that supports both thinking and direct response modes.\nThrough multi-stage training on 23T tokens and comprehensive post-training with\nexpert model iteration and reinforcement learning, GLM-4.5 achieves strong\nperformance across agentic, reasoning, and coding (ARC) tasks, scoring 70.1% on\nTAU-Bench, 91.0% on AIME 24, and 64.2% on SWE-bench Verified. With much fewer\nparameters than several competitors, GLM-4.5 ranks 3rd overall among all\nevaluated models and 2nd on agentic benchmarks. We release both GLM-4.5 (355B\nparameters) and a compact version, GLM-4.5-Air (106B parameters), to advance\nresearch in reasoning and agentic AI systems. Code, models, and more\ninformation are available at https://github.com/zai-org/GLM-4.5.",
+      "keywords": [
+        "Mixture-of-Experts",
+        "hybrid reasoning method",
+        "multi-stage training",
+        "expert model iteration",
+        "reinforcement learning",
+        "TAU-Bench",
+        "AIME 24",
+        "SWE-bench Verified",
+        "agentic benchmarks"
+      ],
+      "url": "https://huggingface.co/papers/2508.06471",
+      "published_at": "2025-08-08"
+    },
+    {
+      "paper_id": "hf:2508.05629",
+      "title": "On the Generalization of SFT: A Reinforcement Learning Perspective with\n  Reward Rectification",
+      "summary": "We present a simple yet theoretically motivated improvement to Supervised\nFine-Tuning (SFT) for the Large Language Model (LLM), addressing its limited\ngeneralization compared to reinforcement learning (RL). Through mathematical\nanalysis, we reveal that standard SFT gradients implicitly encode a problematic\nreward structure that may severely restrict the generalization capabilities of\nmodel. To rectify this, we propose Dynamic Fine-Tuning (DFT), stabilizing\ngradient updates for each token by dynamically rescaling the objective function\nwith the probability of this token. Remarkably, this single-line code change\nsignificantly outperforms standard SFT across multiple challenging benchmarks\nand base models, demonstrating greatly improved generalization. Additionally,\nour approach shows competitive results in offline RL settings, offering an\neffective yet simpler alternative. This work bridges theoretical insight and\npractical solutions, substantially advancing SFT performance. The code will be\navailable at https://github.com/yongliang-wu/DFT.",
+      "keywords": [
+        "Supervised Fine-Tuning",
+        "Large Language Model",
+        "reinforcement learning",
+        "gradient updates",
+        "token probability",
+        "Dynamic Fine-Tuning",
+        "offline RL"
+      ],
+      "url": "https://huggingface.co/papers/2508.05629",
+      "published_at": "2025-08-07"
+    },
+    {
+      "paper_id": "hf:2508.04026",
+      "title": "VeriGUI: Verifiable Long-Chain GUI Dataset",
+      "summary": "Recent studies have delved into constructing autonomous agents capable of\nperforming complex Graphical User Interface (GUI)-based computer tasks, with\nthe potential to revolutionize human-computer interaction. Despite encouraging\nresults, existing efforts mainly focus on short-term interactions and rely on\noutcome-only verification, thereby limiting their scalability in real-world GUI\napplications that demand long-horizon task decomposition and execution. In this\nwork, we introduce VeriGUI, a novel verifiable long-chain GUI dataset designed\nto facilitate the development and evaluation of generalist GUI agents operating\nin realistic computer environments. Our dataset emphasizes two critical\ndimensions: (1) long-chain complexity, with tasks decomposed into a sequence of\ninterdependent subtasks spanning hundreds of steps, explicitly designed to\nallow any subtask to serve as a valid starting point; and (2) subtask-level\nverifiability, which enables diverse exploration strategies within each\nsubtask, while ensuring that each subtask-level goal remains verifiable and\nconsistent. The dataset consists of GUI task trajectories across both desktop\nand web, annotated by human experts. Extensive experiments on VeriGUI using\nvarious agents with different foundation models reveal significant performance\ngaps in handling long-horizon tasks, highlighting the need for more robust\nplanning and decision-making capabilities in GUI agents.",
+      "keywords": [
+        "Graphical User Interface (GUI)",
+        "GUI agents",
+        "long-chain complexity",
+        "subtask-level verifiability",
+        "GUI task trajectories",
+        "desktop",
+        "web",
+        "human experts",
+        "long-horizon tasks",
+        "robust planning",
+        "decision-making capabilities"
+      ],
+      "url": "https://huggingface.co/papers/2508.04026",
+      "published_at": "2025-08-06"
+    },
+    {
+      "paper_id": "hf:2508.16153",
+      "title": "AgentFly: Fine-tuning LLM Agents without Fine-tuning LLMs",
+      "summary": "In this paper, we introduce a novel learning paradigm for adaptive Large\nLanguage Model (LLM) agents that eliminates the need for fine-tuning the\nunderlying LLMs. Existing approaches are often either rigid, relying on static,\nhandcrafted reflection workflows, or computationally intensive, requiring\ngradient updates of LLM model parameters. In contrast, our method enables\nlow-cost continual adaptation via memory-based online reinforcement learning.\nWe formalise this as a Memory-augmented Markov Decision Process (M-MDP),\nequipped with a neural case-selection policy to guide action decisions. Past\nexperiences are stored in an episodic memory, either differentiable or\nnon-parametric. The policy is continually updated based on environmental\nfeedback through a memory rewriting mechanism, whereas policy improvement is\nachieved through efficient memory reading (retrieval). We instantiate our agent\nmodel in the deep research setting, namely AgentFly, which attains top-1 on\nGAIA validation (87.88% Pass@3) and 79.40% on the test set. It reaches\n66.6% F1 and 80.4% PM on the DeepResearcher dataset, outperforming the\nstate-of-the-art training-based method, while case-based memory adds 4.7% to\n9.6% absolute points on out-of-distribution tasks. Our approach offers a\nscalable and efficient pathway for developing generalist LLM agents capable of\ncontinuous, real-time learning without gradient updates, advancing machine\nlearning towards open-ended skill acquisition and deep research scenarios. The\ncode is available at https://github.com/Agent-on-the-Fly/AgentFly.",
+      "keywords": [
+        "Large Language Model (LLM)",
+        "memory-based online reinforcement learning",
+        "Memory-augmented Markov Decision Process (M-MDP)",
+        "neural case-selection policy",
+        "episodic memory",
+        "differentiable memory",
+        "non-parametric memory",
+        "memory rewriting mechanism",
+        "memory reading",
+        "AgentFly",
+        "GAIA validation",
+        "DeepResearcher dataset",
+        "open-ended skill acquisition",
+        "deep research scenarios"
+      ],
+      "url": "https://huggingface.co/papers/2508.16153",
+      "published_at": "2025-08-22"
+    },
+    {
+      "paper_id": "hf:2508.10711",
+      "title": "NextStep-1: Toward Autoregressive Image Generation with Continuous\n  Tokens at Scale",
+      "summary": "Prevailing autoregressive (AR) models for text-to-image generation either\nrely on heavy, computationally-intensive diffusion models to process continuous\nimage tokens, or employ vector quantization (VQ) to obtain discrete tokens with\nquantization loss. In this paper, we push the autoregressive paradigm forward\nwith NextStep-1, a 14B autoregressive model paired with a 157M flow matching\nhead, training on discrete text tokens and continuous image tokens with\nnext-token prediction objectives. NextStep-1 achieves state-of-the-art\nperformance for autoregressive models in text-to-image generation tasks,\nexhibiting strong capabilities in high-fidelity image synthesis. Furthermore,\nour method shows strong performance in image editing, highlighting the power\nand versatility of our unified approach. To facilitate open research, we will\nrelease our code and models to the community.",
+      "keywords": [
+        "autoregressive models",
+        "diffusion models",
+        "vector quantization",
+        "flow matching",
+        "next-token prediction",
+        "high-fidelity image synthesis",
+        "image editing"
+      ],
+      "url": "https://huggingface.co/papers/2508.10711",
+      "published_at": "2025-08-14"
+    },
+    {
+      "paper_id": "hf:2508.10433",
+      "title": "We-Math 2.0: A Versatile MathBook System for Incentivizing Visual\n  Mathematical Reasoning",
+      "summary": "Multimodal Large Language Models (MLLMs) have demonstrated impressive\ncapabilities across various tasks, but still struggle with complex mathematical\nreasoning. Existing research primarily focuses on dataset construction and\nmethod optimization, often overlooking two critical aspects: comprehensive\nknowledge-driven design and model-centric data space modeling. In this paper,\nwe introduce We-Math 2.0, a unified system that integrates a structured\nmathematical knowledge system, model-centric data space modeling, and a\nreinforcement learning (RL)-based training paradigm to comprehensively enhance\nthe mathematical reasoning abilities of MLLMs. The key contributions of We-Math\n2.0 are fourfold: (1) MathBook Knowledge System: We construct a five-level\nhierarchical system encompassing 491 knowledge points and 1,819 fundamental\nprinciples. (2) MathBook-Standard & Pro: We develop MathBook-Standard, a\ndataset that ensures broad conceptual coverage and flexibility through dual\nexpansion. Additionally, we define a three-dimensional difficulty space and\ngenerate 7 progressive variants per problem to build MathBook-Pro, a\nchallenging dataset for robust training. (3) MathBook-RL: We propose a\ntwo-stage RL framework comprising: (i) Cold-Start Fine-tuning, which aligns the\nmodel with knowledge-oriented chain-of-thought reasoning; and (ii) Progressive\nAlignment RL, leveraging average-reward learning and dynamic data scheduling to\nachieve progressive alignment across difficulty levels. (4) MathBookEval: We\nintroduce a comprehensive benchmark covering all 491 knowledge points with\ndiverse reasoning step distributions. Experimental results show that\nMathBook-RL performs competitively with existing baselines on four widely-used\nbenchmarks and achieves strong results on MathBookEval, suggesting promising\ngeneralization in mathematical reasoning.",
+      "keywords": [
+        "Multimodal Large Language Models",
+        "MLLMs",
+        "mathematical reasoning",
+        "MathBook Knowledge System",
+        "MathBook-Standard",
+        "MathBook-Pro",
+        "MathBook-RL",
+        "Cold-Start Fine-tuning",
+        "Progressive Alignment RL",
+        "MathBookEval",
+        "chain-of-thought reasoning",
+        "average-reward learning",
+        "dynamic data scheduling"
+      ],
+      "url": "https://huggingface.co/papers/2508.10433",
+      "published_at": "2025-08-14"
+    },
+    {
+      "paper_id": "hf:2508.19205",
+      "title": "VibeVoice Technical Report",
+      "summary": "This report presents VibeVoice, a novel model designed to synthesize\nlong-form speech with multiple speakers by employing next-token diffusion,\nwhich is a unified method for modeling continuous data by autoregressively\ngenerating latent vectors via diffusion. To enable this, we introduce a novel\ncontinuous speech tokenizer that, when compared to the popular Encodec model,\nimproves data compression by 80 times while maintaining comparable performance.\nThe tokenizer effectively preserves audio fidelity while significantly boosting\ncomputational efficiency for processing long sequences. Thus, VibeVoice can\nsynthesize long-form speech for up to 90 minutes (in a 64K context window\nlength) with a maximum of 4 speakers, capturing the authentic conversational\n``vibe'' and surpassing open-source and proprietary dialogue models.",
+      "keywords": [
+        "next-token diffusion",
+        "continuous speech tokenizer",
+        "Encodec",
+        "audio fidelity",
+        "computational efficiency",
+        "long-form speech",
+        "multi-speaker synthesis",
+        "conversational vibe",
+        "dialogue models"
+      ],
+      "url": "https://huggingface.co/papers/2508.19205",
+      "published_at": "2025-08-26"
+    },
+    {
+      "paper_id": "hf:2508.05748",
+      "title": "WebWatcher: Breaking New Frontier of Vision-Language Deep Research Agent",
+      "summary": "Web agents such as Deep Research have demonstrated superhuman cognitive\nabilities, capable of solving highly challenging information-seeking problems.\nHowever, most research remains primarily text-centric, overlooking visual\ninformation in the real world. This makes multimodal Deep Research highly\nchallenging, as such agents require much stronger reasoning abilities in\nperception, logic, knowledge, and the use of more sophisticated tools compared\nto text-based agents. To address this limitation, we introduce WebWatcher, a\nmulti-modal Agent for Deep Research equipped with enhanced visual-language\nreasoning capabilities. It leverages high-quality synthetic multimodal\ntrajectories for efficient cold start training, utilizes various tools for deep\nreasoning, and further enhances generalization through reinforcement learning.\nTo better evaluate the capabilities of multimodal agents, we propose\nBrowseComp-VL, a benchmark with BrowseComp-style that requires complex\ninformation retrieval involving both visual and textual information.\nExperimental results show that WebWatcher significantly outperforms proprietary\nbaseline, RAG workflow and open-source agents in four challenging VQA\nbenchmarks, which paves the way for solving complex multimodal\ninformation-seeking tasks.",
+      "keywords": [
+        "multimodal",
+        "visual-language reasoning",
+        "high-quality synthetic multimodal trajectories",
+        "reinforcement learning",
+        "BrowseComp-VL",
+        "VQA benchmarks"
+      ],
+      "url": "https://huggingface.co/papers/2508.05748",
+      "published_at": "2025-08-07"
+    },
+    {
+      "paper_id": "hf:2508.02193",
+      "title": "Seed Diffusion: A Large-Scale Diffusion Language Model with High-Speed\n  Inference",
+      "summary": "We present Seed Diffusion Preview, a large-scale language model based on\ndiscrete-state diffusion, offering remarkably fast inference speed. Thanks to\nnon-sequential, parallel generation, discrete diffusion models provide a\nnotable speedup to mitigate the inherent latency of token-by-token decoding, as\ndemonstrated recently (e.g., Mercury Coder, Gemini Diffusion). Seed Diffusion\nPreview achieves an inference speed of 2,146 token/s over H20 GPUs while\nmaintaining competitive performance across a sweep of standard code evaluation\nbenchmarks, significantly faster than contemporary Mercury and Gemini\nDiffusion, establishing new state of the art on the speed-quality Pareto\nfrontier for code models.",
+      "keywords": [
+        "discrete-state diffusion",
+        "non-sequential",
+        "parallel generation",
+        "token-by-token decoding",
+        "Seed Diffusion Preview",
+        "H20 GPUs",
+        "code evaluation benchmarks",
+        "speed-quality Pareto frontier"
+      ],
+      "url": "https://huggingface.co/papers/2508.02193",
+      "published_at": "2025-08-04"
+    },
+    {
+      "paper_id": "hf:2508.05004",
+      "title": "R-Zero: Self-Evolving Reasoning LLM from Zero Data",
+      "summary": "Self-evolving Large Language Models (LLMs) offer a scalable path toward\nsuper-intelligence by autonomously generating, refining, and learning from\ntheir own experiences. However, existing methods for training such models still\nrely heavily on vast human-curated tasks and labels, typically via fine-tuning\nor reinforcement learning, which poses a fundamental bottleneck to advancing AI\nsystems toward capabilities beyond human intelligence. To overcome this\nlimitation, we introduce R-Zero, a fully autonomous framework that generates\nits own training data from scratch. Starting from a single base LLM, R-Zero\ninitializes two independent models with distinct roles, a Challenger and a\nSolver. These models are optimized separately and co-evolve through\ninteraction: the Challenger is rewarded for proposing tasks near the edge of\nthe Solver capability, and the Solver is rewarded for solving increasingly\nchallenging tasks posed by the Challenger. This process yields a targeted,\nself-improving curriculum without any pre-existing tasks and labels.\nEmpirically, R-Zero substantially improves reasoning capability across\ndifferent backbone LLMs, e.g., boosting the Qwen3-4B-Base by +6.49 on\nmath-reasoning benchmarks and +7.54 on general-domain reasoning benchmarks.",
+      "keywords": [
+        "Self-evolving Large Language Models",
+        "LLMs",
+        "R-Zero",
+        "Challenger",
+        "Solver",
+        "co-evolve",
+        "math-reasoning benchmarks",
+        "general-domain reasoning benchmarks"
+      ],
+      "url": "https://huggingface.co/papers/2508.05004",
+      "published_at": "2025-08-07"
+    },
+    {
+      "paper_id": "hf:2508.13167",
+      "title": "Chain-of-Agents: End-to-End Agent Foundation Models via Multi-Agent\n  Distillation and Agentic RL",
+      "summary": "Recent advances in large language models (LLMs) and multi-agent systems have\ndemonstrated remarkable capabilities in complex problem-solving tasks such as\ndeep research, vibe coding, and mathematical reasoning. However, most existing\nmulti-agent systems are built upon manual prompt/workflow engineering with\nsophisticated agent frameworks, making them computationally inefficient, less\ncapable, and can not benefit from data-centric learning. In this work, we\nintroduce Chain-of-Agents (CoA), a novel paradigm of LLM reasoning that enables\nnative end-to-end complex problem-solving in the same way as a multi-agent\nsystem (i.e., multi-turn problem solving with multiple tools and multiple\nagents) within one model. In chain-of-agents problem-solving, the model\ndynamically activates different tool agents and role-playing agents to simulate\nmulti-agent collaboration in an end-to-end fashion. To elicit end-to-end\nchain-of-agents problem-solving abilities in LLMs, we introduce a multi-agent\ndistillation framework to distill state-of-the-art multi-agent systems into\nchain-of-agents trajectories for agentic supervised fine-tuning. We then use\nagentic reinforcement learning on verifiable agentic tasks to further improve\nthe models' capabilities on chain-of-agents problem solving. We call the\nresulting models Agent Foundation Models (AFMs). Our empirical studies\ndemonstrate that AFM establishes new state-of-the-art performance across\ndiverse benchmarks in both web agent and code agent settings. We make the\nentire research, including the model weights, code for training and evaluation,\nand the training data, fully open-sourced, which offers a solid starting point\nfor future research on agent models and agentic RL.",
+      "keywords": [
+        "large language models",
+        "multi-agent systems",
+        "deep research",
+        "vibe coding",
+        "mathematical reasoning",
+        "prompt/workflow engineering",
+        "agent frameworks",
+        "chain-of-agents",
+        "tool agents",
+        "role-playing agents",
+        "multi-agent distillation",
+        "agentic supervised fine-tuning",
+        "agentic reinforcement learning",
+        "Agent Foundation Models",
+        "AFMs",
+        "web agent",
+        "code agent",
+        "verifiable agentic tasks"
+      ],
+      "url": "https://huggingface.co/papers/2508.13167",
+      "published_at": "2025-08-06"
+    },
+    {
+      "paper_id": "hf:2508.03680",
+      "title": "Agent Lightning: Train ANY AI Agents with Reinforcement Learning",
+      "summary": "We present Agent Lightning, a flexible and extensible framework that enables\nReinforcement Learning (RL)-based training of Large Language Models (LLMs) for\nany AI agent. Unlike existing methods that tightly couple RL training with\nagent or rely on sequence concatenation with masking, Agent Lightning achieves\ncomplete decoupling between agent execution and training, allowing seamless\nintegration with existing agents developed via diverse ways (e.g., using\nframeworks like LangChain, OpenAI Agents SDK, AutoGen, and building from\nscratch) with almost ZERO code modifications. By formulating agent execution as\nMarkov decision process, we define an unified data interface and propose a\nhierarchical RL algorithm, LightningRL, which contains a credit assignment\nmodule, allowing us to decompose trajectories generated by ANY agents into\ntraining transition. This enables RL to handle complex interaction logic, such\nas multi-agent scenarios and dynamic workflows. For the system design, we\nintroduce a Training-Agent Disaggregation architecture, and brings agent\nobservability frameworks into agent runtime, providing a standardized agent\nfinetuning interface. Experiments across text-to-SQL, retrieval-augmented\ngeneration, and math tool-use tasks demonstrate stable, continuous\nimprovements, showcasing the framework's potential for real-world agent\ntraining and deployment.",
+      "keywords": [
+        "Reinforcement Learning",
+        "Large Language Models",
+        "Markov decision process",
+        "hierarchical RL algorithm",
+        "credit assignment module",
+        "Training-Agent Disaggregation architecture",
+        "agent observability frameworks",
+        "text-to-SQL",
+        "retrieval-augmented generation",
+        "math tool-use tasks"
+      ],
+      "url": "https://huggingface.co/papers/2508.03680",
+      "published_at": "2025-08-05"
+    },
+    {
+      "paper_id": "hf:2508.14029",
+      "title": "Beyond Pass@1: Self-Play with Variational Problem Synthesis Sustains\n  RLVR",
+      "summary": "Reinforcement Learning with Verifiable Rewards (RLVR) has recently emerged as\na key paradigm for post-training Large Language Models (LLMs), particularly for\ncomplex reasoning tasks. However, vanilla RLVR training has been shown to\nimprove Pass@1 performance at the expense of policy entropy, leading to reduced\ngeneration diversity and limiting the Pass@k performance, which typically\nrepresents the upper bound of LLM reasoning capability. In this paper, we\nsystematically analyze the policy's generation diversity from the perspective\nof training problems and find that augmenting and updating training problems\nhelps mitigate entropy collapse during training. Based on these observations,\nwe propose an online Self-play with Variational problem Synthesis (SvS)\nstrategy for RLVR training, which uses the policy's correct solutions to\nsynthesize variational problems while ensuring their reference answers remain\nidentical to the originals. This self-improving strategy effectively maintains\npolicy entropy during training and substantially improves Pass@k compared with\nstandard RLVR, sustaining prolonged improvements and achieving absolute gains\nof 18.3% and 22.8% in Pass@32 performance on the competition-level AIME24 and\nAIME25 benchmarks. Experiments on 12 reasoning benchmarks across varying model\nsizes from 3B to 32B consistently demonstrate the generalizability and\nrobustness of SvS.",
+      "keywords": [
+        "Reinforcement Learning with Verifiable Rewards (RLVR)",
+        "Large Language Models (LLMs)",
+        "policy entropy",
+        "generation diversity",
+        "Pass@1",
+        "Pass@k",
+        "self-play",
+        "variational problem synthesis",
+        "AIME24",
+        "AIME25"
+      ],
+      "url": "https://huggingface.co/papers/2508.14029",
+      "published_at": "2025-08-19"
+    },
+    {
+      "paper_id": "hf:2508.20722",
+      "title": "rStar2-Agent: Agentic Reasoning Technical Report",
+      "summary": "We introduce rStar2-Agent, a 14B math reasoning model trained with agentic\nreinforcement learning to achieve frontier-level performance. Beyond current\nlong CoT, the model demonstrates advanced cognitive behaviors, such as thinking\ncarefully before using Python coding tools and reflecting on code execution\nfeedback to autonomously explore, verify, and refine intermediate steps in\ncomplex problem-solving. This capability is enabled through three key\ninnovations that makes agentic RL effective at scale: (i) an efficient RL\ninfrastructure with a reliable Python code environment that supports\nhigh-throughput execution and mitigates the high rollout costs, enabling\ntraining on limited GPU resources (64 MI300X GPUs); (ii) GRPO-RoC, an agentic\nRL algorithm with a Resample-on-Correct rollout strategy that addresses the\ninherent environment noises from coding tools, allowing the model to reason\nmore effectively in a code environment; (iii) An efficient agent training\nrecipe that starts with non-reasoning SFT and progresses through multi-RL\nstages, yielding advanced cognitive abilities with minimal compute cost. To\nthis end, rStar2-Agent boosts a pre-trained 14B model to state of the art in\nonly 510 RL steps within one week, achieving average pass@1 scores of 80.6% on\nAIME24 and 69.8% on AIME25, surpassing DeepSeek-R1 (671B) with significantly\nshorter responses. Beyond mathematics, rStar2-Agent-14B also demonstrates\nstrong generalization to alignment, scientific reasoning, and agentic tool-use\ntasks. Code and training recipes are available at\nhttps://github.com/microsoft/rStar.",
+      "keywords": [
+        "agentic reinforcement learning",
+        "CoT",
+        "Python coding tools",
+        "GRPO-RoC",
+        "Resample-on-Correct",
+        "SFT",
+        "multi-RL",
+        "AIME24",
+        "AIME25",
+        "DeepSeek-R1",
+        "alignment",
+        "scientific reasoning",
+        "agentic tool-use"
+      ],
+      "url": "https://huggingface.co/papers/2508.20722",
+      "published_at": "2025-08-28"
+    },
+    {
+      "paper_id": "hf:2508.07050",
+      "title": "ReasonRank: Empowering Passage Ranking with Strong Reasoning Ability",
+      "summary": "Large Language Model (LLM) based listwise ranking has shown superior\nperformance in many passage ranking tasks. With the development of Large\nReasoning Models, many studies have demonstrated that step-by-step reasoning\nduring test-time helps improve listwise ranking performance. However, due to\nthe scarcity of reasoning-intensive training data, existing rerankers perform\npoorly in many complex ranking scenarios and the ranking ability of\nreasoning-intensive rerankers remains largely underdeveloped. In this paper, we\nfirst propose an automated reasoning-intensive training data synthesis\nframework, which sources training queries and passages from diverse domains and\napplies DeepSeek-R1 to generate high-quality training labels. A\nself-consistency data filtering mechanism is designed to ensure the data\nquality. To empower the listwise reranker with strong reasoning ability, we\nfurther propose a two-stage post-training approach, which includes a cold-start\nsupervised fine-tuning (SFT) stage for reasoning pattern learning and a\nreinforcement learning (RL) stage for further ranking ability enhancement.\nDuring the RL stage, based on the nature of listwise ranking, we design a\nmulti-view ranking reward, which is more effective than a ranking metric-based\nreward. Extensive experiments demonstrate that our trained reasoning-intensive\nreranker ReasonRank outperforms existing baselines significantly and\nalso achieves much lower latency than pointwise reranker Rank1. Through\nfurther experiments, our ReasonRank has achieved state-of-the-art (SOTA)\nperformance 40.6 on the BRIGHT\nleaderboard\\footnote{https://brightbenchmark.github.io/.} Our codes are\navailable at https://github.com/8421BCD/ReasonRank.",
+      "keywords": [
+        "Large Language Model",
+        "listwise ranking",
+        "Large Reasoning Models",
+        "step-by-step reasoning",
+        "DeepSeek-R1",
+        "self-consistency data filtering",
+        "cold-start supervised fine-tuning",
+        "reinforcement learning",
+        "multi-view ranking reward",
+        "BRIGHT leaderboard"
+      ],
+      "url": "https://huggingface.co/papers/2508.07050",
+      "published_at": "2025-08-09"
+    },
+    {
+      "paper_id": "hf:2507.23726",
+      "title": "Seed-Prover: Deep and Broad Reasoning for Automated Theorem Proving",
+      "summary": "LLMs have demonstrated strong mathematical reasoning abilities by leveraging\nreinforcement learning with long chain-of-thought, yet they continue to\nstruggle with theorem proving due to the lack of clear supervision signals when\nsolely using natural language. Dedicated domain-specific languages like Lean\nprovide clear supervision via formal verification of proofs, enabling effective\ntraining through reinforcement learning. In this work, we propose\nSeed-Prover, a lemma-style whole-proof reasoning model. Seed-Prover\ncan iteratively refine its proof based on Lean feedback, proved lemmas, and\nself-summarization. To solve IMO-level contest problems, we design three\ntest-time inference strategies that enable both deep and broad reasoning.\nSeed-Prover proves 78.1% of formalized past IMO problems, saturates MiniF2F,\nand achieves over 50\\% on PutnamBench, outperforming the previous\nstate-of-the-art by a large margin. To address the lack of geometry support in\nLean, we introduce a geometry reasoning engine Seed-Geometry, which\noutperforms previous formal geometry engines. We use these two systems to\nparticipate in IMO 2025 and fully prove 5 out of 6 problems. This work\nrepresents a significant advancement in automated mathematical reasoning,\ndemonstrating the effectiveness of formal verification with long\nchain-of-thought reasoning.",
+      "keywords": [
+        "reinforcement learning",
+        "long chain-of-thought",
+        "theorem proving",
+        "formal verification",
+        "lemma-style reasoning",
+        "Seed-Prover",
+        "MiniF2F",
+        "PutnamBench",
+        "Seed-Geometry",
+        "automated mathematical reasoning"
+      ],
+      "url": "https://huggingface.co/papers/2507.23726",
+      "published_at": "2025-07-31"
+    },
+    {
+      "paper_id": "hf:2508.11737",
+      "title": "Ovis2.5 Technical Report",
+      "summary": "We present Ovis2.5, a successor to Ovis2 designed for native-resolution\nvisual perception and strong multimodal reasoning. Ovis2.5 integrates a\nnative-resolution vision transformer that processes images at their native,\nvariable resolutions, avoiding the degradation from fixed-resolution tiling and\npreserving both fine detail and global layout -- crucial for visually dense\ncontent like complex charts. To strengthen reasoning, we train the model to\nmove beyond linear chain-of-thought and perform reflection -- including\nself-checking and revision. This advanced capability is exposed as an optional\n\"thinking mode\" at inference time, allowing users to trade latency for enhanced\naccuracy on difficult inputs. The model is trained via a comprehensive\nfive-phase curriculum that progressively builds its skills. The process begins\nwith foundational visual and multimodal pretraining, advances through\nlarge-scale instruction tuning, and culminates in alignment and reasoning\nenhancement using DPO and GRPO. To scale these upgrades efficiently, we employ\nmultimodal data packing and hybrid parallelism, yielding a significant\nend-to-end speedup. We release two open-source models: Ovis2.5-9B and\nOvis2.5-2B. The latter continues the \"small model, big performance\" philosophy\nof Ovis2, making it ideal for resource-constrained, on-device scenarios. On the\nOpenCompass multimodal leaderboard, Ovis2.5-9B averages 78.3, marking a\nsubstantial improvement over its predecessor, Ovis2-8B, and achieving\nstate-of-the-art results among open-source MLLMs in the sub-40B parameter\nrange; Ovis2.5-2B scores 73.9, establishing SOTA for its size. Beyond aggregate\nscores, Ovis2.5 achieves leading results on STEM benchmarks, exhibits strong\ncapabilities on grounding and video tasks, and achieves open-source SOTA at its\nscale for complex chart analysis.",
+      "keywords": [
+        "vision transformer",
+        "native-resolution",
+        "multimodal reasoning",
+        "linear chain-of-thought",
+        "reflection",
+        "thinking mode",
+        "five-phase curriculum",
+        "DPO",
+        "GRPO",
+        "multimodal data packing",
+        "hybrid parallelism",
+        "OpenCompass",
+        "MLLMs",
+        "STEM benchmarks",
+        "grounding",
+        "video tasks",
+        "complex chart analysis"
+      ],
+      "url": "https://huggingface.co/papers/2508.11737",
+      "published_at": "2025-08-15"
+    },
+    {
+      "paper_id": "hf:2508.07999",
+      "title": "WideSearch: Benchmarking Agentic Broad Info-Seeking",
+      "summary": "From professional research to everyday planning, many tasks are bottlenecked\nby wide-scale information seeking, which is more repetitive than cognitively\ncomplex. With the rapid development of Large Language Models (LLMs), automated\nsearch agents powered by LLMs offer a promising solution to liberate humans\nfrom this tedious work. However, the capability of these agents to perform such\n\"wide-context\" collection reliably and completely remains largely unevaluated\ndue to a lack of suitable benchmarks. To bridge this gap, we introduce\nWideSearch, a new benchmark engineered to evaluate agent reliability on these\nlarge-scale collection tasks. The benchmark features 200 manually curated\nquestions (100 in English, 100 in Chinese) from over 15 diverse domains,\ngrounded in real user queries. Each task requires agents to collect large-scale\natomic information, which could be verified one by one objectively, and arrange\nit into a well-organized output. A rigorous five-stage quality control pipeline\nensures the difficulty, completeness, and verifiability of the dataset. We\nbenchmark over 10 state-of-the-art agentic search systems, including\nsingle-agent, multi-agent frameworks, and end-to-end commercial systems. Most\nsystems achieve overall success rates near 0\\%, with the best performer\nreaching just 5\\%. However, given sufficient time, cross-validation by multiple\nhuman testers can achieve a near 100\\% success rate. These results demonstrate\nthat present search agents have critical deficiencies in large-scale\ninformation seeking, underscoring urgent areas for future research and\ndevelopment in agentic search. Our dataset, evaluation pipeline, and benchmark\nresults have been publicly released at https://widesearch-seed.github.io/",
+      "keywords": [
+        "Large Language Models",
+        "automated search agents",
+        "WideSearch",
+        "benchmark",
+        "quality control pipeline",
+        "agentic search systems",
+        "single-agent",
+        "multi-agent frameworks",
+        "end-to-end commercial systems"
+      ],
+      "url": "https://huggingface.co/papers/2508.07999",
+      "published_at": "2025-08-11"
+    },
+    {
+      "paper_id": "hf:2508.07407",
+      "title": "A Comprehensive Survey of Self-Evolving AI Agents: A New Paradigm\n  Bridging Foundation Models and Lifelong Agentic Systems",
+      "summary": "Recent advances in large language models have sparked growing interest in AI\nagents capable of solving complex, real-world tasks. However, most existing\nagent systems rely on manually crafted configurations that remain static after\ndeployment, limiting their ability to adapt to dynamic and evolving\nenvironments. To this end, recent research has explored agent evolution\ntechniques that aim to automatically enhance agent systems based on interaction\ndata and environmental feedback. This emerging direction lays the foundation\nfor self-evolving AI agents, which bridge the static capabilities of foundation\nmodels with the continuous adaptability required by lifelong agentic systems.\nIn this survey, we provide a comprehensive review of existing techniques for\nself-evolving agentic systems. Specifically, we first introduce a unified\nconceptual framework that abstracts the feedback loop underlying the design of\nself-evolving agentic systems. The framework highlights four key components:\nSystem Inputs, Agent System, Environment, and Optimisers, serving as a\nfoundation for understanding and comparing different strategies. Based on this\nframework, we systematically review a wide range of self-evolving techniques\nthat target different components of the agent system. We also investigate\ndomain-specific evolution strategies developed for specialised fields such as\nbiomedicine, programming, and finance, where optimisation objectives are\ntightly coupled with domain constraints. In addition, we provide a dedicated\ndiscussion on the evaluation, safety, and ethical considerations for\nself-evolving agentic systems, which are critical to ensuring their\neffectiveness and reliability. This survey aims to provide researchers and\npractitioners with a systematic understanding of self-evolving AI agents,\nlaying the foundation for the development of more adaptive, autonomous, and\nlifelong agentic systems.",
+      "keywords": [
+        "agent evolution",
+        "self-evolving agentic systems",
+        "feedback loop",
+        "System Inputs",
+        "Agent System",
+        "Environment",
+        "Optimisers",
+        "domain-specific evolution strategies",
+        "evaluation",
+        "safety",
+        "ethical considerations"
+      ],
+      "url": "https://huggingface.co/papers/2508.07407",
+      "published_at": "2025-08-10"
+    },
+    {
+      "paper_id": "hf:2508.10874",
+      "title": "SSRL: Self-Search Reinforcement Learning",
+      "summary": "We investigate the potential of large language models (LLMs) to serve as\nefficient simulators for agentic search tasks in reinforcement learning (RL),\nthereby reducing dependence on costly interactions with external search\nengines. To this end, we first quantify the intrinsic search capability of LLMs\nvia structured prompting and repeated sampling, which we term Self-Search. Our\nresults reveal that LLMs exhibit strong scaling behavior with respect to the\ninference budget, achieving high pass@k on question-answering benchmarks,\nincluding the challenging BrowseComp task. Building on these observations, we\nintroduce Self-Search RL (SSRL), which enhances LLMs' Self-Search capability\nthrough format-based and rule-based rewards. SSRL enables models to iteratively\nrefine their knowledge utilization internally, without requiring access to\nexternal tools. Empirical evaluations demonstrate that SSRL-trained policy\nmodels provide a cost-effective and stable environment for search-driven RL\ntraining, reducing reliance on external search engines and facilitating robust\nsim-to-real transfer. We draw the following conclusions: 1) LLMs possess world\nknowledge that can be effectively elicited to achieve high performance; 2) SSRL\ndemonstrates the potential of leveraging internal knowledge to reduce\nhallucination; 3) SSRL-trained models integrate seamlessly with external search\nengines without additional effort. Our findings highlight the potential of LLMs\nto support more scalable RL agent training.",
+      "keywords": [
+        "large language models",
+        "LLMs",
+        "reinforcement learning",
+        "RL",
+        "Self-Search",
+        "pass@k",
+        "BrowseComp",
+        "Self-Search RL",
+        "SSRL",
+        "format-based rewards",
+        "rule-based rewards",
+        "hallucination"
+      ],
+      "url": "https://huggingface.co/papers/2508.10874",
+      "published_at": "2025-08-14"
+    },
+    {
+      "paper_id": "hf:2508.00414",
+      "title": "Cognitive Kernel-Pro: A Framework for Deep Research Agents and Agent\n  Foundation Models Training",
+      "summary": "General AI Agents are increasingly recognized as foundational frameworks for\nthe next generation of artificial intelligence, enabling complex reasoning, web\ninteraction, coding, and autonomous research capabilities. However, current\nagent systems are either closed-source or heavily reliant on a variety of paid\nAPIs and proprietary tools, limiting accessibility and reproducibility for the\nresearch community. In this work, we present Cognitive Kernel-Pro, a\nfully open-source and (to the maximum extent) free multi-module agent framework\ndesigned to democratize the development and evaluation of advanced AI agents.\nWithin Cognitive Kernel-Pro, we systematically investigate the curation of\nhigh-quality training data for Agent Foundation Models, focusing on the\nconstruction of queries, trajectories, and verifiable answers across four key\ndomains: web, file, code, and general reasoning. Furthermore, we explore novel\nstrategies for agent test-time reflection and voting to enhance agent\nrobustness and performance. We evaluate Cognitive Kernel-Pro on GAIA, achieving\nstate-of-the-art results among open-source and free agents. Notably, our\n8B-parameter open-source model surpasses previous leading systems such as\nWebDancer and WebSailor, establishing a new performance standard for\naccessible, high-capability AI agents. Code is available at\nhttps://github.com/Tencent/CognitiveKernel-Pro",
+      "keywords": [
+        "Agent Foundation Models",
+        "queries",
+        "trajectories",
+        "verifiable answers",
+        "agent test-time reflection",
+        "agent voting",
+        "GAIA",
+        "WebDancer",
+        "WebSailor"
+      ],
+      "url": "https://huggingface.co/papers/2508.00414",
+      "published_at": "2025-08-01"
+    },
+    {
+      "paper_id": "hf:2508.15260",
+      "title": "Deep Think with Confidence",
+      "summary": "Large Language Models (LLMs) have shown great potential in reasoning tasks\nthrough test-time scaling methods like self-consistency with majority voting.\nHowever, this approach often leads to diminishing returns in accuracy and high\ncomputational overhead. To address these challenges, we introduce Deep Think\nwith Confidence (DeepConf), a simple yet powerful method that enhances both\nreasoning efficiency and performance at test time. DeepConf leverages\nmodel-internal confidence signals to dynamically filter out low-quality\nreasoning traces during or after generation. It requires no additional model\ntraining or hyperparameter tuning and can be seamlessly integrated into\nexisting serving frameworks. We evaluate DeepConf across a variety of reasoning\ntasks and the latest open-source models, including Qwen 3 and GPT-OSS series.\nNotably, on challenging benchmarks such as AIME 2025, DeepConf@512 achieves up\nto 99.9% accuracy and reduces generated tokens by up to 84.7% compared to full\nparallel thinking.",
+      "keywords": [
+        "Deep Think with Confidence",
+        "DeepConf",
+        "model-internal confidence signals",
+        "reasoning traces",
+        "Qwen 3",
+        "GPT-OSS series",
+        "AIME 2025"
+      ],
+      "url": "https://huggingface.co/papers/2508.15260",
+      "published_at": "2025-08-21"
+    },
+    {
+      "paper_id": "hf:2508.20751",
+      "title": "Pref-GRPO: Pairwise Preference Reward-based GRPO for Stable\n  Text-to-Image Reinforcement Learning",
+      "summary": "Recent advancements highlight the importance of GRPO-based reinforcement\nlearning methods and benchmarking in enhancing text-to-image (T2I) generation.\nHowever, current methods using pointwise reward models (RM) for scoring\ngenerated images are susceptible to reward hacking. We reveal that this happens\nwhen minimal score differences between images are amplified after\nnormalization, creating illusory advantages that drive the model to\nover-optimize for trivial gains, ultimately destabilizing the image generation\nprocess. To address this, we propose Pref-GRPO, a pairwise preference\nreward-based GRPO method that shifts the optimization objective from score\nmaximization to preference fitting, ensuring more stable training. In\nPref-GRPO, images are pairwise compared within each group using preference RM,\nand the win rate is used as the reward signal. Extensive experiments\ndemonstrate that PREF-GRPO differentiates subtle image quality differences,\nproviding more stable advantages and mitigating reward hacking. Additionally,\nexisting T2I benchmarks are limited by coarse evaluation criteria, hindering\ncomprehensive model assessment. To solve this, we introduce UniGenBench, a\nunified T2I benchmark comprising 600 prompts across 5 main themes and 20\nsubthemes. It evaluates semantic consistency through 10 primary and 27\nsub-criteria, leveraging MLLM for benchmark construction and evaluation. Our\nbenchmarks uncover the strengths and weaknesses of both open and closed-source\nT2I models and validate the effectiveness of Pref-GRPO.",
+      "keywords": [
+        "GRPO",
+        "reinforcement learning",
+        "text-to-image",
+        "pointwise reward models",
+        "reward hacking",
+        "pairwise preference",
+        "preference fitting",
+        "win rate",
+        "UniGenBench",
+        "semantic consistency",
+        "MLLM"
+      ],
+      "url": "https://huggingface.co/papers/2508.20751",
+      "published_at": "2025-08-28"
+    },
+    {
+      "paper_id": "hf:2508.15882",
+      "title": "Beyond Transcription: Mechanistic Interpretability in ASR",
+      "summary": "Interpretability methods have recently gained significant attention,\nparticularly in the context of large language models, enabling insights into\nlinguistic representations, error detection, and model behaviors such as\nhallucinations and repetitions. However, these techniques remain underexplored\nin automatic speech recognition (ASR), despite their potential to advance both\nthe performance and interpretability of ASR systems. In this work, we adapt and\nsystematically apply established interpretability methods such as logit lens,\nlinear probing, and activation patching, to examine how acoustic and semantic\ninformation evolves across layers in ASR systems. Our experiments reveal\npreviously unknown internal dynamics, including specific encoder-decoder\ninteractions responsible for repetition hallucinations and semantic biases\nencoded deep within acoustic representations. These insights demonstrate the\nbenefits of extending and applying interpretability techniques to speech\nrecognition, opening promising directions for future research on improving\nmodel transparency and robustness.",
+      "keywords": [
+        "logit lens",
+        "linear probing",
+        "activation patching",
+        "encoder-decoder interactions",
+        "repetition hallucinations",
+        "semantic biases"
+      ],
+      "url": "https://huggingface.co/papers/2508.15882",
+      "published_at": "2025-08-21"
+    },
+    {
+      "paper_id": "hf:2508.02694",
+      "title": "Efficient Agents: Building Effective Agents While Reducing Cost",
+      "summary": "The remarkable capabilities of Large Language Model (LLM)-driven agents have\nenabled sophisticated systems to tackle complex, multi-step tasks, but their\nescalating costs threaten scalability and accessibility. This work presents the\nfirst systematic study of the efficiency-effectiveness trade-off in modern\nagent systems, addressing the critical need for cost-effective designs without\nsacrificing performance. We investigate three key questions: (1) How much\ncomplexity do agentic tasks inherently require? (2) When do additional modules\nyield diminishing returns? (3) How much efficiency can be gained through the\ndesign of efficient agent frameworks? Through an empirical analysis on the GAIA\nbenchmark, we evaluate the impact of LLM backbone selection, agent framework\ndesigns, and test-time scaling strategies. Using the cost-of-pass metric, we\nquantify the efficiency-performance trade-off across these dimensions. Our\nfindings inform the development of Efficient Agents , a novel agent framework\nthat has an optimal complexity to task requirements. Efficient Agents retains\n96.7% of the performance of OWL, one leading open-source agent framework, while\nreducing operational costs from 0.398 to 0.228, resulting in a 28.4%\nimprovement in cost-of-pass. Our work provides actionable insights for\ndesigning efficient, high-performing agent systems, advancing the accessibility\nand sustainability of AI-driven solutions.",
+      "keywords": [
+        "Large Language Model",
+        "LLM",
+        "agent systems",
+        "efficiency-effectiveness trade-off",
+        "agentic tasks",
+        "agent framework",
+        "GAIA benchmark",
+        "LLM backbone",
+        "test-time scaling strategies",
+        "cost-of-pass",
+        "Efficient Agents",
+        "OWL"
+      ],
+      "url": "https://huggingface.co/papers/2508.02694",
+      "published_at": "2025-07-24"
+    },
+    {
+      "paper_id": "hf:2508.14460",
+      "title": "DuPO: Enabling Reliable LLM Self-Verification via Dual Preference\n  Optimization",
+      "summary": "We present DuPO, a dual learning-based preference optimization framework that\ngenerates annotation-free feedback via a generalized duality. DuPO addresses\ntwo key limitations: Reinforcement Learning with Verifiable Rewards (RLVR)'s\nreliance on costly labels and applicability restricted to verifiable tasks, and\ntraditional dual learning's restriction to strictly dual task pairs (e.g.,\ntranslation and back-translation). Specifically, DuPO decomposes a primal\ntask's input into known and unknown components, then constructs its dual task\nto reconstruct the unknown part using the primal output and known information\n(e.g., reversing math solutions to recover hidden variables), broadening\napplicability to non-invertible tasks. The quality of this reconstruction\nserves as a self-supervised reward to optimize the primal task, synergizing\nwith LLMs' ability to instantiate both tasks via a single model. Empirically,\nDuPO achieves substantial gains across diverse tasks: it enhances the average\ntranslation quality by 2.13 COMET over 756 directions, boosts the mathematical\nreasoning accuracy by an average of 6.4 points on three challenge benchmarks,\nand enhances performance by 9.3 points as an inference-time reranker (trading\ncomputation for accuracy). These results position DuPO as a scalable, general,\nand annotation-free paradigm for LLM optimization.",
+      "keywords": [
+        "Reinforcement Learning with Verifiable Rewards",
+        "dual learning",
+        "primal task",
+        "dual task",
+        "self-supervised reward",
+        "LLMs",
+        "translation quality",
+        "mathematical reasoning accuracy",
+        "inference-time reranker"
+      ],
+      "url": "https://huggingface.co/papers/2508.14460",
+      "published_at": "2025-08-20"
+    },
+    {
+      "paper_id": "hf:2508.19652",
+      "title": "Self-Rewarding Vision-Language Model via Reasoning Decomposition",
+      "summary": "Vision-Language Models (VLMs) often suffer from visual hallucinations, saying\nthings that are not actually in the image, and language shortcuts, where they\nskip the visual part and just rely on text priors. These issues arise because\nmost post-training methods for VLMs rely on simple verifiable answer matching\nand supervise only final outputs, leaving intermediate visual reasoning without\nexplicit guidance. As a result, VLMs receive sparse visual signals and often\nlearn to prioritize language-based reasoning over visual perception. To\nmitigate this, some existing methods add visual supervision using human\nannotations or distilled labels from external large models. However, human\nannotations are labor-intensive and costly, and because external signals cannot\nadapt to the evolving policy, they cause distributional shifts that can lead to\nreward hacking. In this paper, we introduce Vision-SR1, a self-rewarding method\nthat improves visual reasoning without relying on external visual supervisions\nvia reinforcement learning. Vision-SR1 decomposes VLM reasoning into two\nstages: visual perception and language reasoning. The model is first prompted\nto produce self-contained visual perceptions that are sufficient to answer the\nquestion without referring back the input image. To validate this\nself-containment, the same VLM model is then re-prompted to perform language\nreasoning using only the generated perception as input to compute reward. This\nself-reward is combined with supervision on final outputs, providing a balanced\ntraining signal that strengthens both visual perception and language reasoning.\nOur experiments demonstrate that Vision-SR1 improves visual reasoning,\nmitigates visual hallucinations, and reduces reliance on language shortcuts\nacross diverse vision-language tasks.",
+      "keywords": [
+        "vision-language models",
+        "visual hallucinations",
+        "language shortcuts",
+        "visual reasoning",
+        "reinforcement learning",
+        "self-rewarding method",
+        "visual perception",
+        "language reasoning",
+        "self-containment",
+        "reward hacking"
+      ],
+      "url": "https://huggingface.co/papers/2508.19652",
+      "published_at": "2025-08-27"
+    },
+    {
+      "paper_id": "hf:2508.11630",
+      "title": "Thyme: Think Beyond Images",
+      "summary": "Following OpenAI's introduction of the ``thinking with images'' concept,\nrecent efforts have explored stimulating the use of visual information in the\nreasoning process to enhance model performance in perception and reasoning\ntasks. However, to the best of our knowledge, no open-source work currently\noffers a feature set as rich as proprietary models (O3), which can perform\ndiverse image manipulations and simultaneously enhance logical reasoning\ncapabilities through code. In this paper, we make a preliminary attempt in this\ndirection by introducing Thyme (Think Beyond Images), a novel paradigm for\nenabling MLLMs to transcend existing ``think with images'' approaches by\nautonomously generating and executing diverse image processing and\ncomputational operations via executable code. This approach not only\nfacilitates a rich, on-the-fly set of image manipulations (e.g., cropping,\nrotation, contrast enhancement) but also allows for mathematical computations,\nall while maintaining high autonomy in deciding when and how to apply these\noperations. We activate this capability through a two-stage training strategy:\nan initial SFT on a curated dataset of 500K samples to teach code generation,\nfollowed by a RL phase to refine decision-making. For the RL stage, we manually\ncollect and design high-resolution question-answer pairs to increase the\nlearning difficulty, and we propose GRPO-ATS (Group Relative Policy\nOptimization with Adaptive Temperature Sampling), an algorithm that applies\ndistinct temperatures to text and code generation to balance reasoning\nexploration with code execution precision. We conduct extensive experimental\nanalysis and ablation studies. Comprehensive evaluations on nearly 20\nbenchmarks show that Thyme yields significant and consistent performance gains,\nparticularly in challenging high-resolution perception and complex reasoning\ntasks.",
+      "keywords": [
+        "MLLMs",
+        "think with images",
+        "image processing",
+        "computational operations",
+        "executable code",
+        "SFT",
+        "RL",
+        "GRPO-ATS",
+        "Group Relative Policy Optimization",
+        "Adaptive Temperature Sampling"
+      ],
+      "url": "https://huggingface.co/papers/2508.11630",
+      "published_at": "2025-08-15"
+    },
+    {
+      "paper_id": "hf:2508.17445",
+      "title": "TreePO: Bridging the Gap of Policy Optimization and Efficacy and\n  Inference Efficiency with Heuristic Tree-based Modeling",
+      "summary": "Recent advancements in aligning large language models via reinforcement\nlearning have achieved remarkable gains in solving complex reasoning problems,\nbut at the cost of expensive on-policy rollouts and limited exploration of\ndiverse reasoning paths. In this work, we introduce TreePO, involving a\nself-guided rollout algorithm that views sequence generation as a\ntree-structured searching process. Composed of dynamic tree sampling policy and\nfixed-length segment decoding, TreePO leverages local uncertainty to warrant\nadditional branches. By amortizing computation across common prefixes and\npruning low-value paths early, TreePO essentially reduces the per-update\ncompute burden while preserving or enhancing exploration diversity. Key\ncontributions include: (1) a segment-wise sampling algorithm that alleviates\nthe KV cache burden through contiguous segments and spawns new branches along\nwith an early-stop mechanism; (2) a tree-based segment-level advantage\nestimation that considers both global and local proximal policy optimization.\nand (3) analysis on the effectiveness of probability and quality-driven dynamic\ndivergence and fallback strategy. We empirically validate the performance gain\nof TreePO on a set reasoning benchmarks and the efficiency saving of GPU hours\nfrom 22\\% up to 43\\% of the sampling design for the trained models, meanwhile\nshowing up to 40\\% reduction at trajectory-level and 35\\% at token-level\nsampling compute for the existing models. While offering a free lunch of\ninference efficiency, TreePO reveals a practical path toward scaling RL-based\npost-training with fewer samples and less compute. Home page locates at\nhttps://m-a-p.ai/TreePO.",
+      "keywords": [
+        "reinforcement learning",
+        "sequence generation",
+        "tree-structured searching",
+        "dynamic tree sampling policy",
+        "fixed-length segment decoding",
+        "local uncertainty",
+        "computation amortization",
+        "low-value path pruning",
+        "segment-wise sampling",
+        "KV cache burden",
+        "tree-based segment-level advantage estimation",
+        "proximal policy optimization",
+        "probability-driven dynamic divergence",
+        "quality-driven fallback strategy",
+        "trajectory-level sampling",
+        "token-level sampling"
+      ],
+      "url": "https://huggingface.co/papers/2508.17445",
+      "published_at": "2025-08-24"
+    },
+    {
+      "paper_id": "hf:2508.10419",
+      "title": "ComoRAG: A Cognitive-Inspired Memory-Organized RAG for Stateful Long\n  Narrative Reasoning",
+      "summary": "Narrative comprehension on long stories and novels has been a challenging\ndomain attributed to their intricate plotlines and entangled, often evolving\nrelations among characters and entities. Given the LLM's diminished reasoning\nover extended context and high computational cost, retrieval-based approaches\nremain a pivotal role in practice. However, traditional RAG methods can fall\nshort due to their stateless, single-step retrieval process, which often\noverlooks the dynamic nature of capturing interconnected relations within\nlong-range context. In this work, we propose ComoRAG, holding the principle\nthat narrative reasoning is not a one-shot process, but a dynamic, evolving\ninterplay between new evidence acquisition and past knowledge consolidation,\nanalogous to human cognition when reasoning with memory-related signals in the\nbrain. Specifically, when encountering a reasoning impasse, ComoRAG undergoes\niterative reasoning cycles while interacting with a dynamic memory workspace.\nIn each cycle, it generates probing queries to devise new exploratory paths,\nthen integrates the retrieved evidence of new aspects into a global memory\npool, thereby supporting the emergence of a coherent context for the query\nresolution. Across four challenging long-context narrative benchmarks (200K+\ntokens), ComoRAG outperforms strong RAG baselines with consistent relative\ngains up to 11% compared to the strongest baseline. Further analysis reveals\nthat ComoRAG is particularly advantageous for complex queries requiring global\ncomprehension, offering a principled, cognitively motivated paradigm for\nretrieval-based long context comprehension towards stateful reasoning. Our code\nis publicly released at https://github.com/EternityJune25/ComoRAG",
+      "keywords": [
+        "retrieval-based approaches",
+        "RAG methods",
+        "ComoRAG",
+        "iterative reasoning cycles",
+        "dynamic memory workspace",
+        "probing queries",
+        "global memory pool",
+        "long-context narrative comprehension",
+        "stateful reasoning"
+      ],
+      "url": "https://huggingface.co/papers/2508.10419",
+      "published_at": "2025-08-14"
+    },
+    {
+      "paper_id": "hf:2508.05635",
+      "title": "Genie Envisioner: A Unified World Foundation Platform for Robotic\n  Manipulation",
+      "summary": "We introduce Genie Envisioner (GE), a unified world foundation platform for\nrobotic manipulation that integrates policy learning, evaluation, and\nsimulation within a single video-generative framework. At its core, GE-Base is\na large-scale, instruction-conditioned video diffusion model that captures the\nspatial, temporal, and semantic dynamics of real-world robotic interactions in\na structured latent space. Built upon this foundation, GE-Act maps latent\nrepresentations to executable action trajectories through a lightweight,\nflow-matching decoder, enabling precise and generalizable policy inference\nacross diverse embodiments with minimal supervision. To support scalable\nevaluation and training, GE-Sim serves as an action-conditioned neural\nsimulator, producing high-fidelity rollouts for closed-loop policy development.\nThe platform is further equipped with EWMBench, a standardized benchmark suite\nmeasuring visual fidelity, physical consistency, and instruction-action\nalignment. Together, these components establish Genie Envisioner as a scalable\nand practical foundation for instruction-driven, general-purpose embodied\nintelligence. All code, models, and benchmarks will be released publicly.",
+      "keywords": [
+        "video diffusion model",
+        "latent space",
+        "flow-matching decoder",
+        "action trajectories",
+        "neural simulator",
+        "high-fidelity rollouts",
+        "EWMBench",
+        "visual fidelity",
+        "physical consistency",
+        "instruction-action alignment"
+      ],
+      "url": "https://huggingface.co/papers/2508.05635",
+      "published_at": "2025-08-07"
+    },
+    {
+      "paper_id": "hf:2508.11987",
+      "title": "FutureX: An Advanced Live Benchmark for LLM Agents in Future Prediction",
+      "summary": "Future prediction is a complex task for LLM agents, requiring a high level of\nanalytical thinking, information gathering, contextual understanding, and\ndecision-making under uncertainty. Agents must not only gather and interpret\nvast amounts of dynamic information but also integrate diverse data sources,\nweigh uncertainties, and adapt predictions based on emerging trends, just as\nhuman experts do in fields like politics, economics, and finance. Despite its\nimportance, no large-scale benchmark exists for evaluating agents on future\nprediction, largely due to challenges in handling real-time updates and\nretrieving timely, accurate answers. To address this, we introduce\nFutureX, a dynamic and live evaluation benchmark specifically\ndesigned for LLM agents performing future prediction tasks. FutureX is the\nlargest and most diverse live benchmark for future prediction, supporting\nreal-time daily updates and eliminating data contamination through an automated\npipeline for question gathering and answer collection. We evaluate 25 LLM/agent\nmodels, including those with reasoning, search capabilities, and integration of\nexternal tools such as the open-source Deep Research Agent and closed-source\nDeep Research models. This comprehensive evaluation assesses agents' adaptive\nreasoning and performance in dynamic environments. Additionally, we provide\nin-depth analyses of agents' failure modes and performance pitfalls in\nfuture-oriented tasks, including the vulnerability to fake web pages and the\ntemporal validity. Our goal is to establish a dynamic, contamination-free\nevaluation standard that drives the development of LLM agents capable of\nperforming at the level of professional human analysts in complex reasoning and\npredictive thinking.",
+      "keywords": [
+        "LLM agents",
+        "future prediction",
+        "adaptive reasoning",
+        "real-time updates",
+        "data contamination",
+        "automated pipeline",
+        "question gathering",
+        "answer collection",
+        "failure modes",
+        "performance pitfalls",
+        "fake web pages",
+        "temporal validity"
+      ],
+      "url": "https://huggingface.co/papers/2508.11987",
+      "published_at": "2025-08-16"
+    },
+    {
+      "paper_id": "hf:2508.09848",
+      "title": "PRELUDE: A Benchmark Designed to Require Global Comprehension and\n  Reasoning over Long Contexts",
+      "summary": "We introduce PRELUDE, a benchmark for evaluating long-context understanding\nthrough the task of determining whether a character's prequel story is\nconsistent with the canonical narrative of the original book. Our task poses a\nstronger demand for global comprehension and deep reasoning than existing\nbenchmarks -- as the prequels are not part of the original story, assessing\ntheir plausibility typically requires searching and integrating information\nthat is only indirectly related. Empirically, 88% of instances require evidence\nfrom multiple parts of the narrative. Experimental results highlight the\nchallenge of our task: in-context learning, RAG and in-domain training with\nstate-of-the-art LLMs, and commercial DeepResearch services, lag behind humans\nby >15%. A further human study reveals that models often produce correct\nanswers with flawed reasoning, leading to an over 30% gap in reasoning accuracy\ncompared to humans. These findings underscore the substantial room for\nimprovement in long-context understanding and reasoning.",
+      "keywords": [
+        "PRELUDE",
+        "long-context understanding",
+        "in-context learning",
+        "RAG",
+        "state-of-the-art LLMs",
+        "DeepResearch",
+        "reasoning accuracy"
+      ],
+      "url": "https://huggingface.co/papers/2508.09848",
+      "published_at": "2025-08-13"
+    },
+    {
+      "paper_id": "hf:2508.14879",
+      "title": "MeshCoder: LLM-Powered Structured Mesh Code Generation from Point Clouds",
+      "summary": "Reconstructing 3D objects into editable programs is pivotal for applications\nlike reverse engineering and shape editing. However, existing methods often\nrely on limited domain-specific languages (DSLs) and small-scale datasets,\nrestricting their ability to model complex geometries and structures. To\naddress these challenges, we introduce MeshCoder, a novel framework that\nreconstructs complex 3D objects from point clouds into editable Blender Python\nscripts. We develop a comprehensive set of expressive Blender Python APIs\ncapable of synthesizing intricate geometries. Leveraging these APIs, we\nconstruct a large-scale paired object-code dataset, where the code for each\nobject is decomposed into distinct semantic parts. Subsequently, we train a\nmultimodal large language model (LLM) that translates 3D point cloud into\nexecutable Blender Python scripts. Our approach not only achieves superior\nperformance in shape-to-code reconstruction tasks but also facilitates\nintuitive geometric and topological editing through convenient code\nmodifications. Furthermore, our code-based representation enhances the\nreasoning capabilities of LLMs in 3D shape understanding tasks. Together, these\ncontributions establish MeshCoder as a powerful and flexible solution for\nprogrammatic 3D shape reconstruction and understanding.",
+      "keywords": [
+        "MeshCoder",
+        "Blender Python APIs",
+        "multimodal large language model",
+        "point clouds",
+        "shape-to-code reconstruction",
+        "3D shape understanding"
+      ],
+      "url": "https://huggingface.co/papers/2508.14879",
+      "published_at": "2025-08-20"
+    },
+    {
+      "paper_id": "hf:2508.09983",
+      "title": "Story2Board: A Training-Free Approach for Expressive Storyboard\n  Generation",
+      "summary": "We present Story2Board, a training-free framework for expressive storyboard\ngeneration from natural language. Existing methods narrowly focus on subject\nidentity, overlooking key aspects of visual storytelling such as spatial\ncomposition, background evolution, and narrative pacing. To address this, we\nintroduce a lightweight consistency framework composed of two components:\nLatent Panel Anchoring, which preserves a shared character reference across\npanels, and Reciprocal Attention Value Mixing, which softly blends visual\nfeatures between token pairs with strong reciprocal attention. Together, these\nmechanisms enhance coherence without architectural changes or fine-tuning,\nenabling state-of-the-art diffusion models to generate visually diverse yet\nconsistent storyboards. To structure generation, we use an off-the-shelf\nlanguage model to convert free-form stories into grounded panel-level prompts.\nTo evaluate, we propose the Rich Storyboard Benchmark, a suite of open-domain\nnarratives designed to assess layout diversity and background-grounded\nstorytelling, in addition to consistency. We also introduce a new Scene\nDiversity metric that quantifies spatial and pose variation across storyboards.\nOur qualitative and quantitative results, as well as a user study, show that\nStory2Board produces more dynamic, coherent, and narratively engaging\nstoryboards than existing baselines.",
+      "keywords": [
+        "Latent Panel Anchoring",
+        "Reciprocal Attention Value Mixing",
+        "diffusion models",
+        "Rich Storyboard Benchmark",
+        "Scene Diversity metric"
+      ],
+      "url": "https://huggingface.co/papers/2508.09983",
+      "published_at": "2025-08-13"
+    },
+    {
+      "paper_id": "hf:2508.05405",
+      "title": "DeepPHY: Benchmarking Agentic VLMs on Physical Reasoning",
+      "summary": "Although Vision Language Models (VLMs) exhibit strong perceptual abilities\nand impressive visual reasoning, they struggle with attention to detail and\nprecise action planning in complex, dynamic environments, leading to subpar\nperformance. Real-world tasks typically require complex interactions, advanced\nspatial reasoning, long-term planning, and continuous strategy refinement,\nusually necessitating understanding the physics rules of the target scenario.\nHowever, evaluating these capabilities in real-world scenarios is often\nprohibitively expensive. To bridge this gap, we introduce DeepPHY, a novel\nbenchmark framework designed to systematically evaluate VLMs' understanding and\nreasoning about fundamental physical principles through a series of challenging\nsimulated environments. DeepPHY integrates multiple physical reasoning\nenvironments of varying difficulty levels and incorporates fine-grained\nevaluation metrics. Our evaluation finds that even state-of-the-art VLMs\nstruggle to translate descriptive physical knowledge into precise, predictive\ncontrol.",
+      "keywords": [
+        "Vision Language Models",
+        "DeepPHY",
+        "physical reasoning",
+        "simulated environments",
+        "evaluation metrics"
+      ],
+      "url": "https://huggingface.co/papers/2508.05405",
+      "published_at": "2025-08-07"
+    },
+    {
+      "paper_id": "hf:2508.20453",
+      "title": "MCP-Bench: Benchmarking Tool-Using LLM Agents with Complex Real-World\n  Tasks via MCP Servers",
+      "summary": "We introduce MCP-Bench, a benchmark for evaluating large language models\n(LLMs) on realistic, multi-step tasks that demand tool use, cross-tool\ncoordination, precise parameter control, and planning/reasoning for solving\ntasks. Built on the Model Context Protocol (MCP), MCP-Bench connects LLMs to 28\nrepresentative live MCP servers spanning 250 tools across domains such as\nfinance, traveling, scientific computing, and academic search. Unlike prior\nAPI-based benchmarks, each MCP server provides a set of complementary tools\ndesigned to work together, enabling the construction of authentic, multi-step\ntasks with rich input-output coupling. Tasks in MCP-Bench test agents' ability\nto retrieve relevant tools from fuzzy instructions without explicit tool names,\nplan multi-hop execution trajectories for complex objectives, ground responses\nin intermediate tool outputs, and orchestrate cross-domain workflows -\ncapabilities not adequately evaluated by existing benchmarks that rely on\nexplicit tool specifications, shallow few-step workflows, and isolated domain\noperations. We propose a multi-faceted evaluation framework covering tool-level\nschema understanding and usage, trajectory-level planning, and task completion.\nExperiments on 20 advanced LLMs reveal persistent challenges in MCP-Bench. Code\nand data: https://github.com/Accenture/mcp-bench.",
+      "keywords": [
+        "large language models",
+        "MCP-Bench",
+        "Model Context Protocol",
+        "MCP servers",
+        "multi-step tasks",
+        "tool use",
+        "cross-tool coordination",
+        "parameter control",
+        "planning",
+        "reasoning",
+        "schema understanding",
+        "trajectory-level planning",
+        "task completion"
+      ],
+      "url": "https://huggingface.co/papers/2508.20453",
+      "published_at": "2025-08-28"
+    },
+    {
+      "paper_id": "hf:2508.13154",
+      "title": "4DNeX: Feed-Forward 4D Generative Modeling Made Easy",
+      "summary": "We present 4DNeX, the first feed-forward framework for generating 4D (i.e.,\ndynamic 3D) scene representations from a single image. In contrast to existing\nmethods that rely on computationally intensive optimization or require\nmulti-frame video inputs, 4DNeX enables efficient, end-to-end image-to-4D\ngeneration by fine-tuning a pretrained video diffusion model. Specifically, 1)\nto alleviate the scarcity of 4D data, we construct 4DNeX-10M, a large-scale\ndataset with high-quality 4D annotations generated using advanced\nreconstruction approaches. 2) we introduce a unified 6D video representation\nthat jointly models RGB and XYZ sequences, facilitating structured learning of\nboth appearance and geometry. 3) we propose a set of simple yet effective\nadaptation strategies to repurpose pretrained video diffusion models for 4D\nmodeling. 4DNeX produces high-quality dynamic point clouds that enable\nnovel-view video synthesis. Extensive experiments demonstrate that 4DNeX\noutperforms existing 4D generation methods in efficiency and generalizability,\noffering a scalable solution for image-to-4D modeling and laying the foundation\nfor generative 4D world models that simulate dynamic scene evolution.",
+      "keywords": [
+        "feed-forward framework",
+        "4D scene representations",
+        "video diffusion model",
+        "4DNeX-10M",
+        "6D video representation",
+        "RGB",
+        "XYZ sequences",
+        "dynamic point clouds",
+        "novel-view video synthesis",
+        "generative 4D world models"
+      ],
+      "url": "https://huggingface.co/papers/2508.13154",
+      "published_at": "2025-08-18"
+    },
+    {
+      "paper_id": "hf:2508.03320",
+      "title": "Skywork UniPic: Unified Autoregressive Modeling for Visual Understanding\n  and Generation",
+      "summary": "We introduce Skywork UniPic, a 1.5 billion-parameter autoregressive model\nthat unifies image understanding, text-to-image generation, and image editing\nwithin a single architecture-eliminating the need for task-specific adapters or\ninter-module connectors-and demonstrate that compact multimodal systems can\nachieve state-of-the-art performance on commodity hardware. Skywork UniPic\nachieves a GenEval score of 0.86, surpassing most existing unified models; sets\na new DPG-Bench complex-generation record of 85.5; attains 5.83 on\nGEditBench-EN and 3.49 on ImgEdit-Bench for image editing; and generates 1024 x\n1024 images with under 15 GB of GPU memory (e.g., RTX 4090). (1) a decoupled\nencoding strategy that leverages a masked autoregressive encoder for synthesis\nand a SigLIP2 encoder for understanding, all feeding a shared autoregressive\ndecoder; (2) a progressive, resolution-aware training schedule scaling from 256\nx 256 to 1024 x 1024 while dynamically unfreezing parameters to balance\ncapacity and stability; and (3) meticulously curated, 100 million-scale\ndatasets augmented with task-specific reward models to refine generation and\nediting objectives. By demonstrating that high-fidelity multimodal integration\nneed not incur prohibitive resource demands, Skywork UniPic establishes a\npractical paradigm for deployable, high-fidelity multimodal AI. Code and\nweights are publicly available at\nhttps://huggingface.co/Skywork/Skywork-UniPic-1.5B.",
+      "keywords": [
+        "autoregressive model",
+        "image understanding",
+        "text-to-image generation",
+        "image editing",
+        "GenEval",
+        "DPG-Bench",
+        "GEditBench-EN",
+        "ImgEdit-Bench",
+        "decoupled encoding strategy",
+        "masked autoregressive encoder",
+        "SigLIP2 encoder",
+        "shared autoregressive decoder",
+        "progressive training schedule",
+        "resolution-aware training",
+        "parameter unfreezing",
+        "high-fidelity multimodal integration"
+      ],
+      "url": "https://huggingface.co/papers/2508.03320",
+      "published_at": "2025-08-05"
+    },
+    {
+      "paper_id": "hf:2508.00819",
+      "title": "Beyond Fixed: Variable-Length Denoising for Diffusion Large Language\n  Models",
+      "summary": "Diffusion Large Language Models (DLLMs) are emerging as a powerful\nalternative to the dominant Autoregressive Large Language Models, offering\nefficient parallel generation and capable global context modeling. However, the\npractical application of DLLMs is hindered by a critical architectural\nconstraint: the need for a statically predefined generation length. This static\nlength allocation leads to a problematic trade-off: insufficient lengths\ncripple performance on complex tasks, while excessive lengths incur significant\ncomputational overhead and sometimes result in performance degradation. While\nthe inference framework is rigid, we observe that the model itself possesses\ninternal signals that correlate with the optimal response length for a given\ntask. To bridge this gap, we leverage these latent signals and introduce\nDAEDAL, a novel training-free denoising strategy that enables Dynamic Adaptive\nLength Expansion for Diffusion Large Language Models. DAEDAL operates in two\nphases: 1) Before the denoising process, DAEDAL starts from a short initial\nlength and iteratively expands it to a coarse task-appropriate length, guided\nby a sequence completion metric. 2) During the denoising process, DAEDAL\ndynamically intervenes by pinpointing and expanding insufficient generation\nregions through mask token insertion, ensuring the final output is fully\ndeveloped. Extensive experiments on DLLMs demonstrate that DAEDAL achieves\nperformance comparable, and in some cases superior, to meticulously tuned\nfixed-length baselines, while simultaneously enhancing computational efficiency\nby achieving a higher effective token ratio. By resolving the static length\nconstraint, DAEDAL unlocks new potential for DLLMs, bridging a critical gap\nwith their Autoregressive counterparts and paving the way for more efficient\nand capable generation.",
+      "keywords": [
+        "Diffusion Large Language Models",
+        "DLLMs",
+        "Autoregressive Large Language Models",
+        "denoising strategy",
+        "Dynamic Adaptive Length Expansion",
+        "sequence completion metric",
+        "mask token insertion",
+        "effective token ratio"
+      ],
+      "url": "https://huggingface.co/papers/2508.00819",
+      "published_at": "2025-08-01"
+    },
+    {
+      "paper_id": "hf:2508.10975",
+      "title": "BeyondWeb: Lessons from Scaling Synthetic Data for Trillion-scale\n  Pretraining",
+      "summary": "Recent advances in large language model (LLM) pretraining have shown that\nsimply scaling data quantity eventually leads to diminishing returns, hitting a\ndata wall. In response, the use of synthetic data for pretraining has emerged\nas a promising paradigm for pushing the frontier of performance. Despite this,\nthe factors affecting synthetic data quality remain poorly understood. In this\nwork, we introduce BeyondWeb, a synthetic data generation framework that\nproduces high-quality synthetic data for pretraining. BeyondWeb significantly\nextends the capabilities of traditional web-scale datasets, outperforming\nstate-of-the-art synthetic pretraining datasets such as Cosmopedia and\nNemotron-CC's high-quality synthetic subset (Nemotron-Synth) by up to 5.1\npercentage points (pp) and 2.6pp, respectively, when averaged across a suite of\n14 benchmark evaluations. It delivers up to 7.7x faster training than open web\ndata and 2.7x faster than Nemotron-Synth. Remarkably, a 3B model trained for\n180B tokens on BeyondWeb outperforms an 8B model trained for the same token\nbudget on Cosmopedia. We also present several insights from BeyondWeb on\nsynthetic data for pretraining: what drives its benefits, which data to\nrephrase and how, and the impact of model size and family on data quality.\nOverall, our work shows that there's no silver bullet for generating\nhigh-quality synthetic pretraining data. The best outcomes require jointly\noptimizing many factors, a challenging task that requires rigorous science and\npractical expertise. Naive approaches can yield modest improvements,\npotentially at great cost, while well-executed methods can yield transformative\nimprovements, as exemplified by BeyondWeb.",
+      "keywords": [
+        "large language model",
+        "LLM",
+        "synthetic data",
+        "pretraining",
+        "data wall",
+        "BeyondWeb",
+        "Cosmopedia",
+        "Nemotron-Synth",
+        "benchmark evaluations",
+        "token budget",
+        "model size",
+        "model family"
+      ],
+      "url": "https://huggingface.co/papers/2508.10975",
+      "published_at": "2025-08-14"
+    },
+    {
+      "paper_id": "hf:2508.14041",
+      "title": "LongSplat: Robust Unposed 3D Gaussian Splatting for Casual Long Videos",
+      "summary": "LongSplat addresses critical challenges in novel view synthesis (NVS) from\ncasually captured long videos characterized by irregular camera motion, unknown\ncamera poses, and expansive scenes. Current methods often suffer from pose\ndrift, inaccurate geometry initialization, and severe memory limitations. To\naddress these issues, we introduce LongSplat, a robust unposed 3D Gaussian\nSplatting framework featuring: (1) Incremental Joint Optimization that\nconcurrently optimizes camera poses and 3D Gaussians to avoid local minima and\nensure global consistency; (2) a robust Pose Estimation Module leveraging\nlearned 3D priors; and (3) an efficient Octree Anchor Formation mechanism that\nconverts dense point clouds into anchors based on spatial density. Extensive\nexperiments on challenging benchmarks demonstrate that LongSplat achieves\nstate-of-the-art results, substantially improving rendering quality, pose\naccuracy, and computational efficiency compared to prior approaches. Project\npage: https://linjohnss.github.io/longsplat/",
+      "keywords": [
+        "novel view synthesis",
+        "3D Gaussian Splatting",
+        "Incremental Joint Optimization",
+        "camera poses",
+        "3D Gaussians",
+        "Pose Estimation Module",
+        "3D priors",
+        "Octree Anchor Formation",
+        "dense point clouds",
+        "anchors",
+        "rendering quality",
+        "pose accuracy",
+        "computational efficiency"
+      ],
+      "url": "https://huggingface.co/papers/2508.14041",
+      "published_at": "2025-08-19"
+    },
+    {
+      "paper_id": "hf:2508.13491",
+      "title": "From Scores to Skills: A Cognitive Diagnosis Framework for Evaluating\n  Financial Large Language Models",
+      "summary": "Large Language Models (LLMs) have shown promise for financial applications,\nyet their suitability for this high-stakes domain remains largely unproven due\nto inadequacies in existing benchmarks. Existing benchmarks solely rely on\nscore-level evaluation, summarizing performance with a single score that\nobscures the nuanced understanding of what models truly know and their precise\nlimitations. They also rely on datasets that cover only a narrow subset of\nfinancial concepts, while overlooking other essentials for real-world\napplications. To address these gaps, we introduce FinCDM, the first cognitive\ndiagnosis evaluation framework tailored for financial LLMs, enabling the\nevaluation of LLMs at the knowledge-skill level, identifying what financial\nskills and knowledge they have or lack based on their response patterns across\nskill-tagged tasks, rather than a single aggregated number. We construct\nCPA-QKA, the first cognitively informed financial evaluation dataset derived\nfrom the Certified Public Accountant (CPA) examination, with comprehensive\ncoverage of real-world accounting and financial skills. It is rigorously\nannotated by domain experts, who author, validate, and annotate questions with\nhigh inter-annotator agreement and fine-grained knowledge labels. Our extensive\nexperiments on 30 proprietary, open-source, and domain-specific LLMs show that\nFinCDM reveals hidden knowledge gaps, identifies under-tested areas such as tax\nand regulatory reasoning overlooked by traditional benchmarks, and uncovers\nbehavioral clusters among models. FinCDM introduces a new paradigm for\nfinancial LLM evaluation by enabling interpretable, skill-aware diagnosis that\nsupports more trustworthy and targeted model development, and all datasets and\nevaluation scripts will be publicly released to support further research.",
+      "keywords": [
+        "Large Language Models",
+        "FinCDM",
+        "cognitive diagnosis evaluation framework",
+        "CPA-QKA",
+        "Certified Public Accountant",
+        "accounting and financial skills",
+        "knowledge-skill level",
+        "knowledge gaps",
+        "tax and regulatory reasoning",
+        "behavioral clusters",
+        "skill-aware diagnosis"
+      ],
+      "url": "https://huggingface.co/papers/2508.13491",
+      "published_at": "2025-08-19"
+    },
+    {
+      "paper_id": "hf:2508.01959",
+      "title": "SitEmb-v1.5: Improved Context-Aware Dense Retrieval for Semantic\n  Association and Long Story Comprehension",
+      "summary": "Retrieval-augmented generation (RAG) over long documents typically involves\nsplitting the text into smaller chunks, which serve as the basic units for\nretrieval. However, due to dependencies across the original document,\ncontextual information is often essential for accurately interpreting each\nchunk. To address this, prior work has explored encoding longer context windows\nto produce embeddings for longer chunks. Despite these efforts, gains in\nretrieval and downstream tasks remain limited. This is because (1) longer\nchunks strain the capacity of embedding models due to the increased amount of\ninformation they must encode, and (2) many real-world applications still\nrequire returning localized evidence due to constraints on model or human\nbandwidth.\n  We propose an alternative approach to this challenge by representing short\nchunks in a way that is conditioned on a broader context window to enhance\nretrieval performance -- i.e., situating a chunk's meaning within its context.\nWe further show that existing embedding models are not well-equipped to encode\nsuch situated context effectively, and thus introduce a new training paradigm\nand develop the situated embedding models (SitEmb). To evaluate our method, we\ncurate a book-plot retrieval dataset specifically designed to assess situated\nretrieval capabilities. On this benchmark, our SitEmb-v1 model based on BGE-M3\nsubstantially outperforms state-of-the-art embedding models, including several\nwith up to 7-8B parameters, with only 1B parameters. Our 8B SitEmb-v1.5 model\nfurther improves performance by over 10% and shows strong results across\ndifferent languages and several downstream applications.",
+      "keywords": [
+        "Retrieval-augmented generation (RAG)",
+        "context window",
+        "embedding models",
+        "situated context",
+        "situated embedding models (SitEmb)",
+        "BGE-M3",
+        "downstream applications"
+      ],
+      "url": "https://huggingface.co/papers/2508.01959",
+      "published_at": "2025-08-03"
+    },
+    {
+      "paper_id": "hf:2508.09736",
+      "title": "Seeing, Listening, Remembering, and Reasoning: A Multimodal Agent with\n  Long-Term Memory",
+      "summary": "We introduce M3-Agent, a novel multimodal agent framework equipped with\nlong-term memory. Like humans, M3-Agent can process real-time visual and\nauditory inputs to build and update its long-term memory. Beyond episodic\nmemory, it also develops semantic memory, enabling it to accumulate world\nknowledge over time. Its memory is organized in an entity-centric, multimodal\nformat, allowing deeper and more consistent understanding of the environment.\nGiven an instruction, M3-Agent autonomously performs multi-turn, iterative\nreasoning and retrieves relevant information from memory to accomplish the\ntask. To evaluate memory effectiveness and memory-based reasoning in multimodal\nagents, we develop M3-Bench, a new long-video question answering benchmark.\nM3-Bench comprises 100 newly recorded real-world videos captured from a robot's\nperspective (M3-Bench-robot) and 929 web-sourced videos across diverse\nscenarios (M3-Bench-web). We annotate question-answer pairs designed to test\nkey capabilities essential for agent applications, such as human understanding,\ngeneral knowledge extraction, and cross-modal reasoning. Experimental results\nshow that M3-Agent, trained via reinforcement learning, outperforms the\nstrongest baseline, a prompting agent using Gemini-1.5-pro and GPT-4o,\nachieving 6.7%, 7.7%, and 5.3% higher accuracy on M3-Bench-robot, M3-Bench-web\nand VideoMME-long, respectively. Our work advances the multimodal agents toward\nmore human-like long-term memory and provides insights into their practical\ndesign. Model, code and data are available at\nhttps://github.com/bytedance-seed/m3-agent",
+      "keywords": [
+        "multimodal agent",
+        "long-term memory",
+        "episodic memory",
+        "semantic memory",
+        "real-time visual inputs",
+        "real-time auditory inputs",
+        "multi-turn reasoning",
+        "iterative reasoning",
+        "M3-Bench",
+        "long-video question answering benchmark",
+        "reinforcement learning",
+        "Gemini-1.5-pro",
+        "GPT-4o",
+        "human understanding",
+        "general knowledge extraction",
+        "cross-modal reasoning"
+      ],
+      "url": "https://huggingface.co/papers/2508.09736",
+      "published_at": "2025-08-13"
+    }
+  ],
+  "clusters": [
+    {
+      "cluster_index": 0,
+      "size": 9,
+      "cohesion": 0.9101390507486131,
+      "members": [
+        {
+          "paper_id": "hf:2508.05004",
+          "rank_in_cluster": 0,
+          "sim_to_centroid": 0.9380190372467041
+        },
+        {
+          "paper_id": "hf:2508.20722",
+          "rank_in_cluster": 1,
+          "sim_to_centroid": 0.9257411956787109
+        },
+        {
+          "paper_id": "hf:2508.06471",
+          "rank_in_cluster": 2,
+          "sim_to_centroid": 0.9191102981567383
+        },
+        {
+          "paper_id": "hf:2508.00414",
+          "rank_in_cluster": 3,
+          "sim_to_centroid": 0.9145451188087463
+        },
+        {
+          "paper_id": "hf:2508.14029",
+          "rank_in_cluster": 4,
+          "sim_to_centroid": 0.9110456705093384
+        },
+        {
+          "paper_id": "hf:2508.10433",
+          "rank_in_cluster": 5,
+          "sim_to_centroid": 0.9075390100479126
+        },
+        {
+          "paper_id": "hf:2508.03680",
+          "rank_in_cluster": 6,
+          "sim_to_centroid": 0.9047103524208069
+        },
+        {
+          "paper_id": "hf:2508.05748",
+          "rank_in_cluster": 7,
+          "sim_to_centroid": 0.8880176544189453
+        },
+        {
+          "paper_id": "hf:2507.23726",
+          "rank_in_cluster": 8,
+          "sim_to_centroid": 0.8825231194496155
+        }
+      ]
+    },
+    {
+      "cluster_index": 1,
+      "size": 10,
+      "cohesion": 0.8943517863750458,
+      "members": [
+        {
+          "paper_id": "hf:2508.11737",
+          "rank_in_cluster": 0,
+          "sim_to_centroid": 0.916928768157959
+        },
+        {
+          "paper_id": "hf:2508.03320",
+          "rank_in_cluster": 1,
+          "sim_to_centroid": 0.9168972373008728
+        },
+        {
+          "paper_id": "hf:2508.11630",
+          "rank_in_cluster": 2,
+          "sim_to_centroid": 0.9025439620018005
+        },
+        {
+          "paper_id": "hf:2508.13154",
+          "rank_in_cluster": 3,
+          "sim_to_centroid": 0.9009050726890564
+        },
+        {
+          "paper_id": "hf:2508.14041",
+          "rank_in_cluster": 4,
+          "sim_to_centroid": 0.8937625885009766
+        },
+        {
+          "paper_id": "hf:2508.10104",
+          "rank_in_cluster": 5,
+          "sim_to_centroid": 0.8913964033126831
+        },
+        {
+          "paper_id": "hf:2508.20751",
+          "rank_in_cluster": 6,
+          "sim_to_centroid": 0.8869571685791016
+        },
+        {
+          "paper_id": "hf:2508.02324",
+          "rank_in_cluster": 7,
+          "sim_to_centroid": 0.8854527473449707
+        },
+        {
+          "paper_id": "hf:2508.19652",
+          "rank_in_cluster": 8,
+          "sim_to_centroid": 0.8825277090072632
+        },
+        {
+          "paper_id": "hf:2508.14879",
+          "rank_in_cluster": 9,
+          "sim_to_centroid": 0.8661462068557739
+        }
+      ]
+    },
+    {
+      "cluster_index": 2,
+      "size": 3,
+      "cohesion": 0.9344939589500427,
+      "members": [
+        {
+          "paper_id": "hf:2508.18265",
+          "rank_in_cluster": 0,
+          "sim_to_centroid": 0.9442647695541382
+        },
+        {
+          "paper_id": "hf:2508.15763",
+          "rank_in_cluster": 1,
+          "sim_to_centroid": 0.940268874168396
+        },
+        {
+          "paper_id": "hf:2508.05635",
+          "rank_in_cluster": 2,
+          "sim_to_centroid": 0.918948233127594
+        }
+      ]
+    },
+    {
+      "cluster_index": 3,
+      "size": 8,
+      "cohesion": 0.8957575261592865,
+      "members": [
+        {
+          "paper_id": "hf:2508.02193",
+          "rank_in_cluster": 0,
+          "sim_to_centroid": 0.9159482717514038
+        },
+        {
+          "paper_id": "hf:2508.00819",
+          "rank_in_cluster": 1,
+          "sim_to_centroid": 0.914575457572937
+        },
+        {
+          "paper_id": "hf:2508.10975",
+          "rank_in_cluster": 2,
+          "sim_to_centroid": 0.9108258485794067
+        },
+        {
+          "paper_id": "hf:2508.10711",
+          "rank_in_cluster": 3,
+          "sim_to_centroid": 0.9032832384109497
+        },
+        {
+          "paper_id": "hf:2508.19205",
+          "rank_in_cluster": 4,
+          "sim_to_centroid": 0.9020838737487793
+        },
+        {
+          "paper_id": "hf:2508.01959",
+          "rank_in_cluster": 5,
+          "sim_to_centroid": 0.8821974992752075
+        },
+        {
+          "paper_id": "hf:2508.09983",
+          "rank_in_cluster": 6,
+          "sim_to_centroid": 0.8785054683685303
+        },
+        {
+          "paper_id": "hf:2508.15882",
+          "rank_in_cluster": 7,
+          "sim_to_centroid": 0.8586405515670776
+        }
+      ]
+    },
+    {
+      "cluster_index": 4,
+      "size": 20,
+      "cohesion": 0.8908812373876571,
+      "members": [
+        {
+          "paper_id": "hf:2508.20453",
+          "rank_in_cluster": 0,
+          "sim_to_centroid": 0.9224786758422852
+        },
+        {
+          "paper_id": "hf:2508.10874",
+          "rank_in_cluster": 1,
+          "sim_to_centroid": 0.9168703556060791
+        },
+        {
+          "paper_id": "hf:2508.16153",
+          "rank_in_cluster": 2,
+          "sim_to_centroid": 0.9158018827438354
+        },
+        {
+          "paper_id": "hf:2508.13167",
+          "rank_in_cluster": 3,
+          "sim_to_centroid": 0.912956178188324
+        },
+        {
+          "paper_id": "hf:2508.11987",
+          "rank_in_cluster": 4,
+          "sim_to_centroid": 0.9020683169364929
+        },
+        {
+          "paper_id": "hf:2508.07999",
+          "rank_in_cluster": 5,
+          "sim_to_centroid": 0.9014216661453247
+        },
+        {
+          "paper_id": "hf:2508.02694",
+          "rank_in_cluster": 6,
+          "sim_to_centroid": 0.9004366397857666
+        },
+        {
+          "paper_id": "hf:2508.09736",
+          "rank_in_cluster": 7,
+          "sim_to_centroid": 0.8942232131958008
+        },
+        {
+          "paper_id": "hf:2508.01191",
+          "rank_in_cluster": 8,
+          "sim_to_centroid": 0.8934469223022461
+        },
+        {
+          "paper_id": "hf:2508.07050",
+          "rank_in_cluster": 9,
+          "sim_to_centroid": 0.8927602767944336
+        },
+        {
+          "paper_id": "hf:2508.05629",
+          "rank_in_cluster": 10,
+          "sim_to_centroid": 0.887436032295227
+        },
+        {
+          "paper_id": "hf:2508.04026",
+          "rank_in_cluster": 11,
+          "sim_to_centroid": 0.885330319404602
+        },
+        {
+          "paper_id": "hf:2508.10419",
+          "rank_in_cluster": 12,
+          "sim_to_centroid": 0.8798495531082153
+        },
+        {
+          "paper_id": "hf:2508.17445",
+          "rank_in_cluster": 13,
+          "sim_to_centroid": 0.8798127770423889
+        },
+        {
+          "paper_id": "hf:2508.14460",
+          "rank_in_cluster": 14,
+          "sim_to_centroid": 0.8784763813018799
+        },
+        {
+          "paper_id": "hf:2508.07407",
+          "rank_in_cluster": 15,
+          "sim_to_centroid": 0.8782841563224792
+        },
+        {
+          "paper_id": "hf:2508.05405",
+          "rank_in_cluster": 16,
+          "sim_to_centroid": 0.8772459626197815
+        },
+        {
+          "paper_id": "hf:2508.15260",
+          "rank_in_cluster": 17,
+          "sim_to_centroid": 0.8763377666473389
+        },
+        {
+          "paper_id": "hf:2508.09848",
+          "rank_in_cluster": 18,
+          "sim_to_centroid": 0.869783341884613
+        },
+        {
+          "paper_id": "hf:2508.13491",
+          "rank_in_cluster": 19,
+          "sim_to_centroid": 0.852604329586029
+        }
+      ]
+    }
+  ]
+}

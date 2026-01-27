@@ -1,136 +1,146 @@
-"""Pydantic models for per-cluster LLM response"""
+"""Pydantic models for per-cluster LLM response.
+
+Design goal:
+- Pydantic models define *structure/types* only (so JSON parsing is strict & typed).
+- All semantic constraints (word limits, item counts, formatting rules, etc.) are defined
+  as global constants and validated in the judges module.
+"""
 
 from __future__ import annotations
 
-import re
-from typing import List, Literal
+from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, conlist
 
-_WORD_RE = re.compile(r"\b[\w'-]+\b", re.UNICODE)
+# ----------------------------
+# Global constraints (single source of truth)
+# ----------------------------
+
+TITLE_MAX_WORDS = 12
+ONE_LINER_MAX_WORDS = 25
+
+ABOUT_MIN_WORDS = 80
+ABOUT_MAX_WORDS = 140
+
+WHY_MIN_WORDS = 60
+WHY_MAX_WORDS = 120
+
+CONF_RATIONALE_MIN_ITEMS = 2
+CONF_RATIONALE_MAX_ITEMS = 4
+CONF_RATIONALE_MAX_WORDS_PER_ITEM = 18
+
+REP_PAPERS_MIN_ITEMS = 2
+REP_PAPERS_MAX_ITEMS = 5
+
+READING_ORDER_MIN_ITEMS = 3
+READING_ORDER_MAX_ITEMS = 7
+READING_ORDER_MAX_WORDS_PER_ITEM_REASON = 12
+
+SEARCH_QUERY_MIN_TERMS = 2
+SEARCH_QUERY_MAX_TERMS = 5
+
+NOTES_MAX_ITEMS = 5
+NOTES_MAX_WORDS_PER_ITEM = 20
+
+KEYWORDS_MIN_ITEMS = 5
+KEYWORDS_MAX_ITEMS = 12
+KEYWORD_MIN_WORDS = 1
+KEYWORD_MAX_WORDS = 3
 
 
-def _word_count(s: str) -> int:
-    """Count words in a string"""
-    return len(_WORD_RE.findall(s))
-
-
-def _is_lowercase_tag(tag: str) -> bool:
-    """Check if tag is lowercase (allow digits/hyphens/spaces, but require letters to be lowercase)"""
-    return tag == tag.lower()
-
-
-def _tag_word_count(tag: str) -> int:
-    """Count words separated by whitespace"""
-    return len([w for w in tag.strip().split() if w])
-
+# ----------------------------
+# Pydantic models (structure only)
+# ----------------------------
 
 class RepresentativePaper(BaseModel):
-    """Representative paper in cluster"""
+    """Representative paper in this topic."""
     paper_id: str = Field(..., description="paper_id, referenced like [paper_id] in the report")
     title: str = Field(..., description="paper title")
 
 
 class ReadingOrderItem(BaseModel):
-    """Reading order item with reason"""
+    """One item in the suggested reading order."""
     paper_id: str = Field(..., description="paper_id")
-    why_read_now: str = Field(..., description="Short reason, <= 12 words (best-effort)")
-
-
-class ClusterCardSectionA(BaseModel):
-    """SECTION A — Human-readable report fields"""
-    title: str
-    one_liner: str
-    what_this_cluster_is_about: str
-    why_it_matters: str
-    confidence: Literal["HIGH", "MEDIUM", "LOW"]
-    confidence_rationale: List[str] = Field(..., min_length=2, max_length=4)
-    representative_papers: List[RepresentativePaper] = Field(..., min_length=2, max_length=5)
-    reading_order: List[ReadingOrderItem] = Field(..., min_length=3, max_length=7)
-    search_query_seed: str
-    notes: List[str] = Field(..., max_length=5)
-
-
-class ClusterIndexSectionB(BaseModel):
-    """
-    SECTION B — JSON index for database storage
-    
-    Keys:
-      - title: must equal SECTION A title exactly (cannot be enforced without Section A passed in)
-      - summary: 60–110 words
-      - keyword_list: 5–12 items; automatically lowercased; deduped; each tag 1–3 words
-    """
-    title: str = Field(..., min_length=1)
-    summary: str = Field(..., min_length=1)
-    keyword_list: List[str] = Field(..., min_length=5, max_length=12)
-
-    @field_validator("summary")
-    @classmethod
-    def validate_summary_word_count(cls, v: str) -> str:
-        """Validate summary is 60–110 words"""
-        wc = _word_count(v)
-        if wc < 60 or wc > 110:
-            raise ValueError(f"summary must be 60–110 words; got {wc}")
-        return v.strip()
-
-    @field_validator("keyword_list")
-    @classmethod
-    def validate_keywords(cls, v: List[str]) -> List[str]:
-        """Validate keywords: auto-convert to lowercase, 1-3 words each, no hashtags, deduped"""
-        # strip + basic checks
-        cleaned = [k.strip() for k in v if k and k.strip()]
-        if len(cleaned) != len(v):
-            raise ValueError("keyword_list contains empty/whitespace-only items")
-
-        # Convert to lowercase automatically
-        lowercased = [k.lower() for k in cleaned]
-
-        for k in lowercased:
-            wc = _tag_word_count(k)
-            if wc < 1 or wc > 3:
-                raise ValueError(f"keyword must be 1–3 words: {k!r}")
-            if "#" in k:
-                raise ValueError(f"keyword must not include hashtags: {k!r}")
-
-        # dedupe while preserving order
-        seen = set()
-        deduped = []
-        for k in lowercased:
-            if k not in seen:
-                seen.add(k)
-                deduped.append(k)
-
-        if len(deduped) < 5 or len(deduped) > 12:
-            raise ValueError(
-                f"keyword_list must be 5–12 unique items after dedupe; got {len(deduped)}"
-            )
-        return deduped
-
-    @model_validator(mode="after")
-    def validate_title_nonempty(self) -> "ClusterIndexSectionB":
-        """Ensure title is non-empty after stripping"""
-        self.title = self.title.strip()
-        if not self.title:
-            raise ValueError("title must be non-empty")
-        return self
+    why_read_now: str = Field(
+        ...,
+        description=(
+            "Short reason for this placement in the reading order. "
+            f"Target <= {READING_ORDER_MAX_WORDS_PER_ITEM_REASON} words."
+        ),
+    )
 
 
 class ClusterReport(BaseModel):
-    """
-    One response object that contains:
-      - section_a: structured fields (you can render these into Markdown cards yourself)
-      - section_b: JSON index for DB storage
-    """
-    section_a: ClusterCardSectionA
-    section_b: ClusterIndexSectionB
+    """Cluster/topic report returned by the LLM (JSON)."""
 
-    @model_validator(mode="after")
-    def validate_title_match(self) -> "ClusterReport":
-        """Ensure section_b.title matches section_a.title exactly"""
-        if self.section_b.title != self.section_a.title:
-            raise ValueError(
-                f"SECTION B title must equal SECTION A title exactly. "
-                f"SECTION A: {self.section_a.title!r}, SECTION B: {self.section_b.title!r}"
-            )
-        return self
+    title: str = Field(
+        ...,
+        description=f"Title Case, no colon. Target <= {TITLE_MAX_WORDS} words.",
+    )
+    one_liner: str = Field(
+        ...,
+        description=f"Plain-English summary. Target <= {ONE_LINER_MAX_WORDS} words.",
+    )
+    what_this_cluster_is_about: str = Field(
+        ...,
+        description=(
+            "Describe the shared theme using only provided information. Explain how multiple papers relate. "
+            f"Target {ABOUT_MIN_WORDS}–{ABOUT_MAX_WORDS} words. Include inline citations [paper_id]. "
+            "Use the word “topic”, not “cluster”."
+        ),
+    )
+    why_it_matters: str = Field(
+        ...,
+        description=(
+            "Practical and research significance. No hype or speculation. "
+            f"Target {WHY_MIN_WORDS}–{WHY_MAX_WORDS} words. Use hedged verbs if unclear."
+        ),
+    )
 
+    confidence: Literal["HIGH", "MEDIUM", "LOW"] = Field(
+        ...,
+        description="Self-rated confidence in this topic summary given the provided paper summaries/keywords.",
+    )
+
+    confidence_rationale: conlist(str, min_length=CONF_RATIONALE_MIN_ITEMS, max_length=CONF_RATIONALE_MAX_ITEMS) = Field(
+        ...,
+        description=(
+            "Bullet list justifying confidence using cluster size, cohesion, and evidence quality. "
+            f"{CONF_RATIONALE_MIN_ITEMS}–{CONF_RATIONALE_MAX_ITEMS} items, each <= {CONF_RATIONALE_MAX_WORDS_PER_ITEM} words."
+        ),
+    )
+
+    representative_papers: conlist(RepresentativePaper, min_length=REP_PAPERS_MIN_ITEMS, max_length=REP_PAPERS_MAX_ITEMS) = Field(
+        ...,
+        description=f"{REP_PAPERS_MIN_ITEMS}–{REP_PAPERS_MAX_ITEMS} representative papers.",
+    )
+
+    reading_order: conlist(ReadingOrderItem, min_length=READING_ORDER_MIN_ITEMS, max_length=READING_ORDER_MAX_ITEMS) = Field(
+        ...,
+        description=(
+            f"{READING_ORDER_MIN_ITEMS}–{READING_ORDER_MAX_ITEMS} items. "
+            "Order from most central/accessible to more detailed papers."
+        ),
+    )
+
+    search_query_seed: str = Field(
+        ...,
+        description=f"One line, {SEARCH_QUERY_MIN_TERMS}–{SEARCH_QUERY_MAX_TERMS} key terms.",
+    )
+
+    notes: conlist(str, max_length=NOTES_MAX_ITEMS) = Field(
+        ...,
+        description=(
+            f"Up to {NOTES_MAX_ITEMS} bullets. Each <= {NOTES_MAX_WORDS_PER_ITEM} words. "
+            "Include warnings about mixed themes, missing information, or ambiguity when applicable."
+        ),
+    )
+
+    keyword_list: conlist(str, min_length=KEYWORDS_MIN_ITEMS, max_length=KEYWORDS_MAX_ITEMS) = Field(
+        ...,
+        description=(
+            "Keywords extracted from provided paper keywords + the topic theme. "
+            f"{KEYWORDS_MIN_ITEMS}–{KEYWORDS_MAX_ITEMS} items, lowercase, deduped; "
+            f"each item {KEYWORD_MIN_WORDS}–{KEYWORD_MAX_WORDS} words; no hashtags."
+        ),
+    )

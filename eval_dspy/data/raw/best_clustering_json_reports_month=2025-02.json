@@ -1,0 +1,1240 @@
+{
+  "source": "hf_monthly",
+  "period_start": "2025-02-01",
+  "period_end": "2025-02-28",
+  "raw_json": "",
+  "embed_config": {
+    "embed_config_id": "algo_lib.embedding|0.1.0",
+    "json_payload": {
+      "model_name": "BAAI/bge-small-en-v1.5",
+      "mode": "B",
+      "top_n_keywords": 10
+    }
+  },
+  "cluster_config": {
+    "cluster_config_id": "algo_lib.clustering|0.1.0",
+    "json_payload": {
+      "k": 4,
+      "seed": 42,
+      "algorithm": "kmeans"
+    }
+  },
+  "papers": [
+    {
+      "paper_id": "hf:2502.02737",
+      "title": "SmolLM2: When Smol Goes Big -- Data-Centric Training of a Small Language Model",
+      "summary": "While large language models have facilitated breakthroughs in many applications of artificial intelligence, their inherent largeness makes them computationally expensive and challenging to deploy in resource-constrained settings. In this paper, we document the development of SmolLM2, a state-of-the-art \"small\" (1.7 billion parameter) language model (LM). To attain strong performance, we overtrain SmolLM2 on ~11 trillion tokens of data using a multi-stage training process that mixes web text with specialized math, code, and instruction-following data. We additionally introduce new specialized datasets (FineMath, Stack-Edu, and SmolTalk) at stages where we found existing datasets to be problematically small or low-quality. To inform our design decisions, we perform both small-scale ablations as well as a manual refinement process that updates the dataset mixing rates at each stage based on the performance at the previous stage. Ultimately, we demonstrate that SmolLM2 outperforms other recent small LMs including Qwen2.5-1.5B and Llama3.2-1B. To facilitate future research on LM development as well as applications of small LMs, we release both SmolLM2 as well as all of the datasets we prepared in the course of this project.",
+      "keywords": [
+        "large language models",
+        "small language models",
+        "overtraining",
+        "dataset mixing",
+        "FineMath",
+        "Stack-Edu",
+        "SmolTalk",
+        "ablations",
+        "dataset refinement"
+      ],
+      "url": "https://huggingface.co/papers/2502.02737",
+      "published_at": "2025-02-04"
+    },
+    {
+      "paper_id": "hf:2502.01061",
+      "title": "OmniHuman-1: Rethinking the Scaling-Up of One-Stage Conditioned Human\n  Animation Models",
+      "summary": "End-to-end human animation, such as audio-driven talking human generation,\nhas undergone notable advancements in the recent few years. However, existing\nmethods still struggle to scale up as large general video generation models,\nlimiting their potential in real applications. In this paper, we propose\nOmniHuman, a Diffusion Transformer-based framework that scales up data by\nmixing motion-related conditions into the training phase. To this end, we\nintroduce two training principles for these mixed conditions, along with the\ncorresponding model architecture and inference strategy. These designs enable\nOmniHuman to fully leverage data-driven motion generation, ultimately achieving\nhighly realistic human video generation. More importantly, OmniHuman supports\nvarious portrait contents (face close-up, portrait, half-body, full-body),\nsupports both talking and singing, handles human-object interactions and\nchallenging body poses, and accommodates different image styles. Compared to\nexisting end-to-end audio-driven methods, OmniHuman not only produces more\nrealistic videos, but also offers greater flexibility in inputs. It also\nsupports multiple driving modalities (audio-driven, video-driven and combined\ndriving signals). Video samples are provided on the ttfamily project page\n(https://omnihuman-lab.github.io)",
+      "keywords": [
+        "Diffusion Transformer",
+        "motion-related conditions",
+        "model architecture",
+        "inference strategy",
+        "data-driven motion generation",
+        "human video generation",
+        "portrait contents",
+        "human-object interactions",
+        "body poses",
+        "image styles",
+        "audio-driven",
+        "video-driven",
+        "combined driving signals"
+      ],
+      "url": "https://huggingface.co/papers/2502.01061",
+      "published_at": "2025-02-03"
+    },
+    {
+      "paper_id": "hf:2502.13923",
+      "title": "Qwen2.5-VL Technical Report",
+      "summary": "We introduce Qwen2.5-VL, the latest flagship model of Qwen vision-language\nseries, which demonstrates significant advancements in both foundational\ncapabilities and innovative functionalities. Qwen2.5-VL achieves a major leap\nforward in understanding and interacting with the world through enhanced visual\nrecognition, precise object localization, robust document parsing, and\nlong-video comprehension. A standout feature of Qwen2.5-VL is its ability to\nlocalize objects using bounding boxes or points accurately. It provides robust\nstructured data extraction from invoices, forms, and tables, as well as\ndetailed analysis of charts, diagrams, and layouts. To handle complex inputs,\nQwen2.5-VL introduces dynamic resolution processing and absolute time encoding,\nenabling it to process images of varying sizes and videos of extended durations\n(up to hours) with second-level event localization. This allows the model to\nnatively perceive spatial scales and temporal dynamics without relying on\ntraditional normalization techniques. By training a native dynamic-resolution\nVision Transformer (ViT) from scratch and incorporating Window Attention, we\nreduce computational overhead while maintaining native resolution. As a result,\nQwen2.5-VL excels not only in static image and document understanding but also\nas an interactive visual agent capable of reasoning, tool usage, and task\nexecution in real-world scenarios such as operating computers and mobile\ndevices. Qwen2.5-VL is available in three sizes, addressing diverse use cases\nfrom edge AI to high-performance computing. The flagship Qwen2.5-VL-72B model\nmatches state-of-the-art models like GPT-4o and Claude 3.5 Sonnet, particularly\nexcelling in document and diagram understanding. Additionally, Qwen2.5-VL\nmaintains robust linguistic performance, preserving the core language\ncompetencies of the Qwen2.5 LLM.",
+      "keywords": [
+        "Vision Transformer",
+        "Window Attention",
+        "dynamic resolution processing",
+        "bounding boxes",
+        "dynamic-resolution",
+        "ViT",
+        "long-video comprehension",
+        "document parsing",
+        "visual recognition",
+        "spatial scales",
+        "temporal dynamics",
+        "real-world scenarios"
+      ],
+      "url": "https://huggingface.co/papers/2502.13923",
+      "published_at": "2025-02-19"
+    },
+    {
+      "paper_id": "hf:2502.14499",
+      "title": "MLGym: A New Framework and Benchmark for Advancing AI Research Agents",
+      "summary": "We introduce Meta MLGym and MLGym-Bench, a new framework and benchmark for\nevaluating and developing LLM agents on AI research tasks. This is the first\nGym environment for machine learning (ML) tasks, enabling research on\nreinforcement learning (RL) algorithms for training such agents. MLGym-bench\nconsists of 13 diverse and open-ended AI research tasks from diverse domains\nsuch as computer vision, natural language processing, reinforcement learning,\nand game theory. Solving these tasks requires real-world AI research skills\nsuch as generating new ideas and hypotheses, creating and processing data,\nimplementing ML methods, training models, running experiments, analyzing the\nresults, and iterating through this process to improve on a given task. We\nevaluate a number of frontier large language models (LLMs) on our benchmarks\nsuch as Claude-3.5-Sonnet, Llama-3.1 405B, GPT-4o, o1-preview, and Gemini-1.5\nPro. Our MLGym framework makes it easy to add new tasks, integrate and evaluate\nmodels or agents, generate synthetic data at scale, as well as develop new\nlearning algorithms for training agents on AI research tasks. We find that\ncurrent frontier models can improve on the given baselines, usually by finding\nbetter hyperparameters, but do not generate novel hypotheses, algorithms,\narchitectures, or substantial improvements. We open-source our framework and\nbenchmark to facilitate future research in advancing the AI research\ncapabilities of LLM agents.",
+      "keywords": [
+        "Gym",
+        "reinforcement learning (RL)",
+        "large language models (LLMs)",
+        "Claude-3.5-Sonnet",
+        "Llama-3.1 405B",
+        "GPT-4o",
+        "o1-preview",
+        "Gemini-1.5 Pro",
+        "machine learning (ML)",
+        "computer vision",
+        "natural language processing",
+        "game theory",
+        "hyperparameters",
+        "synthetic data",
+        "learning algorithms"
+      ],
+      "url": "https://huggingface.co/papers/2502.14499",
+      "published_at": "2025-02-20"
+    },
+    {
+      "paper_id": "hf:2502.08946",
+      "title": "The Stochastic Parrot on LLM's Shoulder: A Summative Assessment of\n  Physical Concept Understanding",
+      "summary": "In a systematic way, we investigate a widely asked question: Do LLMs really\nunderstand what they say?, which relates to the more familiar term Stochastic\nParrot. To this end, we propose a summative assessment over a carefully\ndesigned physical concept understanding task, PhysiCo. Our task alleviates the\nmemorization issue via the usage of grid-format inputs that abstractly describe\nphysical phenomena. The grids represents varying levels of understanding, from\nthe core phenomenon, application examples to analogies to other abstract\npatterns in the grid world. A comprehensive study on our task demonstrates: (1)\nstate-of-the-art LLMs, including GPT-4o, o1 and Gemini 2.0 flash thinking, lag\nbehind humans by ~40%; (2) the stochastic parrot phenomenon is present in LLMs,\nas they fail on our grid task but can describe and recognize the same concepts\nwell in natural language; (3) our task challenges the LLMs due to intrinsic\ndifficulties rather than the unfamiliar grid format, as in-context learning and\nfine-tuning on same formatted data added little to their performance.",
+      "keywords": [
+        "LLMs",
+        "Stochastic Parrot",
+        "PhysiCo",
+        "grid-format inputs",
+        "in-context learning",
+        "fine-tuning"
+      ],
+      "url": "https://huggingface.co/papers/2502.08946",
+      "published_at": "2025-02-13"
+    },
+    {
+      "paper_id": "hf:2502.15007",
+      "title": "LLM-Microscope: Uncovering the Hidden Role of Punctuation in Context\n  Memory of Transformers",
+      "summary": "We introduce methods to quantify how Large Language Models (LLMs) encode and\nstore contextual information, revealing that tokens often seen as minor (e.g.,\ndeterminers, punctuation) carry surprisingly high context. Notably, removing\nthese tokens -- especially stopwords, articles, and commas -- consistently\ndegrades performance on MMLU and BABILong-4k, even if removing only irrelevant\ntokens. Our analysis also shows a strong correlation between contextualization\nand linearity, where linearity measures how closely the transformation from one\nlayer's embeddings to the next can be approximated by a single linear mapping.\nThese findings underscore the hidden importance of filler tokens in maintaining\ncontext. For further exploration, we present LLM-Microscope, an open-source\ntoolkit that assesses token-level nonlinearity, evaluates contextual memory,\nvisualizes intermediate layer contributions (via an adapted Logit Lens), and\nmeasures the intrinsic dimensionality of representations. This toolkit\nilluminates how seemingly trivial tokens can be critical for long-range\nunderstanding.",
+      "keywords": [
+        "Large Language Models",
+        "LLMs",
+        "contextual information",
+        "tokens",
+        "determiners",
+        "punctuation",
+        "stopwords",
+        "articles",
+        "commas",
+        "MMLU",
+        "BABILong-4k",
+        "contextualization",
+        "linearity",
+        "embeddings",
+        "Logit Lens",
+        "intrinsic dimensionality",
+        "long-range understanding"
+      ],
+      "url": "https://huggingface.co/papers/2502.15007",
+      "published_at": "2025-02-20"
+    },
+    {
+      "paper_id": "hf:2502.11089",
+      "title": "Native Sparse Attention: Hardware-Aligned and Natively Trainable Sparse\n  Attention",
+      "summary": "Long-context modeling is crucial for next-generation language models, yet the\nhigh computational cost of standard attention mechanisms poses significant\ncomputational challenges. Sparse attention offers a promising direction for\nimproving efficiency while maintaining model capabilities. We present NSA, a\nNatively trainable Sparse Attention mechanism that integrates algorithmic\ninnovations with hardware-aligned optimizations to achieve efficient\nlong-context modeling. NSA employs a dynamic hierarchical sparse strategy,\ncombining coarse-grained token compression with fine-grained token selection to\npreserve both global context awareness and local precision. Our approach\nadvances sparse attention design with two key innovations: (1) We achieve\nsubstantial speedups through arithmetic intensity-balanced algorithm design,\nwith implementation optimizations for modern hardware. (2) We enable end-to-end\ntraining, reducing pretraining computation without sacrificing model\nperformance. As shown in Figure 1, experiments show the model pretrained with\nNSA maintains or exceeds Full Attention models across general benchmarks,\nlong-context tasks, and instruction-based reasoning. Meanwhile, NSA achieves\nsubstantial speedups over Full Attention on 64k-length sequences across\ndecoding, forward propagation, and backward propagation, validating its\nefficiency throughout the model lifecycle.",
+      "keywords": [
+        "sparse attention",
+        "long-context modeling",
+        "token compression",
+        "token selection",
+        "arithmetic intensity-balanced",
+        "full attention",
+        "end-to-end training"
+      ],
+      "url": "https://huggingface.co/papers/2502.11089",
+      "published_at": "2025-02-16"
+    },
+    {
+      "paper_id": "hf:2502.14786",
+      "title": "SigLIP 2: Multilingual Vision-Language Encoders with Improved Semantic\n  Understanding, Localization, and Dense Features",
+      "summary": "We introduce SigLIP 2, a family of new multilingual vision-language encoders\nthat build on the success of the original SigLIP. In this second iteration, we\nextend the original image-text training objective with several prior,\nindependently developed techniques into a unified recipe -- this includes\ncaptioning-based pretraining, self-supervised losses (self-distillation, masked\nprediction) and online data curation. With these changes, SigLIP 2 models\noutperform their SigLIP counterparts at all model scales in core capabilities,\nincluding zero-shot classification, image-text retrieval, and transfer\nperformance when extracting visual representations for Vision-Language Models\n(VLMs). Furthermore, the new training recipe leads to significant improvements\non localization and dense prediction tasks. We also train variants which\nsupport multiple resolutions and preserve the input's native aspect ratio.\nFinally, we train on a more diverse data-mixture that includes de-biasing\ntechniques, leading to much better multilingual understanding and improved\nfairness. To allow users to trade off inference cost with performance, we\nrelease model checkpoints at four sizes: ViT-B (86M), L (303M), So400m (400M),\nand g (1B).",
+      "keywords": [
+        "vision-language encoders",
+        "captioning-based pretraining",
+        "self-supervised losses",
+        "self-distillation",
+        "masked prediction",
+        "online data curation",
+        "zero-shot classification",
+        "image-text retrieval",
+        "Visual-Language Models (VLMs)",
+        "localization",
+        "dense prediction",
+        "multiple resolutions",
+        "native aspect ratio",
+        "de-biasing techniques",
+        "multilingual understanding",
+        "fairness",
+        "model checkpoints",
+        "ViT-B",
+        "ViT-L",
+        "So400m",
+        "g"
+      ],
+      "url": "https://huggingface.co/papers/2502.14786",
+      "published_at": "2025-02-20"
+    },
+    {
+      "paper_id": "hf:2502.06703",
+      "title": "Can 1B LLM Surpass 405B LLM? Rethinking Compute-Optimal Test-Time\n  Scaling",
+      "summary": "Test-Time Scaling (TTS) is an important method for improving the performance\nof Large Language Models (LLMs) by using additional computation during the\ninference phase. However, current studies do not systematically analyze how\npolicy models, Process Reward Models (PRMs), and problem difficulty influence\nTTS. This lack of analysis limits the understanding and practical use of TTS\nmethods. In this paper, we focus on two core questions: (1) What is the optimal\napproach to scale test-time computation across different policy models, PRMs,\nand problem difficulty levels? (2) To what extent can extended computation\nimprove the performance of LLMs on complex tasks, and can smaller language\nmodels outperform larger ones through this approach? Through comprehensive\nexperiments on MATH-500 and challenging AIME24 tasks, we have the following\nobservations: (1) The compute-optimal TTS strategy is highly dependent on the\nchoice of policy model, PRM, and problem difficulty. (2) With our\ncompute-optimal TTS strategy, extremely small policy models can outperform\nlarger models. For example, a 1B LLM can exceed a 405B LLM on MATH-500.\nMoreover, on both MATH-500 and AIME24, a 0.5B LLM outperforms GPT-4o, a 3B LLM\nsurpasses a 405B LLM, and a 7B LLM beats o1 and DeepSeek-R1, while with higher\ninference efficiency. These findings show the significance of adapting TTS\nstrategies to the specific characteristics of each task and model and indicate\nthat TTS is a promising approach for enhancing the reasoning abilities of LLMs.",
+      "keywords": [
+        "Test-Time Scaling",
+        "Large Language Models",
+        "process reward models",
+        "MATH-500",
+        "AIME24",
+        "compute-optimal strategy"
+      ],
+      "url": "https://huggingface.co/papers/2502.06703",
+      "published_at": "2025-02-10"
+    },
+    {
+      "paper_id": "hf:2502.05171",
+      "title": "Scaling up Test-Time Compute with Latent Reasoning: A Recurrent Depth\n  Approach",
+      "summary": "We study a novel language model architecture that is capable of scaling\ntest-time computation by implicitly reasoning in latent space. Our model works\nby iterating a recurrent block, thereby unrolling to arbitrary depth at\ntest-time. This stands in contrast to mainstream reasoning models that scale up\ncompute by producing more tokens. Unlike approaches based on chain-of-thought,\nour approach does not require any specialized training data, can work with\nsmall context windows, and can capture types of reasoning that are not easily\nrepresented in words. We scale a proof-of-concept model to 3.5 billion\nparameters and 800 billion tokens. We show that the resulting model can improve\nits performance on reasoning benchmarks, sometimes dramatically, up to a\ncomputation load equivalent to 50 billion parameters.",
+      "keywords": [
+        "recurrent block",
+        "latent space",
+        "chain-of-thought",
+        "reasoning benchmarks"
+      ],
+      "url": "https://huggingface.co/papers/2502.05171",
+      "published_at": "2025-02-07"
+    },
+    {
+      "paper_id": "hf:2502.08910",
+      "title": "InfiniteHiP: Extending Language Model Context Up to 3 Million Tokens on\n  a Single GPU",
+      "summary": "In modern large language models (LLMs), handling very long context lengths\npresents significant challenges as it causes slower inference speeds and\nincreased memory costs. Additionally, most existing pre-trained LLMs fail to\ngeneralize beyond their original training sequence lengths. To enable efficient\nand practical long-context utilization, we introduce InfiniteHiP, a novel, and\npractical LLM inference framework that accelerates processing by dynamically\neliminating irrelevant context tokens through a modular hierarchical token\npruning algorithm. Our method also allows generalization to longer sequences by\nselectively applying various RoPE adjustment methods according to the internal\nattention patterns within LLMs. Furthermore, we offload the key-value cache to\nhost memory during inference, significantly reducing GPU memory pressure. As a\nresult, InfiniteHiP enables the processing of up to 3 million tokens on a\nsingle L40s 48GB GPU -- 3x larger -- without any permanent loss of context\ninformation. Our framework achieves an 18.95x speedup in attention decoding for\na 1 million token context without requiring additional training. We implement\nour method in the SGLang framework and demonstrate its effectiveness and\npracticality through extensive evaluations.",
+      "keywords": [
+        "LLMs",
+        "InfiniteHiP",
+        "token pruning",
+        "hierarchical token pruning algorithm",
+        "RoPE adjustment",
+        "key-value cache",
+        "host memory",
+        "GPU memory pressure"
+      ],
+      "url": "https://huggingface.co/papers/2502.08910",
+      "published_at": "2025-02-13"
+    },
+    {
+      "paper_id": "hf:2502.06329",
+      "title": "Expect the Unexpected: FailSafe Long Context QA for Finance",
+      "summary": "We propose a new long-context financial benchmark, FailSafeQA, designed to\ntest the robustness and context-awareness of LLMs against six variations in\nhuman-interface interactions in LLM-based query-answer systems within finance.\nWe concentrate on two case studies: Query Failure and Context Failure. In the\nQuery Failure scenario, we perturb the original query to vary in domain\nexpertise, completeness, and linguistic accuracy. In the Context Failure case,\nwe simulate the uploads of degraded, irrelevant, and empty documents. We employ\nthe LLM-as-a-Judge methodology with Qwen2.5-72B-Instruct and use fine-grained\nrating criteria to define and calculate Robustness, Context Grounding, and\nCompliance scores for 24 off-the-shelf models. The results suggest that\nalthough some models excel at mitigating input perturbations, they must balance\nrobust answering with the ability to refrain from hallucinating. Notably,\nPalmyra-Fin-128k-Instruct, recognized as the most compliant model, maintained\nstrong baseline performance but encountered challenges in sustaining robust\npredictions in 17% of test cases. On the other hand, the most robust model,\nOpenAI o3-mini, fabricated information in 41% of tested cases. The results\ndemonstrate that even high-performing models have significant room for\nimprovement and highlight the role of FailSafeQA as a tool for developing LLMs\noptimized for dependability in financial applications. The dataset is available\nat: https://huggingface.co/datasets/Writer/FailSafeQA",
+      "keywords": [
+        "LLM",
+        "long-context financial benchmark",
+        "FailSafeQA",
+        "Query Failure",
+        "Context Failure",
+        "LLM-as-a-Judge",
+        "Qwen2.5-72B-Instruct",
+        "Robustness",
+        "Context Grounding",
+        "Compliance",
+        "Palmyra-Fin-128k-Instruct",
+        "OpenAI o3-mini",
+        "hallucination"
+      ],
+      "url": "https://huggingface.co/papers/2502.06329",
+      "published_at": "2025-02-10"
+    },
+    {
+      "paper_id": "hf:2502.09992",
+      "title": "Large Language Diffusion Models",
+      "summary": "Autoregressive models (ARMs) are widely regarded as the cornerstone of large\nlanguage models (LLMs). We challenge this notion by introducing LLaDA, a\ndiffusion model trained from scratch under the pre-training and supervised\nfine-tuning (SFT) paradigm. LLaDA models distributions through a forward data\nmasking process and a reverse process, parameterized by a vanilla Transformer\nto predict masked tokens. By optimizing a likelihood bound, it provides a\nprincipled generative approach for probabilistic inference. Across extensive\nbenchmarks, LLaDA demonstrates strong scalability, outperforming our\nself-constructed ARM baselines. Remarkably, LLaDA 8B is competitive with strong\nLLMs like LLaMA3 8B in in-context learning and, after SFT, exhibits impressive\ninstruction-following abilities in case studies such as multi-turn dialogue.\nMoreover, LLaDA addresses the reversal curse, surpassing GPT-4o in a reversal\npoem completion task. Our findings establish diffusion models as a viable and\npromising alternative to ARMs, challenging the assumption that key LLM\ncapabilities discussed above are inherently tied to ARMs.",
+      "keywords": [
+        "autoregressive models",
+        "LLaDA",
+        "diffusion model",
+        "pre-training",
+        "supervised fine-tuning",
+        "vanilla Transformer",
+        "likelihood bound",
+        "probabilistic inference",
+        "in-context learning",
+        "instruction-following",
+        "reversal curse",
+        "LLaMA3",
+        "GPT-4o",
+        "reversal poem completion"
+      ],
+      "url": "https://huggingface.co/papers/2502.09992",
+      "published_at": "2025-02-14"
+    },
+    {
+      "paper_id": "hf:2501.19393",
+      "title": "s1: Simple test-time scaling",
+      "summary": "Test-time scaling is a promising new approach to language modeling that uses\nextra test-time compute to improve performance. Recently, OpenAI's o1 model\nshowed this capability but did not publicly share its methodology, leading to\nmany replication efforts. We seek the simplest approach to achieve test-time\nscaling and strong reasoning performance. First, we curate a small dataset s1K\nof 1,000 questions paired with reasoning traces relying on three criteria we\nvalidate through ablations: difficulty, diversity, and quality. Second, we\ndevelop budget forcing to control test-time compute by forcefully terminating\nthe model's thinking process or lengthening it by appending \"Wait\" multiple\ntimes to the model's generation when it tries to end. This can lead the model\nto double-check its answer, often fixing incorrect reasoning steps. After\nsupervised finetuning the Qwen2.5-32B-Instruct language model on s1K and\nequipping it with budget forcing, our model s1 exceeds o1-preview on\ncompetition math questions by up to 27% (MATH and AIME24). Further, scaling s1\nwith budget forcing allows extrapolating beyond its performance without\ntest-time intervention: from 50% to 57% on AIME24. Our model, data, and code\nare open-source at https://github.com/simplescaling/s1.",
+      "keywords": [
+        "test-time scaling",
+        "language modeling",
+        "budget forcing",
+        "Qwen2.5-32B-Instruct",
+        "supervised finetuning",
+        "reasoning traces"
+      ],
+      "url": "https://huggingface.co/papers/2501.19393",
+      "published_at": "2025-01-31"
+    },
+    {
+      "paper_id": "hf:2502.01237",
+      "title": "The Differences Between Direct Alignment Algorithms are a Blur",
+      "summary": "Direct Alignment Algorithms (DAAs) simplify language model alignment by\nreplacing reinforcement learning (RL) and reward modeling (RM) in Reinforcement\nLearning from Human Feedback (RLHF) with direct policy optimization. DAAs can\nbe classified by their ranking losses (pairwise vs. pointwise), by the rewards\nused in those losses (e.g., likelihood ratios of policy and reference policy,\nor odds ratios), or by whether a Supervised Fine-Tuning (SFT) phase is required\n(two-stage vs. one-stage). We first show that one-stage methods underperform\ntwo-stage methods. To address this, we incorporate an explicit SFT phase and\nintroduce the beta parameter, controlling the strength of preference\noptimization, into single-stage ORPO and ASFT. These modifications improve\ntheir performance in Alpaca Eval 2 by +3.46 (ORPO) and +8.27 (ASFT),\nmatching two-stage methods like DPO. Further analysis reveals that the key\nfactor is whether the approach uses pairwise or pointwise objectives, rather\nthan the specific implicit reward or loss function. These results highlight the\nimportance of careful evaluation to avoid premature claims of performance gains\nor overall superiority in alignment algorithms.",
+      "keywords": [
+        "Direct Alignment Algorithms",
+        "RLHF",
+        "direct policy optimization",
+        "ranking losses",
+        "likelihood ratios",
+        "odds ratios",
+        "Supervised Fine-Tuning",
+        "$\\beta$ parameter",
+        "single-stage ORPO",
+        "ASFT",
+        "pairwise objectives",
+        "pointwise objectives",
+        "Alpaca Eval 2",
+        "DPO"
+      ],
+      "url": "https://huggingface.co/papers/2502.01237",
+      "published_at": "2025-02-03"
+    },
+    {
+      "paper_id": "hf:2502.14739",
+      "title": "SuperGPQA: Scaling LLM Evaluation across 285 Graduate Disciplines",
+      "summary": "Large language models (LLMs) have demonstrated remarkable proficiency in\nmainstream academic disciplines such as mathematics, physics, and computer\nscience. However, human knowledge encompasses over 200 specialized disciplines,\nfar exceeding the scope of existing benchmarks. The capabilities of LLMs in\nmany of these specialized fields-particularly in light industry, agriculture,\nand service-oriented disciplines-remain inadequately evaluated. To address this\ngap, we present SuperGPQA, a comprehensive benchmark that evaluates\ngraduate-level knowledge and reasoning capabilities across 285 disciplines. Our\nbenchmark employs a novel Human-LLM collaborative filtering mechanism to\neliminate trivial or ambiguous questions through iterative refinement based on\nboth LLM responses and expert feedback. Our experimental results reveal\nsignificant room for improvement in the performance of current state-of-the-art\nLLMs across diverse knowledge domains (e.g., the reasoning-focused model\nDeepSeek-R1 achieved the highest accuracy of 61.82% on SuperGPQA), highlighting\nthe considerable gap between current model capabilities and artificial general\nintelligence. Additionally, we present comprehensive insights from our\nmanagement of a large-scale annotation process, involving over 80 expert\nannotators and an interactive Human-LLM collaborative system, offering valuable\nmethodological guidance for future research initiatives of comparable scope.",
+      "keywords": [
+        "LLMs",
+        "Large language models",
+        "SuperGPQA",
+        "Human-LLM collaborative filtering",
+        "DeepSeek-R1"
+      ],
+      "url": "https://huggingface.co/papers/2502.14739",
+      "published_at": "2025-02-20"
+    },
+    {
+      "paper_id": "hf:2502.04896",
+      "title": "Goku: Flow Based Video Generative Foundation Models",
+      "summary": "This paper introduces Goku, a state-of-the-art family of joint\nimage-and-video generation models leveraging rectified flow Transformers to\nachieve industry-leading performance. We detail the foundational elements\nenabling high-quality visual generation, including the data curation pipeline,\nmodel architecture design, flow formulation, and advanced infrastructure for\nefficient and robust large-scale training. The Goku models demonstrate superior\nperformance in both qualitative and quantitative evaluations, setting new\nbenchmarks across major tasks. Specifically, Goku achieves 0.76 on GenEval and\n83.65 on DPG-Bench for text-to-image generation, and 84.85 on VBench for\ntext-to-video tasks. We believe that this work provides valuable insights and\npractical advancements for the research community in developing joint\nimage-and-video generation models.",
+      "keywords": [
+        "rectified flow Transformers",
+        "image-and-video generation models",
+        "text-to-image generation",
+        "text-to-video tasks",
+        "GenEval",
+        "DPG-Bench",
+        "VBench"
+      ],
+      "url": "https://huggingface.co/papers/2502.04896",
+      "published_at": "2025-02-07"
+    },
+    {
+      "paper_id": "hf:2502.14776",
+      "title": "SurveyX: Academic Survey Automation via Large Language Models",
+      "summary": "Large Language Models (LLMs) have demonstrated exceptional comprehension\ncapabilities and a vast knowledge base, suggesting that LLMs can serve as\nefficient tools for automated survey generation. However, recent research\nrelated to automated survey generation remains constrained by some critical\nlimitations like finite context window, lack of in-depth content discussion,\nand absence of systematic evaluation frameworks. Inspired by human writing\nprocesses, we propose SurveyX, an efficient and organized system for automated\nsurvey generation that decomposes the survey composing process into two phases:\nthe Preparation and Generation phases. By innovatively introducing online\nreference retrieval, a pre-processing method called AttributeTree, and a\nre-polishing process, SurveyX significantly enhances the efficacy of survey\ncomposition. Experimental evaluation results show that SurveyX outperforms\nexisting automated survey generation systems in content quality (0.259\nimprovement) and citation quality (1.76 enhancement), approaching human expert\nperformance across multiple evaluation dimensions. Examples of surveys\ngenerated by SurveyX are available on www.surveyx.cn",
+      "keywords": [
+        "Large Language Models",
+        "LLMs",
+        "automated survey generation",
+        "context window",
+        "AttributeTree",
+        "reference retrieval",
+        "re-polishing process",
+        "content quality",
+        "citation quality",
+        "human expert performance"
+      ],
+      "url": "https://huggingface.co/papers/2502.14776",
+      "published_at": "2025-02-20"
+    },
+    {
+      "paper_id": "hf:2502.14502",
+      "title": "How Much Knowledge Can You Pack into a LoRA Adapter without Harming LLM?",
+      "summary": "The performance of Large Language Models (LLMs) on many tasks is greatly\nlimited by the knowledge learned during pre-training and stored in the model's\nparameters. Low-rank adaptation (LoRA) is a popular and efficient training\ntechnique for updating or domain-specific adaptation of LLMs. In this study, we\ninvestigate how new facts can be incorporated into the LLM using LoRA without\ncompromising the previously learned knowledge. We fine-tuned\nLlama-3.1-8B-instruct using LoRA with varying amounts of new knowledge. Our\nexperiments have shown that the best results are obtained when the training\ndata contains a mixture of known and new facts. However, this approach is still\npotentially harmful because the model's performance on external\nquestion-answering benchmarks declines after such fine-tuning. When the\ntraining data is biased towards certain entities, the model tends to regress to\nfew overrepresented answers. In addition, we found that the model becomes more\nconfident and refuses to provide an answer in only few cases. These findings\nhighlight the potential pitfalls of LoRA-based LLM updates and underscore the\nimportance of training data composition and tuning parameters to balance new\nknowledge integration and general model capabilities.",
+      "keywords": [
+        "Low-rank adaptation",
+        "LoRA",
+        "Large Language Models",
+        "LLMs",
+        "fine-tuning",
+        "Llama-3.1-8B-instruct",
+        "question-answering benchmarks",
+        "overrepresented answers",
+        "confidence",
+        "general model capabilities"
+      ],
+      "url": "https://huggingface.co/papers/2502.14502",
+      "published_at": "2025-02-20"
+    },
+    {
+      "paper_id": "hf:2502.06394",
+      "title": "SynthDetoxM: Modern LLMs are Few-Shot Parallel Detoxification Data\n  Annotators",
+      "summary": "Existing approaches to multilingual text detoxification are hampered by the\nscarcity of parallel multilingual datasets. In this work, we introduce a\npipeline for the generation of multilingual parallel detoxification data. We\nalso introduce SynthDetoxM, a manually collected and synthetically generated\nmultilingual parallel text detoxification dataset comprising 16,000\nhigh-quality detoxification sentence pairs across German, French, Spanish and\nRussian. The data was sourced from different toxicity evaluation datasets and\nthen rewritten with nine modern open-source LLMs in few-shot setting. Our\nexperiments demonstrate that models trained on the produced synthetic datasets\nhave superior performance to those trained on the human-annotated\nMultiParaDetox dataset even in data limited setting. Models trained on\nSynthDetoxM outperform all evaluated LLMs in few-shot setting. We release our\ndataset and code to help further research in multilingual text detoxification.",
+      "keywords": [
+        "multilingual text detoxification",
+        "parallel multilingual datasets",
+        "text detoxification dataset",
+        "LLMs",
+        "few-shot setting",
+        "MultiParaDetox"
+      ],
+      "url": "https://huggingface.co/papers/2502.06394",
+      "published_at": "2025-02-10"
+    },
+    {
+      "paper_id": "hf:2502.12900",
+      "title": "Soundwave: Less is More for Speech-Text Alignment in LLMs",
+      "summary": "Existing end-to-end speech large language models (LLMs) usually rely on\nlarge-scale annotated data for training, while data-efficient training has not\nbeen discussed in depth. We focus on two fundamental problems between speech\nand text: the representation space gap and sequence length inconsistency. We\npropose Soundwave, which utilizes an efficient training strategy and a novel\narchitecture to address these issues. Results show that Soundwave outperforms\nthe advanced Qwen2-Audio in speech translation and AIR-Bench speech tasks,\nusing only one-fiftieth of the training data. Further analysis shows that\nSoundwave still retains its intelligence during conversation. The project is\navailable at https://github.com/FreedomIntelligence/Soundwave.",
+      "keywords": [
+        "large language models",
+        "large-scale annotated data",
+        "data-efficient training",
+        "representation space gap",
+        "sequence length inconsistency",
+        "soundwave",
+        "Qwen2-Audio",
+        "speech translation",
+        "AIR-Bench speech tasks"
+      ],
+      "url": "https://huggingface.co/papers/2502.12900",
+      "published_at": "2025-02-18"
+    },
+    {
+      "paper_id": "hf:2502.19613",
+      "title": "Self-rewarding correction for mathematical reasoning",
+      "summary": "We study self-rewarding reasoning large language models (LLMs), which can\nsimultaneously generate step-by-step reasoning and evaluate the correctness of\ntheir outputs during the inference time-without external feedback. This\nintegrated approach allows a single model to independently guide its reasoning\nprocess, offering computational advantages for model deployment. We\nparticularly focus on the representative task of self-correction, where models\nautonomously detect errors in their responses, revise outputs, and decide when\nto terminate iterative refinement loops. To enable this, we propose a\ntwo-staged algorithmic framework for constructing self-rewarding reasoning\nmodels using only self-generated data. In the first stage, we employ sequential\nrejection sampling to synthesize long chain-of-thought trajectories that\nincorporate both self-rewarding and self-correction mechanisms. Fine-tuning\nmodels on these curated data allows them to learn the patterns of\nself-rewarding and self-correction. In the second stage, we further enhance the\nmodels' ability to assess response accuracy and refine outputs through\nreinforcement learning with rule-based signals. Experiments with Llama-3 and\nQwen-2.5 demonstrate that our approach surpasses intrinsic self-correction\ncapabilities and achieves performance comparable to systems that rely on\nexternal reward models.",
+      "keywords": [
+        "self-rewarding reasoning",
+        "large language models",
+        "chain-of-thought trajectories",
+        "sequential rejection sampling",
+        "intrinsic self-correction",
+        "reinforcement learning",
+        "rule-based signals"
+      ],
+      "url": "https://huggingface.co/papers/2502.19613",
+      "published_at": "2025-02-26"
+    },
+    {
+      "paper_id": "hf:2502.17258",
+      "title": "VideoGrain: Modulating Space-Time Attention for Multi-grained Video\n  Editing",
+      "summary": "Recent advancements in diffusion models have significantly improved video\ngeneration and editing capabilities. However, multi-grained video editing,\nwhich encompasses class-level, instance-level, and part-level modifications,\nremains a formidable challenge. The major difficulties in multi-grained editing\ninclude semantic misalignment of text-to-region control and feature coupling\nwithin the diffusion model. To address these difficulties, we present\nVideoGrain, a zero-shot approach that modulates space-time (cross- and self-)\nattention mechanisms to achieve fine-grained control over video content. We\nenhance text-to-region control by amplifying each local prompt's attention to\nits corresponding spatial-disentangled region while minimizing interactions\nwith irrelevant areas in cross-attention. Additionally, we improve feature\nseparation by increasing intra-region awareness and reducing inter-region\ninterference in self-attention. Extensive experiments demonstrate our method\nachieves state-of-the-art performance in real-world scenarios. Our code, data,\nand demos are available at https://knightyxp.github.io/VideoGrain_project_page/",
+      "keywords": [
+        "diffusion models",
+        "multi-grained video editing",
+        "text-to-region control",
+        "feature coupling",
+        "cross-attention",
+        "self-attention",
+        "spatial-disentangled region",
+        "intra-region awareness",
+        "inter-region interference"
+      ],
+      "url": "https://huggingface.co/papers/2502.17258",
+      "published_at": "2025-02-24"
+    },
+    {
+      "paper_id": "hf:2502.18449",
+      "title": "SWE-RL: Advancing LLM Reasoning via Reinforcement Learning on Open\n  Software Evolution",
+      "summary": "The recent DeepSeek-R1 release has demonstrated the immense potential of\nreinforcement learning (RL) in enhancing the general reasoning capabilities of\nlarge language models (LLMs). While DeepSeek-R1 and other follow-up work\nprimarily focus on applying RL to competitive coding and math problems, this\npaper introduces SWE-RL, the first approach to scale RL-based LLM reasoning for\nreal-world software engineering. Leveraging a lightweight rule-based reward\n(e.g., the similarity score between ground-truth and LLM-generated solutions),\nSWE-RL enables LLMs to autonomously recover a developer's reasoning processes\nand solutions by learning from extensive open-source software evolution data --\nthe record of a software's entire lifecycle, including its code snapshots, code\nchanges, and events such as issues and pull requests. Trained on top of Llama\n3, our resulting reasoning model, Llama3-SWE-RL-70B, achieves a 41.0% solve\nrate on SWE-bench Verified -- a human-verified collection of real-world GitHub\nissues. To our knowledge, this is the best performance reported for\nmedium-sized (<100B) LLMs to date, even comparable to leading proprietary LLMs\nlike GPT-4o. Surprisingly, despite performing RL solely on software evolution\ndata, Llama3-SWE-RL has even emerged with generalized reasoning skills. For\nexample, it shows improved results on five out-of-domain tasks, namely,\nfunction coding, library use, code reasoning, mathematics, and general language\nunderstanding, whereas a supervised-finetuning baseline even leads to\nperformance degradation on average. Overall, SWE-RL opens up a new direction to\nimprove the reasoning capabilities of LLMs through reinforcement learning on\nmassive software engineering data.",
+      "keywords": [
+        "reinforcement learning",
+        "large language models",
+        "RL-based LLM reasoning",
+        "lightweight rule-based reward",
+        "open-source software evolution data",
+        "SWE-bench Verified",
+        "solve rate",
+        "Llama 3",
+        "function coding",
+        "library use",
+        "code reasoning",
+        "mathematics",
+        "general language understanding"
+      ],
+      "url": "https://huggingface.co/papers/2502.18449",
+      "published_at": "2025-02-25"
+    },
+    {
+      "paper_id": "hf:2502.18411",
+      "title": "OmniAlign-V: Towards Enhanced Alignment of MLLMs with Human Preference",
+      "summary": "Recent advancements in open-source multi-modal large language models (MLLMs)\nhave primarily focused on enhancing foundational capabilities, leaving a\nsignificant gap in human preference alignment. This paper introduces\nOmniAlign-V, a comprehensive dataset of 200K high-quality training samples\nfeaturing diverse images, complex questions, and varied response formats to\nimprove MLLMs' alignment with human preferences. We also present MM-AlignBench,\na human-annotated benchmark specifically designed to evaluate MLLMs' alignment\nwith human values. Experimental results show that finetuning MLLMs with\nOmniAlign-V, using Supervised Fine-Tuning (SFT) or Direct Preference\nOptimization (DPO), significantly enhances human preference alignment while\nmaintaining or enhancing performance on standard VQA benchmarks, preserving\ntheir fundamental capabilities. Our datasets, benchmark, code and checkpoints\nhave been released at https://github.com/PhoenixZ810/OmniAlign-V.",
+      "keywords": [
+        "multi-modal large language models",
+        "OmniAlign-V",
+        "MM-AlignBench",
+        "Supervised Fine-Tuning",
+        "Direct Preference Optimization",
+        "human preference alignment",
+        "VQA benchmarks"
+      ],
+      "url": "https://huggingface.co/papers/2502.18411",
+      "published_at": "2025-02-25"
+    },
+    {
+      "paper_id": "hf:2502.13063",
+      "title": "Cramming 1568 Tokens into a Single Vector and Back Again: Exploring the\n  Limits of Embedding Space Capacity",
+      "summary": "A range of recent works addresses the problem of compression of sequence of\ntokens into a shorter sequence of real-valued vectors to be used as inputs\ninstead of token embeddings or key-value cache. These approaches allow to\nreduce the amount of compute in existing language models. Despite relying on\npowerful models as encoders, the maximum attainable lossless compression ratio\nis typically not higher than x10. This fact is highly intriguing because, in\ntheory, the maximum information capacity of large real-valued vectors is far\nbeyond the presented rates even for 16-bit precision and a modest vector size.\nIn this work, we explore the limits of compression by replacing the encoder\nwith a per-sample optimization procedure. We show that vectors with compression\nratios up to x1500 exist, which highlights two orders of magnitude gap between\nexisting and practically attainable solutions. Furthermore, we empirically show\nthat the compression limits are determined not by the length of the input but\nby the amount of uncertainty to be reduced, namely, the cross-entropy loss on\nthis sequence without any conditioning. The obtained limits highlight the\nsubstantial gap between the theoretical capacity of input embeddings and their\npractical utilization, suggesting significant room for optimization in model\ndesign.",
+      "keywords": [
+        "sequence compression",
+        "token embeddings",
+        "per-sample optimization",
+        "compression ratio",
+        "cross-entropy loss",
+        "model design"
+      ],
+      "url": "https://huggingface.co/papers/2502.13063",
+      "published_at": "2025-02-18"
+    },
+    {
+      "paper_id": "hf:2502.17129",
+      "title": "Thus Spake Long-Context Large Language Model",
+      "summary": "Long context is an important topic in Natural Language Processing (NLP),\nrunning through the development of NLP architectures, and offers immense\nopportunities for Large Language Models (LLMs) giving LLMs the lifelong\nlearning potential akin to humans. Unfortunately, the pursuit of a long context\nis accompanied by numerous obstacles. Nevertheless, long context remains a core\ncompetitive advantage for LLMs. In the past two years, the context length of\nLLMs has achieved a breakthrough extension to millions of tokens. Moreover, the\nresearch on long-context LLMs has expanded from length extrapolation to a\ncomprehensive focus on architecture, infrastructure, training, and evaluation\ntechnologies.\n  Inspired by the symphonic poem, Thus Spake Zarathustra, we draw an analogy\nbetween the journey of extending the context of LLM and the attempts of humans\nto transcend its mortality. In this survey, We will illustrate how LLM\nstruggles between the tremendous need for a longer context and its equal need\nto accept the fact that it is ultimately finite. To achieve this, we give a\nglobal picture of the lifecycle of long-context LLMs from four perspectives:\narchitecture, infrastructure, training, and evaluation, showcasing the full\nspectrum of long-context technologies. At the end of this survey, we will\npresent 10 unanswered questions currently faced by long-context LLMs. We hope\nthis survey can serve as a systematic introduction to the research on\nlong-context LLMs.",
+      "keywords": [
+        "Large Language Models",
+        "long context",
+        "length extrapolation",
+        "architecture",
+        "infrastructure",
+        "training",
+        "evaluation",
+        "long-context LLMs"
+      ],
+      "url": "https://huggingface.co/papers/2502.17129",
+      "published_at": "2025-02-24"
+    },
+    {
+      "paper_id": "hf:2502.15814",
+      "title": "Slamming: Training a Speech Language Model on One GPU in a Day",
+      "summary": "We introduce Slam, a recipe for training high-quality Speech Language Models\n(SLMs) on a single academic GPU in 24 hours. We do so through empirical\nanalysis of model initialisation and architecture, synthetic training data,\npreference optimisation with synthetic data and tweaking all other components.\nWe empirically demonstrate that this training recipe also scales well with more\ncompute getting results on par with leading SLMs in a fraction of the compute\ncost. We hope these insights will make SLM training and research more\naccessible. In the context of SLM scaling laws, our results far outperform\npredicted compute optimal performance, giving an optimistic view to SLM\nfeasibility. See code, data, models, samples at -\nhttps://pages.cs.huji.ac.il/adiyoss-lab/slamming .",
+      "keywords": [
+        "Slam",
+        "Speech Language Models",
+        "model initialization",
+        "architecture",
+        "synthetic training data",
+        "preference optimization"
+      ],
+      "url": "https://huggingface.co/papers/2502.15814",
+      "published_at": "2025-02-19"
+    },
+    {
+      "paper_id": "hf:2502.06807",
+      "title": "Competitive Programming with Large Reasoning Models",
+      "summary": "We show that reinforcement learning applied to large language models (LLMs)\nsignificantly boosts performance on complex coding and reasoning tasks.\nAdditionally, we compare two general-purpose reasoning models - OpenAI o1 and\nan early checkpoint of o3 - with a domain-specific system, o1-ioi, which uses\nhand-engineered inference strategies designed for competing in the 2024\nInternational Olympiad in Informatics (IOI). We competed live at IOI 2024 with\no1-ioi and, using hand-crafted test-time strategies, placed in the 49th\npercentile. Under relaxed competition constraints, o1-ioi achieved a gold\nmedal. However, when evaluating later models such as o3, we find that o3\nachieves gold without hand-crafted domain-specific strategies or relaxed\nconstraints. Our findings show that although specialized pipelines such as\no1-ioi yield solid improvements, the scaled-up, general-purpose o3 model\nsurpasses those results without relying on hand-crafted inference heuristics.\nNotably, o3 achieves a gold medal at the 2024 IOI and obtains a Codeforces\nrating on par with elite human competitors. Overall, these results indicate\nthat scaling general-purpose reinforcement learning, rather than relying on\ndomain-specific techniques, offers a robust path toward state-of-the-art AI in\nreasoning domains, such as competitive programming.",
+      "keywords": [
+        "reinforcement learning",
+        "large language models",
+        "LLMs",
+        "general-purpose reasoning models",
+        "domain-specific system",
+        "hand-engineered inference strategies",
+        "International Olympiad in Informatics",
+        "IOI",
+        "gold medal",
+        "Codeforces rating",
+        "competitive programming"
+      ],
+      "url": "https://huggingface.co/papers/2502.06807",
+      "published_at": "2025-02-03"
+    },
+    {
+      "paper_id": "hf:2502.18417",
+      "title": "GHOST 2.0: generative high-fidelity one shot transfer of heads",
+      "summary": "While the task of face swapping has recently gained attention in the research\ncommunity, a related problem of head swapping remains largely unexplored. In\naddition to skin color transfer, head swap poses extra challenges, such as the\nneed to preserve structural information of the whole head during synthesis and\ninpaint gaps between swapped head and background. In this paper, we address\nthese concerns with GHOST 2.0, which consists of two problem-specific modules.\nFirst, we introduce enhanced Aligner model for head reenactment, which\npreserves identity information at multiple scales and is robust to extreme pose\nvariations. Secondly, we use a Blender module that seamlessly integrates the\nreenacted head into the target background by transferring skin color and\ninpainting mismatched regions. Both modules outperform the baselines on the\ncorresponding tasks, allowing to achieve state of the art results in head\nswapping. We also tackle complex cases, such as large difference in hair styles\nof source and target. Code is available at\nhttps://github.com/ai-forever/ghost-2.0",
+      "keywords": [
+        "Aligner",
+        "Blender",
+        "head reenactment",
+        "skin color transfer",
+        "inpainting",
+        "identity information",
+        "extreme pose variations"
+      ],
+      "url": "https://huggingface.co/papers/2502.18417",
+      "published_at": "2025-02-25"
+    },
+    {
+      "paper_id": "hf:2502.02492",
+      "title": "VideoJAM: Joint Appearance-Motion Representations for Enhanced Motion\n  Generation in Video Models",
+      "summary": "Despite tremendous recent progress, generative video models still struggle to\ncapture real-world motion, dynamics, and physics. We show that this limitation\narises from the conventional pixel reconstruction objective, which biases\nmodels toward appearance fidelity at the expense of motion coherence. To\naddress this, we introduce VideoJAM, a novel framework that instills an\neffective motion prior to video generators, by encouraging the model to learn a\njoint appearance-motion representation. VideoJAM is composed of two\ncomplementary units. During training, we extend the objective to predict both\nthe generated pixels and their corresponding motion from a single learned\nrepresentation. During inference, we introduce Inner-Guidance, a mechanism that\nsteers the generation toward coherent motion by leveraging the model's own\nevolving motion prediction as a dynamic guidance signal. Notably, our framework\ncan be applied to any video model with minimal adaptations, requiring no\nmodifications to the training data or scaling of the model. VideoJAM achieves\nstate-of-the-art performance in motion coherence, surpassing highly competitive\nproprietary models while also enhancing the perceived visual quality of the\ngenerations. These findings emphasize that appearance and motion can be\ncomplementary and, when effectively integrated, enhance both the visual quality\nand the coherence of video generation. Project website:\nhttps://hila-chefer.github.io/videojam-paper.github.io/",
+      "keywords": [
+        "generative video models",
+        "motion coherence",
+        "dynamics",
+        "physics",
+        "pixel reconstruction",
+        "VideoJAM",
+        "joint appearance-motion representation",
+        "Inner-Guidance",
+        "dynamic guidance signal"
+      ],
+      "url": "https://huggingface.co/papers/2502.02492",
+      "published_at": "2025-02-04"
+    },
+    {
+      "paper_id": "hf:2502.18934",
+      "title": "Kanana: Compute-efficient Bilingual Language Models",
+      "summary": "We introduce Kanana, a series of bilingual language models that demonstrate\nexceeding performance in Korean and competitive performance in English. The\ncomputational cost of Kanana is significantly lower than that of\nstate-of-the-art models of similar size. The report details the techniques\nemployed during pre-training to achieve compute-efficient yet competitive\nmodels, including high quality data filtering, staged pre-training, depth\nup-scaling, and pruning and distillation. Furthermore, the report outlines the\nmethodologies utilized during the post-training of the Kanana models,\nencompassing supervised fine-tuning and preference optimization, aimed at\nenhancing their capability for seamless interaction with users. Lastly, the\nreport elaborates on plausible approaches used for language model adaptation to\nspecific scenarios, such as embedding, retrieval augmented generation, and\nfunction calling. The Kanana model series spans from 2.1B to 32.5B parameters\nwith 2.1B models (base, instruct, embedding) publicly released to promote\nresearch on Korean language models.",
+      "keywords": [
+        "high quality data filtering",
+        "staged pre-training",
+        "depth up-scaling",
+        "pruning",
+        "distillation",
+        "supervised fine-tuning",
+        "preference optimization",
+        "embedding",
+        "retrieval augmented generation",
+        "function calling"
+      ],
+      "url": "https://huggingface.co/papers/2502.18934",
+      "published_at": "2025-02-26"
+    },
+    {
+      "paper_id": "hf:2502.05173",
+      "title": "VideoRoPE: What Makes for Good Video Rotary Position Embedding?",
+      "summary": "While Rotary Position Embedding (RoPE) and its variants are widely adopted\nfor their long-context capabilities, the extension of the 1D RoPE to video,\nwith its complex spatio-temporal structure, remains an open challenge. This\nwork first introduces a comprehensive analysis that identifies four key\ncharacteristics essential for the effective adaptation of RoPE to video, which\nhave not been fully considered in prior work. As part of our analysis, we\nintroduce a challenging V-NIAH-D (Visual Needle-In-A-Haystack with Distractors)\ntask, which adds periodic distractors into V-NIAH. The V-NIAH-D task\ndemonstrates that previous RoPE variants, lacking appropriate temporal\ndimension allocation, are easily misled by distractors. Based on our analysis,\nwe introduce VideoRoPE, with a 3D structure designed to\npreserve spatio-temporal relationships. VideoRoPE features\nlow-frequency temporal allocation to mitigate periodic oscillations, a\ndiagonal layout to maintain spatial symmetry, and adjustable\ntemporal spacing to decouple temporal and spatial indexing. VideoRoPE\nconsistently surpasses previous RoPE variants, across diverse downstream tasks\nsuch as long video retrieval, video understanding, and video hallucination. Our\ncode will be available at\nhttps://github.com/Wiselnn570/VideoRoPE{https://github.com/Wiselnn570/VideoRoPE}.",
+      "keywords": [
+        "Rotary Position Embedding",
+        "RoPE",
+        "long-context capabilities",
+        "V-NIAH-D",
+        "diagonal layout",
+        "low-frequency temporal allocation",
+        "adjustable temporal spacing",
+        "long video retrieval",
+        "video understanding",
+        "video hallucination"
+      ],
+      "url": "https://huggingface.co/papers/2502.05173",
+      "published_at": "2025-02-07"
+    },
+    {
+      "paper_id": "hf:2502.19634",
+      "title": "MedVLM-R1: Incentivizing Medical Reasoning Capability of Vision-Language\n  Models (VLMs) via Reinforcement Learning",
+      "summary": "Reasoning is a critical frontier for advancing medical image analysis, where\ntransparency and trustworthiness play a central role in both clinician trust\nand regulatory approval. Although Medical Visual Language Models (VLMs) show\npromise for radiological tasks, most existing VLMs merely produce final answers\nwithout revealing the underlying reasoning. To address this gap, we introduce\nMedVLM-R1, a medical VLM that explicitly generates natural language reasoning\nto enhance transparency and trustworthiness. Instead of relying on supervised\nfine-tuning (SFT), which often suffers from overfitting to training\ndistributions and fails to foster genuine reasoning, MedVLM-R1 employs a\nreinforcement learning framework that incentivizes the model to discover\nhuman-interpretable reasoning paths without using any reasoning references.\nDespite limited training data (600 visual question answering samples) and model\nparameters (2B), MedVLM-R1 boosts accuracy from 55.11% to 78.22% across MRI,\nCT, and X-ray benchmarks, outperforming larger models trained on over a million\nsamples. It also demonstrates robust domain generalization under\nout-of-distribution tasks. By unifying medical image analysis with explicit\nreasoning, MedVLM-R1 marks a pivotal step toward trustworthy and interpretable\nAI in clinical practice.",
+      "keywords": [
+        "Medical Visual Language Models",
+        "VLMs",
+        "reinforcement learning",
+        "human-interpretable reasoning",
+        "visual question answering",
+        "MRI",
+        "CT",
+        "X-ray benchmarks",
+        "domain generalization"
+      ],
+      "url": "https://huggingface.co/papers/2502.19634",
+      "published_at": "2025-02-26"
+    },
+    {
+      "paper_id": "hf:2502.14382",
+      "title": "S*: Test Time Scaling for Code Generation",
+      "summary": "Increasing test-time compute for LLMs shows promise across domains but\nremains underexplored in code generation, despite extensive study in math. In\nthis paper, we propose S*, the first hybrid test-time scaling framework that\nsubstantially improves the coverage and selection accuracy of generated code.\nS* extends the existing parallel scaling paradigm with sequential scaling to\npush performance boundaries. It further leverages a novel selection mechanism\nthat adaptively generates distinguishing inputs for pairwise comparison,\ncombined with execution-grounded information to robustly identify correct\nsolutions. We evaluate across 12 Large Language Models and Large Reasoning\nModel and show: (1) S* consistently improves performance across model families\nand sizes, enabling a 3B model to outperform GPT-4o-mini; (2) S* enables\nnon-reasoning models to surpass reasoning models - GPT-4o-mini with S*\noutperforms o1-preview by 3.7% on LiveCodeBench; (3) S* further boosts\nstate-of-the-art reasoning models - DeepSeek-R1-Distill-Qwen-32B with S*\nachieves 85.7% on LiveCodeBench, approaching o1 (high) at 88.5%. Code will be\navailable under https://github.com/NovaSky-AI/SkyThought.",
+      "keywords": [
+        "hybrid test-time scaling framework",
+        "parallel scaling",
+        "sequential scaling",
+        "selection mechanism",
+        "distinguishing inputs",
+        "execution-grounded information",
+        "Large Language Models",
+        "Large Reasoning Models",
+        "LiveCodeBench",
+        "DeepSeek"
+      ],
+      "url": "https://huggingface.co/papers/2502.14382",
+      "published_at": "2025-02-20"
+    },
+    {
+      "paper_id": "hf:2502.03387",
+      "title": "LIMO: Less is More for Reasoning",
+      "summary": "We present a fundamental discovery that challenges our understanding of how\ncomplex reasoning emerges in large language models. While conventional wisdom\nsuggests that sophisticated reasoning tasks demand extensive training data\n(>100,000 examples), we demonstrate that complex mathematical reasoning\nabilities can be effectively elicited with surprisingly few examples. Through\ncomprehensive experiments, our proposed model LIMO demonstrates unprecedented\nperformance in mathematical reasoning. With merely 817 curated training\nsamples, LIMO achieves 57.1% accuracy on AIME and 94.8% on MATH, improving from\nprevious SFT-based models' 6.5% and 59.2% respectively, while only using 1% of\nthe training data required by previous approaches. LIMO demonstrates\nexceptional out-of-distribution generalization, achieving 40.5% absolute\nimprovement across 10 diverse benchmarks, outperforming models trained on 100x\nmore data, challenging the notion that SFT leads to memorization rather than\ngeneralization. Based on these results, we propose the Less-Is-More Reasoning\nHypothesis (LIMO Hypothesis): In foundation models where domain knowledge has\nbeen comprehensively encoded during pre-training, sophisticated reasoning\ncapabilities can emerge through minimal but precisely orchestrated\ndemonstrations of cognitive processes. This hypothesis posits that the\nelicitation threshold for complex reasoning is determined by two key factors:\n(1) the completeness of the model's encoded knowledge foundation during\npre-training, and (2) the effectiveness of post-training examples as \"cognitive\ntemplates\" that show the model how to utilize its knowledge base to solve\ncomplex reasoning tasks. To facilitate reproducibility and future research in\ndata-efficient reasoning, we release LIMO as a comprehensive open-source suite\nat https://github.com/GAIR-NLP/LIMO.",
+      "keywords": [
+        "LIMO",
+        "LIMO Hypothesis",
+        "pre-training",
+        "foundation models",
+        "encoded knowledge",
+        "cognitive templates",
+        "data-efficient reasoning"
+      ],
+      "url": "https://huggingface.co/papers/2502.03387",
+      "published_at": "2025-02-05"
+    },
+    {
+      "paper_id": "hf:2502.01456",
+      "title": "Process Reinforcement through Implicit Rewards",
+      "summary": "Dense process rewards have proven a more effective alternative to the sparse\noutcome-level rewards in the inference-time scaling of large language models\n(LLMs), particularly in tasks requiring complex multi-step reasoning. While\ndense rewards also offer an appealing choice for the reinforcement learning\n(RL) of LLMs since their fine-grained rewards have the potential to address\nsome inherent issues of outcome rewards, such as training efficiency and credit\nassignment, this potential remains largely unrealized. This can be primarily\nattributed to the challenges of training process reward models (PRMs) online,\nwhere collecting high-quality process labels is prohibitively expensive, making\nthem particularly vulnerable to reward hacking. To address these challenges, we\npropose PRIME (Process Reinforcement through IMplicit rEwards), which enables\nonline PRM updates using only policy rollouts and outcome labels through\nimplict process rewards. PRIME combines well with various advantage functions\nand forgoes the dedicated reward model training phrase that existing approaches\nrequire, substantially reducing the development overhead. We demonstrate\nPRIME's effectiveness on competitional math and coding. Starting from\nQwen2.5-Math-7B-Base, PRIME achieves a 15.1% average improvement across several\nkey reasoning benchmarks over the SFT model. Notably, our resulting model,\nEurus-2-7B-PRIME, surpasses Qwen2.5-Math-7B-Instruct on seven reasoning\nbenchmarks with 10% of its training data.",
+      "keywords": [
+        "dense process rewards",
+        "sparse outcome-level rewards",
+        "large language models",
+        "reinforcement learning",
+        "process reward models",
+        "reward hacking",
+        "policy rollouts",
+        "advantage functions",
+        "Qwen2.5-Math-7B-Base",
+        "reasoning benchmarks",
+        "Eurus-2-7B-PRIME"
+      ],
+      "url": "https://huggingface.co/papers/2502.01456",
+      "published_at": "2025-02-03"
+    },
+    {
+      "paper_id": "hf:2502.03032",
+      "title": "Analyze Feature Flow to Enhance Interpretation and Steering in Language\n  Models",
+      "summary": "We introduce a new approach to systematically map features discovered by\nsparse autoencoder across consecutive layers of large language models,\nextending earlier work that examined inter-layer feature links. By using a\ndata-free cosine similarity technique, we trace how specific features persist,\ntransform, or first appear at each stage. This method yields granular flow\ngraphs of feature evolution, enabling fine-grained interpretability and\nmechanistic insights into model computations. Crucially, we demonstrate how\nthese cross-layer feature maps facilitate direct steering of model behavior by\namplifying or suppressing chosen features, achieving targeted thematic control\nin text generation. Together, our findings highlight the utility of a causal,\ncross-layer interpretability framework that not only clarifies how features\ndevelop through forward passes but also provides new means for transparent\nmanipulation of large language models.",
+      "keywords": [
+        "sparse autoencoder",
+        "large language models",
+        "data-free cosine similarity",
+        "feature evolution",
+        "forward passes"
+      ],
+      "url": "https://huggingface.co/papers/2502.03032",
+      "published_at": "2025-02-05"
+    },
+    {
+      "paper_id": "hf:2502.18137",
+      "title": "SpargeAttn: Accurate Sparse Attention Accelerating Any Model Inference",
+      "summary": "An efficient attention implementation is essential for large models due to\nits quadratic time complexity. Fortunately, attention commonly exhibits\nsparsity, i.e., many values in the attention map are near zero, allowing for\nthe omission of corresponding computations. Many studies have utilized the\nsparse pattern to accelerate attention. However, most existing works focus on\noptimizing attention within specific models by exploiting certain sparse\npatterns of the attention map. A universal sparse attention that guarantees\nboth the speedup and end-to-end performance of diverse models remains elusive.\nIn this paper, we propose SpargeAttn, a universal sparse and quantized\nattention for any model. Our method uses a two-stage online filter: in the\nfirst stage, we rapidly and accurately predict the attention map, enabling the\nskip of some matrix multiplications in attention. In the second stage, we\ndesign an online softmax-aware filter that incurs no extra overhead and further\nskips some matrix multiplications. Experiments show that our method\nsignificantly accelerates diverse models, including language, image, and video\ngeneration, without sacrificing end-to-end metrics. The codes are available at\nhttps://github.com/thu-ml/SpargeAttn.",
+      "keywords": [
+        "attention",
+        "sparse attention",
+        "quantized attention",
+        "matrix multiplications",
+        "online filter",
+        "softmax-aware filter",
+        "language generation",
+        "image generation",
+        "video generation"
+      ],
+      "url": "https://huggingface.co/papers/2502.18137",
+      "published_at": "2025-02-25"
+    },
+    {
+      "paper_id": "hf:2502.11079",
+      "title": "Phantom: Subject-consistent video generation via cross-modal alignment",
+      "summary": "The continuous development of foundational models for video generation is\nevolving into various applications, with subject-consistent video generation\nstill in the exploratory stage. We refer to this as Subject-to-Video, which\nextracts subject elements from reference images and generates\nsubject-consistent video through textual instructions. We believe that the\nessence of subject-to-video lies in balancing the dual-modal prompts of text\nand image, thereby deeply and simultaneously aligning both text and visual\ncontent. To this end, we propose Phantom, a unified video generation framework\nfor both single and multi-subject references. Building on existing\ntext-to-video and image-to-video architectures, we redesign the joint\ntext-image injection model and drive it to learn cross-modal alignment via\ntext-image-video triplet data. In particular, we emphasize subject consistency\nin human generation, covering existing ID-preserving video generation while\noffering enhanced advantages. The project homepage is here\nhttps://phantom-video.github.io/Phantom/.",
+      "keywords": [
+        "text-to-video",
+        "image-to-video",
+        "joint text-image injection model",
+        "cross-modal alignment",
+        "text-image-video triplet data",
+        "subject consistency",
+        "ID-preserving video generation"
+      ],
+      "url": "https://huggingface.co/papers/2502.11079",
+      "published_at": "2025-02-16"
+    },
+    {
+      "paper_id": "hf:2502.13130",
+      "title": "Magma: A Foundation Model for Multimodal AI Agents",
+      "summary": "We present Magma, a foundation model that serves multimodal AI agentic tasks\nin both the digital and physical worlds. Magma is a significant extension of\nvision-language (VL) models in that it not only retains the VL understanding\nability (verbal intelligence) of the latter, but is also equipped with the\nability to plan and act in the visual-spatial world (spatial-temporal\nintelligence) and complete agentic tasks ranging from UI navigation to robot\nmanipulation. To endow the agentic capabilities, Magma is pretrained on large\namounts of heterogeneous datasets spanning from images, videos to robotics\ndata, where the actionable visual objects (e.g., clickable buttons in GUI) in\nimages are labeled by Set-of-Mark (SoM) for action grounding, and the object\nmovements (e.g., the trace of human hands or robotic arms) in videos are\nlabeled by Trace-of-Mark (ToM) for action planning. Extensive experiments show\nthat SoM and ToM reach great synergy and facilitate the acquisition of\nspatial-temporal intelligence for our Magma model, which is fundamental to a\nwide range of tasks as shown in Fig.1. In particular, Magma creates new\nstate-of-the-art results on UI navigation and robotic manipulation tasks,\noutperforming previous models that are specifically tailored to these tasks. On\nimage and video-related multimodal tasks, Magma also compares favorably to\npopular large multimodal models that are trained on much larger datasets. We\nmake our model and code public for reproducibility at\nhttps://microsoft.github.io/Magma.",
+      "keywords": [
+        "vision-language models",
+        "spatial-temporal intelligence",
+        "actionable visual objects",
+        "Set-of-Mark",
+        "Trace-of-Mark",
+        "action grounding",
+        "action planning",
+        "spatial-temporal intelligence",
+        "UI navigation",
+        "robotic manipulation"
+      ],
+      "url": "https://huggingface.co/papers/2502.13130",
+      "published_at": "2025-02-18"
+    },
+    {
+      "paper_id": "hf:2502.08127",
+      "title": "Fino1: On the Transferability of Reasoning Enhanced LLMs to Finance",
+      "summary": "Recent advancements in large language models (LLMs) have shown strong general\nreasoning abilities, yet their effectiveness in financial reasoning remains\nunderexplored. In this study, we comprehensively evaluate 16 powerful reasoning\nand general LLMs on three complex financial tasks involving financial text,\ntabular data, and equations, assessing numerical reasoning, tabular\ninterpretation, financial terminology comprehension, long-context processing,\nand equation-based problem solving. Our results show that while better datasets\nand pretraining improve financial reasoning, general enhancements like CoT\nfine-tuning do not always yield consistent gains. Moreover, all reasoning\nstrategies face challenges in improving performance on long-context and\nmulti-table tasks. To address these limitations, we develop a financial\nreasoning-enhanced model based on Llama-3.1-8B-Instruct, by CoT fine-tuning and\nreinforcement learning with domain-specific reasoning paths. Even with simple\nfine-tuning with one financial dataset, our model achieves a consistent 10%\nperformance improvement across tasks, surpassing all 8B models and even\nLlama3-70B-Instruct and Llama3.1-70B-Instruct on average. Our results highlight\nthe need for domain-specific adaptations in financial tasks, emphasizing future\ndirections such as multi-table reasoning, long-context processing, and\nfinancial terminology comprehension. All our datasets, models, and codes are\npublicly available. Furthermore, we introduce a leaderboard for benchmarking\nfuture datasets and models.",
+      "keywords": [
+        "large language models",
+        "financial reasoning",
+        "CoT fine-tuning",
+        "reinforcement learning",
+        "domain-specific reasoning paths",
+        "multi-table reasoning",
+        "long-context processing"
+      ],
+      "url": "https://huggingface.co/papers/2502.08127",
+      "published_at": "2025-02-12"
+    },
+    {
+      "paper_id": "hf:2502.06781",
+      "title": "Exploring the Limit of Outcome Reward for Learning Mathematical\n  Reasoning",
+      "summary": "Reasoning abilities, especially those for solving complex math problems, are\ncrucial components of general intelligence. Recent advances by proprietary\ncompanies, such as o-series models of OpenAI, have made remarkable progress on\nreasoning tasks. However, the complete technical details remain unrevealed, and\nthe techniques that are believed certainly to be adopted are only reinforcement\nlearning (RL) and the long chain of thoughts. This paper proposes a new RL\nframework, termed OREAL, to pursue the performance limit that can be achieved\nthrough Outcome REwArd-based reinforcement\nLearning for mathematical reasoning tasks, where only binary outcome\nrewards are easily accessible. We theoretically prove that behavior cloning on\npositive trajectories from best-of-N (BoN) sampling is sufficient to learn the\nKL-regularized optimal policy in binary feedback environments. This formulation\nfurther implies that the rewards of negative samples should be reshaped to\nensure the gradient consistency between positive and negative samples. To\nalleviate the long-existing difficulties brought by sparse rewards in RL, which\nare even exacerbated by the partial correctness of the long chain of thought\nfor reasoning tasks, we further apply a token-level reward model to sample\nimportant tokens in reasoning trajectories for learning. With OREAL, for the\nfirst time, a 7B model can obtain 94.0 pass@1 accuracy on MATH-500 through RL,\nbeing on par with 32B models. OREAL-32B also surpasses previous 32B models\ntrained by distillation with 95.0 pass@1 accuracy on MATH-500. Our\ninvestigation also indicates the importance of initial policy models and\ntraining queries for RL. Code, models, and data will be released to benefit\nfuture researchhttps://github.com/InternLM/OREAL.",
+      "keywords": [
+        "reinforcement learning",
+        "OREAL",
+        "Outcome REwArd-based reinforcement Learning",
+        "binary outcome rewards",
+        "behavior cloning",
+        "best-of-N",
+        "KL-regularized optimal policy",
+        "token-level reward model",
+        "MATH-500",
+        "pass@1 accuracy"
+      ],
+      "url": "https://huggingface.co/papers/2502.06781",
+      "published_at": "2025-02-10"
+    },
+    {
+      "paper_id": "hf:2502.03373",
+      "title": "Demystifying Long Chain-of-Thought Reasoning in LLMs",
+      "summary": "Scaling inference compute enhances reasoning in large language models (LLMs),\nwith long chains-of-thought (CoTs) enabling strategies like backtracking and\nerror correction. Reinforcement learning (RL) has emerged as a crucial method\nfor developing these capabilities, yet the conditions under which long CoTs\nemerge remain unclear, and RL training requires careful design choices. In this\nstudy, we systematically investigate the mechanics of long CoT reasoning,\nidentifying the key factors that enable models to generate long CoT\ntrajectories. Through extensive supervised fine-tuning (SFT) and RL\nexperiments, we present four main findings: (1) While SFT is not strictly\nnecessary, it simplifies training and improves efficiency; (2) Reasoning\ncapabilities tend to emerge with increased training compute, but their\ndevelopment is not guaranteed, making reward shaping crucial for stabilizing\nCoT length growth; (3) Scaling verifiable reward signals is critical for RL. We\nfind that leveraging noisy, web-extracted solutions with filtering mechanisms\nshows strong potential, particularly for out-of-distribution (OOD) tasks such\nas STEM reasoning; and (4) Core abilities like error correction are inherently\npresent in base models, but incentivizing these skills effectively for complex\ntasks via RL demands significant compute, and measuring their emergence\nrequires a nuanced approach. These insights provide practical guidance for\noptimizing training strategies to enhance long CoT reasoning in LLMs. Our code\nis available at: https://github.com/eddycmu/demystify-long-cot.",
+      "keywords": [
+        "large language models",
+        "long chains-of-thought",
+        "backtracking",
+        "error correction",
+        "reinforcement learning",
+        "supervised fine-tuning",
+        "training compute",
+        "reward shaping",
+        "verifiable reward signals",
+        "web-extracted solutions",
+        "filtering mechanisms",
+        "out-of-distribution tasks",
+        "STEM reasoning",
+        "core abilities"
+      ],
+      "url": "https://huggingface.co/papers/2502.03373",
+      "published_at": "2025-02-05"
+    },
+    {
+      "paper_id": "hf:2502.07864",
+      "title": "TransMLA: Multi-head Latent Attention Is All You Need",
+      "summary": "Modern large language models (LLMs) often encounter communication bottlenecks\non current hardware, rather than purely computational constraints. Multi-head\nLatent Attention (MLA) tackles this challenge by using low-rank matrices in the\nkey-value (KV) layers, thereby allowing compressed latent KV states to be\ncached. This approach significantly reduces the KV cache size relative to\ntraditional multi-head attention, leading to faster inference. Moreover, MLA\nemploys an up-projection matrix to increase expressiveness, trading additional\ncomputation for reduced communication overhead. Although MLA has demonstrated\nefficiency and effectiveness in Deepseek V2/V3/R1, many major model providers\nstill rely on Group Query Attention (GQA) and have not announced any plans to\nadopt MLA. In this paper, we show that GQA can always be represented by MLA\nwhile maintaining the same KV cache overhead, but the converse does not hold.\nTo encourage broader use of MLA, we introduce **TransMLA**, a post-training\nmethod that converts widely used GQA-based pre-trained models (e.g., LLaMA,\nQwen, Mixtral) into MLA-based models. After conversion, the model can undergo\nadditional training to boost expressiveness without increasing the KV cache\nsize. Furthermore, we plan to develop MLA-specific inference acceleration\ntechniques to preserve low latency in transformed models, thus enabling more\nefficient distillation of Deepseek R1.",
+      "keywords": [
+        "Multi-head Latent Attention",
+        "MLA",
+        "low-rank matrices",
+        "KV layers",
+        "latent KV states",
+        "up-projection matrix",
+        "Group Query Attention",
+        "GQA",
+        "TransMLA",
+        "pre-trained models",
+        "LLaMA",
+        "Qwen",
+        "Mixtral",
+        "expressiveness",
+        "KV cache overhead",
+        "inference acceleration",
+        "distillation"
+      ],
+      "url": "https://huggingface.co/papers/2502.07864",
+      "published_at": "2025-02-11"
+    },
+    {
+      "paper_id": "hf:2502.10248",
+      "title": "Step-Video-T2V Technical Report: The Practice, Challenges, and Future of\n  Video Foundation Model",
+      "summary": "We present Step-Video-T2V, a state-of-the-art text-to-video pre-trained model\nwith 30B parameters and the ability to generate videos up to 204 frames in\nlength. A deep compression Variational Autoencoder, Video-VAE, is designed for\nvideo generation tasks, achieving 16x16 spatial and 8x temporal compression\nratios, while maintaining exceptional video reconstruction quality. User\nprompts are encoded using two bilingual text encoders to handle both English\nand Chinese. A DiT with 3D full attention is trained using Flow Matching and is\nemployed to denoise input noise into latent frames. A video-based DPO approach,\nVideo-DPO, is applied to reduce artifacts and improve the visual quality of the\ngenerated videos. We also detail our training strategies and share key\nobservations and insights. Step-Video-T2V's performance is evaluated on a novel\nvideo generation benchmark, Step-Video-T2V-Eval, demonstrating its\nstate-of-the-art text-to-video quality when compared with both open-source and\ncommercial engines. Additionally, we discuss the limitations of current\ndiffusion-based model paradigm and outline future directions for video\nfoundation models. We make both Step-Video-T2V and Step-Video-T2V-Eval\navailable at https://github.com/stepfun-ai/Step-Video-T2V. The online version\ncan be accessed from https://yuewen.cn/videos as well. Our goal is to\naccelerate the innovation of video foundation models and empower video content\ncreators.",
+      "keywords": [
+        "Step-Video-T2V",
+        "Variational Autoencoder",
+        "Video-VAE",
+        "DiT",
+        "3D full attention",
+        "Flow Matching",
+        "Video-DPO",
+        "Step-Video-T2V-Eval",
+        "diffusion-based model",
+        "video foundation models"
+      ],
+      "url": "https://huggingface.co/papers/2502.10248",
+      "published_at": "2025-02-14"
+    },
+    {
+      "paper_id": "hf:2502.11564",
+      "title": "Continuous Diffusion Model for Language Modeling",
+      "summary": "Diffusion models have emerged as a promising alternative to autoregressive\nmodels in modeling discrete categorical data. Yet diffusion models that\ndirectly work on discrete data space do not fully exploit the power of\niterative refinement, as the signals are lost during the transition between\ndiscrete states. Existing continuous diffusion models for discrete data have\nlimited performance compared to discrete approaches, and the unclear link\nbetween them restricts the development of diffusion models for discrete data.\nIn this work, we propose a continuous diffusion model for language modeling\nthat incorporates the geometry of the underlying categorical distribution. We\nestablish a connection between the discrete diffusion and continuous flow on\nthe statistical manifold, and building on the analogy, we introduce a simple\ndesign for the diffusion process that generalizes previous discrete diffusion\nmodels. We further propose a simulation-free training framework based on radial\nsymmetry and a simple technique to address the high dimensionality of the\nmanifold. Comprehensive experiments on language modeling benchmarks and other\nmodalities show that our method outperforms existing discrete diffusion models\nand approaches the performance of autoregressive models. Codes available at\nhttps://github.com/harryjo97/RDLM{https://github.com/harryjo97/RDLM}.",
+      "keywords": [
+        "diffusion models",
+        "autoregressive models",
+        "discrete data space",
+        "iterative refinement",
+        "continuous diffusion models",
+        "statistical manifold",
+        "radial symmetry",
+        "high dimensionality"
+      ],
+      "url": "https://huggingface.co/papers/2502.11564",
+      "published_at": "2025-02-17"
+    },
+    {
+      "paper_id": "hf:2502.10389",
+      "title": "Region-Adaptive Sampling for Diffusion Transformers",
+      "summary": "Diffusion models (DMs) have become the leading choice for generative tasks\nacross diverse domains. However, their reliance on multiple sequential forward\npasses significantly limits real-time performance. Previous acceleration\nmethods have primarily focused on reducing the number of sampling steps or\nreusing intermediate results, failing to leverage variations across spatial\nregions within the image due to the constraints of convolutional U-Net\nstructures. By harnessing the flexibility of Diffusion Transformers (DiTs) in\nhandling variable number of tokens, we introduce RAS, a novel, training-free\nsampling strategy that dynamically assigns different sampling ratios to regions\nwithin an image based on the focus of the DiT model. Our key observation is\nthat during each sampling step, the model concentrates on semantically\nmeaningful regions, and these areas of focus exhibit strong continuity across\nconsecutive steps. Leveraging this insight, RAS updates only the regions\ncurrently in focus, while other regions are updated using cached noise from the\nprevious step. The model's focus is determined based on the output from the\npreceding step, capitalizing on the temporal consistency we observed. We\nevaluate RAS on Stable Diffusion 3 and Lumina-Next-T2I, achieving speedups up\nto 2.36x and 2.51x, respectively, with minimal degradation in generation\nquality. Additionally, a user study reveals that RAS delivers comparable\nqualities under human evaluation while achieving a 1.6x speedup. Our approach\nmakes a significant step towards more efficient diffusion transformers,\nenhancing their potential for real-time applications.",
+      "keywords": [
+        "diffusion models",
+        "sampling strategy",
+        "Diffusion Transformers (DiTs)",
+        "tokens",
+        "sampling ratios",
+        "spatial regions",
+        "U-Net structures",
+        "consecutive steps",
+        "temporal consistency",
+        "Stable Diffusion 3",
+        "Lumina-Next-T2I",
+        "generation quality",
+        "user study"
+      ],
+      "url": "https://huggingface.co/papers/2502.10389",
+      "published_at": "2025-02-14"
+    },
+    {
+      "paper_id": "hf:2502.07346",
+      "title": "BenchMAX: A Comprehensive Multilingual Evaluation Suite for Large\n  Language Models",
+      "summary": "Previous multilingual benchmarks focus primarily on simple understanding\ntasks, but for large language models(LLMs), we emphasize proficiency in\ninstruction following, reasoning, long context understanding, code generation,\nand so on. However, measuring these advanced capabilities across languages is\nunderexplored. To address the disparity, we introduce BenchMAX, a multi-way\nmultilingual evaluation benchmark that allows for fair comparisons of these\nimportant abilities across languages. To maintain high quality, three distinct\nnative-speaking annotators independently annotate each sample within all tasks\nafter the data was machine-translated from English into 16 other languages.\nAdditionally, we present a novel translation challenge stemming from dataset\nconstruction. Extensive experiments on BenchMAX reveal varying effectiveness of\ncore capabilities across languages, highlighting performance gaps that cannot\nbe bridged by simply scaling up model size. BenchMAX serves as a comprehensive\nmultilingual evaluation platform, providing a promising test bed to promote the\ndevelopment of multilingual language models. The dataset and code are publicly\naccessible.",
+      "keywords": [
+        "multilingual benchmarks",
+        "large language models (LLMs)",
+        "instruction following",
+        "reasoning",
+        "long context understanding",
+        "code generation",
+        "BenchMAX",
+        "native-speaking annotators",
+        "machine translation",
+        "translation challenge",
+        "multilingual evaluation platform"
+      ],
+      "url": "https://huggingface.co/papers/2502.07346",
+      "published_at": "2025-02-11"
+    },
+    {
+      "paper_id": "hf:2502.18864",
+      "title": "Towards an AI co-scientist",
+      "summary": "Scientific discovery relies on scientists generating novel hypotheses that\nundergo rigorous experimental validation. To augment this process, we introduce\nan AI co-scientist, a multi-agent system built on Gemini 2.0. The AI\nco-scientist is intended to help uncover new, original knowledge and to\nformulate demonstrably novel research hypotheses and proposals, building upon\nprior evidence and aligned to scientist-provided research objectives and\nguidance. The system's design incorporates a generate, debate, and evolve\napproach to hypothesis generation, inspired by the scientific method and\naccelerated by scaling test-time compute. Key contributions include: (1) a\nmulti-agent architecture with an asynchronous task execution framework for\nflexible compute scaling; (2) a tournament evolution process for self-improving\nhypotheses generation. Automated evaluations show continued benefits of\ntest-time compute, improving hypothesis quality. While general purpose, we\nfocus development and validation in three biomedical areas: drug repurposing,\nnovel target discovery, and explaining mechanisms of bacterial evolution and\nanti-microbial resistance. For drug repurposing, the system proposes candidates\nwith promising validation findings, including candidates for acute myeloid\nleukemia that show tumor inhibition in vitro at clinically applicable\nconcentrations. For novel target discovery, the AI co-scientist proposed new\nepigenetic targets for liver fibrosis, validated by anti-fibrotic activity and\nliver cell regeneration in human hepatic organoids. Finally, the AI\nco-scientist recapitulated unpublished experimental results via a parallel in\nsilico discovery of a novel gene transfer mechanism in bacterial evolution.\nThese results, detailed in separate, co-timed reports, demonstrate the\npotential to augment biomedical and scientific discovery and usher an era of AI\nempowered scientists.",
+      "keywords": [
+        "multi-agent system",
+        "Gemini 2.0",
+        "generate",
+        "debate",
+        "evolve",
+        "device-free compute",
+        "tournament evolution",
+        "hypothesis generation",
+        "drug repurposing",
+        "novel target discovery",
+        "liver fibrosis",
+        "gene transfer mechanism",
+        "bacterial evolution"
+      ],
+      "url": "https://huggingface.co/papers/2502.18864",
+      "published_at": "2025-02-26"
+    }
+  ],
+  "clusters": [
+    {
+      "cluster_index": 0,
+      "size": 18,
+      "cohesion": 0.898054281870524,
+      "members": [
+        {
+          "paper_id": "hf:2502.07346",
+          "rank_in_cluster": 0,
+          "sim_to_centroid": 0.9324400424957275
+        },
+        {
+          "paper_id": "hf:2502.17129",
+          "rank_in_cluster": 1,
+          "sim_to_centroid": 0.9295482635498047
+        },
+        {
+          "paper_id": "hf:2502.15007",
+          "rank_in_cluster": 2,
+          "sim_to_centroid": 0.9239084720611572
+        },
+        {
+          "paper_id": "hf:2502.09992",
+          "rank_in_cluster": 3,
+          "sim_to_centroid": 0.9222195744514465
+        },
+        {
+          "paper_id": "hf:2502.02737",
+          "rank_in_cluster": 4,
+          "sim_to_centroid": 0.9220865964889526
+        },
+        {
+          "paper_id": "hf:2502.08910",
+          "rank_in_cluster": 5,
+          "sim_to_centroid": 0.9137141704559326
+        },
+        {
+          "paper_id": "hf:2502.07864",
+          "rank_in_cluster": 6,
+          "sim_to_centroid": 0.9064558744430542
+        },
+        {
+          "paper_id": "hf:2502.14502",
+          "rank_in_cluster": 7,
+          "sim_to_centroid": 0.9057973623275757
+        },
+        {
+          "paper_id": "hf:2502.11089",
+          "rank_in_cluster": 8,
+          "sim_to_centroid": 0.9055447578430176
+        },
+        {
+          "paper_id": "hf:2502.03032",
+          "rank_in_cluster": 9,
+          "sim_to_centroid": 0.8958489894866943
+        },
+        {
+          "paper_id": "hf:2502.13063",
+          "rank_in_cluster": 10,
+          "sim_to_centroid": 0.893010139465332
+        },
+        {
+          "paper_id": "hf:2502.12900",
+          "rank_in_cluster": 11,
+          "sim_to_centroid": 0.892436146736145
+        },
+        {
+          "paper_id": "hf:2502.18934",
+          "rank_in_cluster": 12,
+          "sim_to_centroid": 0.8866983652114868
+        },
+        {
+          "paper_id": "hf:2502.15814",
+          "rank_in_cluster": 13,
+          "sim_to_centroid": 0.886568546295166
+        },
+        {
+          "paper_id": "hf:2502.18411",
+          "rank_in_cluster": 14,
+          "sim_to_centroid": 0.880157470703125
+        },
+        {
+          "paper_id": "hf:2502.06329",
+          "rank_in_cluster": 15,
+          "sim_to_centroid": 0.8731725215911865
+        },
+        {
+          "paper_id": "hf:2502.14776",
+          "rank_in_cluster": 16,
+          "sim_to_centroid": 0.8490040302276611
+        },
+        {
+          "paper_id": "hf:2502.06394",
+          "rank_in_cluster": 17,
+          "sim_to_centroid": 0.846365749835968
+        }
+      ]
+    },
+    {
+      "cluster_index": 1,
+      "size": 3,
+      "cohesion": 0.9248815774917603,
+      "members": [
+        {
+          "paper_id": "hf:2502.10389",
+          "rank_in_cluster": 0,
+          "sim_to_centroid": 0.9430663585662842
+        },
+        {
+          "paper_id": "hf:2502.11564",
+          "rank_in_cluster": 1,
+          "sim_to_centroid": 0.9189146757125854
+        },
+        {
+          "paper_id": "hf:2502.18137",
+          "rank_in_cluster": 2,
+          "sim_to_centroid": 0.9126636981964111
+        }
+      ]
+    },
+    {
+      "cluster_index": 2,
+      "size": 19,
+      "cohesion": 0.8961596865403024,
+      "members": [
+        {
+          "paper_id": "hf:2502.03373",
+          "rank_in_cluster": 0,
+          "sim_to_centroid": 0.9391927719116211
+        },
+        {
+          "paper_id": "hf:2502.06703",
+          "rank_in_cluster": 1,
+          "sim_to_centroid": 0.9323734045028687
+        },
+        {
+          "paper_id": "hf:2502.05171",
+          "rank_in_cluster": 2,
+          "sim_to_centroid": 0.9236832857131958
+        },
+        {
+          "paper_id": "hf:2502.06807",
+          "rank_in_cluster": 3,
+          "sim_to_centroid": 0.9208768606185913
+        },
+        {
+          "paper_id": "hf:2502.19613",
+          "rank_in_cluster": 4,
+          "sim_to_centroid": 0.9175685048103333
+        },
+        {
+          "paper_id": "hf:2501.19393",
+          "rank_in_cluster": 5,
+          "sim_to_centroid": 0.9125888347625732
+        },
+        {
+          "paper_id": "hf:2502.14739",
+          "rank_in_cluster": 6,
+          "sim_to_centroid": 0.9104806184768677
+        },
+        {
+          "paper_id": "hf:2502.18449",
+          "rank_in_cluster": 7,
+          "sim_to_centroid": 0.9076253175735474
+        },
+        {
+          "paper_id": "hf:2502.14499",
+          "rank_in_cluster": 8,
+          "sim_to_centroid": 0.9035829901695251
+        },
+        {
+          "paper_id": "hf:2502.06781",
+          "rank_in_cluster": 9,
+          "sim_to_centroid": 0.9007951021194458
+        },
+        {
+          "paper_id": "hf:2502.01456",
+          "rank_in_cluster": 10,
+          "sim_to_centroid": 0.898959755897522
+        },
+        {
+          "paper_id": "hf:2502.08127",
+          "rank_in_cluster": 11,
+          "sim_to_centroid": 0.8942050933837891
+        },
+        {
+          "paper_id": "hf:2502.03387",
+          "rank_in_cluster": 12,
+          "sim_to_centroid": 0.8820412158966064
+        },
+        {
+          "paper_id": "hf:2502.14382",
+          "rank_in_cluster": 13,
+          "sim_to_centroid": 0.8798832893371582
+        },
+        {
+          "paper_id": "hf:2502.08946",
+          "rank_in_cluster": 14,
+          "sim_to_centroid": 0.8738081455230713
+        },
+        {
+          "paper_id": "hf:2502.01237",
+          "rank_in_cluster": 15,
+          "sim_to_centroid": 0.8694379329681396
+        },
+        {
+          "paper_id": "hf:2502.19634",
+          "rank_in_cluster": 16,
+          "sim_to_centroid": 0.8676234483718872
+        },
+        {
+          "paper_id": "hf:2502.13130",
+          "rank_in_cluster": 17,
+          "sim_to_centroid": 0.858373761177063
+        },
+        {
+          "paper_id": "hf:2502.18864",
+          "rank_in_cluster": 18,
+          "sim_to_centroid": 0.8339337110519409
+        }
+      ]
+    },
+    {
+      "cluster_index": 3,
+      "size": 10,
+      "cohesion": 0.8940174281597137,
+      "members": [
+        {
+          "paper_id": "hf:2502.02492",
+          "rank_in_cluster": 0,
+          "sim_to_centroid": 0.9229733943939209
+        },
+        {
+          "paper_id": "hf:2502.10248",
+          "rank_in_cluster": 1,
+          "sim_to_centroid": 0.9161350727081299
+        },
+        {
+          "paper_id": "hf:2502.17258",
+          "rank_in_cluster": 2,
+          "sim_to_centroid": 0.9081217050552368
+        },
+        {
+          "paper_id": "hf:2502.04896",
+          "rank_in_cluster": 3,
+          "sim_to_centroid": 0.9069010019302368
+        },
+        {
+          "paper_id": "hf:2502.11079",
+          "rank_in_cluster": 4,
+          "sim_to_centroid": 0.9059735536575317
+        },
+        {
+          "paper_id": "hf:2502.01061",
+          "rank_in_cluster": 5,
+          "sim_to_centroid": 0.9057849645614624
+        },
+        {
+          "paper_id": "hf:2502.05173",
+          "rank_in_cluster": 6,
+          "sim_to_centroid": 0.8796252012252808
+        },
+        {
+          "paper_id": "hf:2502.14786",
+          "rank_in_cluster": 7,
+          "sim_to_centroid": 0.8788951635360718
+        },
+        {
+          "paper_id": "hf:2502.13923",
+          "rank_in_cluster": 8,
+          "sim_to_centroid": 0.8687152862548828
+        },
+        {
+          "paper_id": "hf:2502.18417",
+          "rank_in_cluster": 9,
+          "sim_to_centroid": 0.8470489382743835
+        }
+      ]
+    }
+  ]
+}
