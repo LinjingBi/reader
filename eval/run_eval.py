@@ -1,4 +1,21 @@
-"""Main evaluation runner"""
+"""
+Main evaluation runner.
+
+Workflow:
+1. Load configuration from YAML file
+2. Load monthly clustering data (JSON)
+3. Pack input data using P0 packer (transforms raw data into prompt-ready format)
+4. Load prompt template and compute hash for run ID generation
+5. For each model (in parallel):
+   a. Process all clusters in parallel:
+      - Call LLM with per-cluster prompt template
+      - Validate response using judge (JSON parsing, schema validation, citations)
+      - Save raw responses per cluster
+   b. Synthesize cluster reports into final output JSON
+   c. Save model output and compute scores
+6. Generate summary with aggregate scores across all models
+7. Save summary.json with run metadata and results
+"""
 
 import argparse
 import json
@@ -7,7 +24,6 @@ import os
 import shutil
 import sys
 import time
-import re
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
@@ -16,6 +32,7 @@ from typing import Dict, Any, List, Tuple, Optional
 
 import yaml
 from pydantic import BaseModel
+from dataclasses import asdict
 
 # Add eval directory to path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -24,9 +41,8 @@ from packers.p0 import build_input, get_packer_stats
 from judges.heuristics import judge_output, JudgeOutput
 from utils.llm_client import LLMClient
 from utils.logger import EvalLogger
-from utils.template_loader import load_template, compute_template_hash, render_template, render_template_per_cluster
+from utils.template_loader import load_template, compute_template_hash, render_template_per_cluster
 from schemas.cluster_response import ClusterReport
-from schemas.output_models import OutputSchema, ClusterCard, RepresentativePaperOutput, ReadingOrderItemOutput
 
 
 # Pydantic models for config validation
@@ -40,7 +56,6 @@ class PromptsConfig(BaseModel):
 
 
 class DatasetConfig(BaseModel):
-    months: List[str]
     input_dir: str
 
 
@@ -76,7 +91,16 @@ class EvalConfig(BaseModel):
     logging: LoggingConfig
 
 def _load_config(config_path: Path, logger: EvalLogger) -> EvalConfig:
-    """Load and validate config file with Pydantic models"""
+    """
+    Load and validate config file with Pydantic models.
+    
+    Args:
+        config_path: Path to YAML config file
+        logger: Logger instance for logging config loading
+        
+    Returns:
+        Validated EvalConfig object
+    """
     with open(config_path, 'r', encoding='utf-8') as f:
         config_dict = yaml.safe_load(f)
     
@@ -106,19 +130,53 @@ def _load_config(config_path: Path, logger: EvalLogger) -> EvalConfig:
 
 
 def generate_run_id(month: str, packing_variant: str, prompt_variant: str, model: str, temperature: float, prompt_hash: str) -> str:
-    """Generate stable run ID"""
+    """
+    Generate stable run ID from run parameters.
+    
+    Args:
+        month: Month key (e.g., "2025-01")
+        packing_variant: Packing variant name (e.g., "P0")
+        prompt_variant: Prompt variant ID
+        model: Model name
+        temperature: Temperature setting
+        prompt_hash: Template hash (first 8 chars)
+        
+    Returns:
+        Run ID string in format: {month}__{packing}__{prompt}__{model}__t{temp}__{hash}
+    """
     # Format: {month}__{packing}__{prompt}__{model}__t{temp}__{hash}
     temp_str = f"t{temperature}".replace(".", "_")
     return f"{month}__{packing_variant}__{prompt_variant}__{model}__{temp_str}__{prompt_hash[:8]}"
 
 
 def generate_snapshot_id(source: str, period_start: str, period_end: str) -> str:
-    """Generate snapshot ID from input data"""
+    """
+    Generate snapshot ID from input data metadata.
+    
+    Args:
+        source: Data source identifier
+        period_start: Period start date string
+        period_end: Period end date string
+        
+    Returns:
+        Snapshot ID string in format: {source}|{period_start}|{period_end}
+    """
     return f"{source}|{period_start}|{period_end}"
 
 
-def _pack_input_data(monthly_data: dict, logger: EvalLogger) -> Tuple[dict, dict]:
-    """Pack input data using P0 packer"""
+def _pack_input_data(monthly_data: Dict[str, Any], logger: EvalLogger) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """
+    Pack input data using P0 packer.
+    
+    Args:
+        monthly_data: Raw monthly clustering data dictionary
+        logger: Logger instance
+        
+    Returns:
+        Tuple of (packed_data, stats):
+        - packed_data: Packed data dictionary ready for prompts
+        - stats: Statistics dictionary with cluster and paper counts
+    """
     packed_data, warnings = build_input(monthly_data)
     stats = get_packer_stats(packed_data)
     
@@ -132,71 +190,15 @@ def _pack_input_data(monthly_data: dict, logger: EvalLogger) -> Tuple[dict, dict
     return packed_data, stats
 
 
-def _generate_prompt(template_path: Path, output_schema_path: Path, packed_data: dict, prompt_file_path: Path, logger: EvalLogger) -> Tuple[str, str]:
-    """Generate complete prompt using template"""
-    # Load template
-    template_content = load_template(template_path)
-    
-    # Compute template hash
-    template_hash = compute_template_hash(template_content)
-    
-    # Render template
-    rendered_prompt = render_template(
-        template_content=template_content,
-        output_schema_path=output_schema_path,
-        input_data=packed_data
-    )
-    
-    # Save rendered prompt to file
-    prompt_file_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(prompt_file_path, 'w', encoding='utf-8') as f:
-        f.write(rendered_prompt)
-    
-    # Log template hash at INFO level
-    logger._log("prompt.hash", f"template_hash={template_hash}", level=logging.INFO)
-    
-    # Log prompt content at DEBUG level only
-    logger._log("prompt.content", rendered_prompt, level=logging.DEBUG)
-    
-    return rendered_prompt, template_hash
-
-
-def _call_llm(llm_config: LLMConfig, model: str, prompt: str, logger: EvalLogger) -> str:
-    """Call LLM and return raw text response"""
-    # Initialize LLM client
-    api_key = os.getenv(llm_config.api_key_env)
-    if not api_key:
-        raise ValueError(f"API key not found in environment variable: {llm_config.api_key_env}")
-    
-    llm_client = LLMClient(
-        provider=llm_config.provider,
-        model=model,
-        temperature=llm_config.temperature,
-        max_tokens=llm_config.max_tokens,
-        api_key=api_key
-    )
-    
-    # Log call metadata at INFO level
-    logger._log("llm.call", f"model={model}, api_uri={llm_client.api_uri}, args={llm_client.get_api_args()}", level=logging.INFO)
-    
-    # Call LLM (with retry logic built in)
-    raw_response = llm_client.call(prompt)
-    
-    # Log response content at DEBUG level only
-    logger._log("llm.response", raw_response, level=logging.DEBUG)
-    
-    return raw_response
-
-
 def _call_llm_per_cluster(
     llm_config: LLMConfig,
     model: str,
-    cluster_data: dict,
+    cluster_data: Dict[str, Any],
     template_content: str,
     logger: EvalLogger,
     run_results_dir: Optional[Path] = None,
     cluster_index: Optional[int] = None
-) -> ClusterReport:
+) -> Tuple[JudgeOutput, Optional[ClusterReport]]:
     """
     Call LLM for a single cluster using structured output.
     
@@ -210,7 +212,9 @@ def _call_llm_per_cluster(
         cluster_index: Optional cluster index for saving raw responses
     
     Returns:
-        Parsed ClusterReport Pydantic model
+        Tuple of (JudgeOutput, Optional[ClusterReport]):
+        - JudgeOutput: Contains sub_scores, overall, and reasons
+        - ClusterReport: Validated Pydantic object if validation passes, None otherwise
     """
     # Initialize LLM client
     api_key = os.getenv(llm_config.api_key_env)
@@ -233,200 +237,26 @@ def _call_llm_per_cluster(
     
     # Get raw response text (so we can save it even if validation fails)
     raw_response_text = llm_client.call_structured_raw(prompt, ClusterReport)
-    
-    # Parse JSON from raw text
-    try:
-        raw_response_dict = extract_json(raw_response_text)
-    except Exception as e:
-        # Save raw response with parse error
-        if run_results_dir and cluster_index is not None:
-            try:
-                sanitized_model = model.replace("/", "_")
-                raw_response_path = run_results_dir / f"raw_response_{sanitized_model}_cluster_{cluster_index}.json"
-                with open(raw_response_path, 'w', encoding='utf-8') as f:
-                    json.dump({
-                        "model": model,
-                        "cluster_index": cluster_index,
-                        "raw_response_text": raw_response_text,
-                        "parse_error": str(e)
-                    }, f, indent=2, ensure_ascii=False)
-                logger._log("llm.raw_saved", f"Raw response saved with parse error to {raw_response_path}", level=logging.INFO)
-            except Exception:
-                pass
-        raise ValueError(f"Failed to parse JSON from raw response: {str(e)}")
-    
-    # Save raw response if we have a directory (before validation)
-    if run_results_dir and cluster_index is not None:
-        try:
-            sanitized_model = model.replace("/", "_")
-            raw_response_path = run_results_dir / f"raw_response_{sanitized_model}_cluster_{cluster_index}.json"
-            with open(raw_response_path, 'w', encoding='utf-8') as f:
-                json.dump({
-                    "model": model,
-                    "cluster_index": cluster_index,
-                    "raw_response_text": raw_response_text,
-                    "parsed_response": raw_response_dict
-                }, f, indent=2, ensure_ascii=False)
-            logger._log("llm.raw_saved", f"Raw response saved to {raw_response_path}", level=logging.DEBUG)
-        except Exception as save_error:
-            logger._log("llm.raw_save_failed", f"Failed to save raw response: {str(save_error)}", level=logging.WARNING)
-    
-    # Validate parsed response
-    try:
-        cluster_report = ClusterReport.model_validate(raw_response_dict)
-        
-        # Log response content at DEBUG level only
-        logger._log("llm.response", cluster_report.model_dump_json(indent=2, ensure_ascii=False), level=logging.DEBUG)
-        
-        return cluster_report
-    except Exception as e:
-        # Update saved raw response with validation error if we saved it
-        if run_results_dir and cluster_index is not None:
-            try:
-                sanitized_model = model.replace("/", "_")
-                raw_response_path = run_results_dir / f"raw_response_{sanitized_model}_cluster_{cluster_index}.json"
-                with open(raw_response_path, 'w', encoding='utf-8') as f:
-                    json.dump({
-                        "model": model,
-                        "cluster_index": cluster_index,
-                        "raw_response_text": raw_response_text,
-                        "parsed_response": raw_response_dict,
-                        "validation_error": str(e)
-                    }, f, indent=2, ensure_ascii=False)
-                logger._log("llm.raw_updated", f"Raw response updated with validation error at {raw_response_path}", level=logging.INFO)
-            except Exception:
-                pass  # Ignore errors updating the file
-        raise
 
-
-def _normalize_confidence(confidence: str) -> str:
-    """Normalize confidence from HIGH/MEDIUM/LOW to high/medium/low"""
-    confidence_map = {
-        "HIGH": "high",
-        "MEDIUM": "medium",
-        "LOW": "low"
-    }
-    return confidence_map.get(confidence.upper(), confidence.lower())
-
-
-def _format_confidence_rationale(rationale_list: List[str]) -> str:
-    """Format confidence_rationale from list to single string"""
-    return "\n".join(f"- {item}" for item in rationale_list)
-
-
-def _enrich_reading_order(
-    reading_order_items: List[Any],
-    papers_lookup: Dict[str, dict]
-) -> List[Dict[str, str]]:
-    """
-    Enrich reading order items with URLs from paper data.
+    sanitized_model = model.replace("/", "_")
+    raw_response_path = run_results_dir / f"raw_response_{sanitized_model}_cluster_{cluster_index}.json"
+    with open(raw_response_path, 'w', encoding='utf-8') as f:
+        json.dump({
+            "model": model,
+            "cluster_index": cluster_index,
+            "raw_response_text": raw_response_text,
+        }, f, indent=2, ensure_ascii=False)
+    logger._log("llm.raw_saved", f"Raw response saved to {raw_response_path}", level=logging.INFO)
     
-    Args:
-        reading_order_items: List of ReadingOrderItem from ClusterReport
-        papers_lookup: Dict mapping paper_id to paper data with url
-    
-    Returns:
-        List of dicts with paper_id, url, why_read_next
-    """
-    enriched = []
-    for item in reading_order_items:
-        paper_id = item.paper_id if hasattr(item, 'paper_id') else item.get('paper_id')
-        why_read_now = item.why_read_now if hasattr(item, 'why_read_now') else item.get('why_read_now', '')
-        
-        paper = papers_lookup.get(paper_id, {})
-        url = paper.get('url', '')
-        
-        enriched.append({
-            "paper_id": paper_id,
-            "url": url,
-            "why_read_next": why_read_now
-        })
-    return enriched
-
-
-def _map_cluster_report_to_card(
-    cluster_report: ClusterReport,
-    cluster_index: int,
-    papers_lookup: Dict[str, dict]
-) -> Dict[str, Any]:
-    """
-    Map ClusterReport to cluster_card dict matching output schema.
-    
-    Args:
-        cluster_report: ClusterReport from LLM
-        cluster_index: Cluster index for cluster_key
-        papers_lookup: Dict mapping paper_id to paper data
-    
-    Returns:
-        Dict matching ClusterCard structure
-    """
-    # Map representative papers
-    representative_papers = [
-        {
-            "paper_id": paper.paper_id,
-            "reason_representative": paper.title  # Using title as reason for now
-        }
-        for paper in cluster_report.representative_papers
-    ]
-    
-    # Enrich reading order with URLs
-    reading_order = _enrich_reading_order(cluster_report.reading_order, papers_lookup)
-    
-    # Format notes from list to string
-    notes_str = "\n".join(f"- {note}" for note in cluster_report.notes) if cluster_report.notes else ""
-    
-    # Use keywords (5-12 items), take up to 7 to match output schema constraint (3-7)
-    tags = cluster_report.keyword_list[:7] if len(cluster_report.keyword_list) > 7 else cluster_report.keyword_list
-    
-    return {
-        "cluster_key": f"cluster_index:{cluster_index}",
-        "topic_name": cluster_report.title,
-        "one_liner": cluster_report.one_liner,
-        "tags": tags,
-        "what_this_cluster_is_about": cluster_report.what_this_cluster_is_about,
-        "why_it_matters": cluster_report.why_it_matters,
-        "confidence": _normalize_confidence(cluster_report.confidence),
-        "confidence_rationale": _format_confidence_rationale(cluster_report.confidence_rationale),
-        "representative_papers": representative_papers,
-        "reading_order": reading_order,
-        "search_query_seed": cluster_report.search_query_seed,
-        "notes": notes_str
-    }
-
-
-def _synthesize_output(
-    cluster_cards: List[Dict[str, Any]],
-    snapshot_id: str,
-    period_start: str,
-    period_end: str
-) -> Dict[str, Any]:
-    """
-    Synthesize cluster cards into final output format.
-    
-    Args:
-        cluster_cards: List of cluster card dicts
-        snapshot_id: Snapshot ID
-        period_start: Period start date
-        period_end: Period end date
-    
-    Returns:
-        Dict matching OutputSchema structure
-    """
-    return {
-        "snapshot_id": snapshot_id,
-        "cluster_run_id": "",  # Will be set by caller if needed
-        "period_start": period_start,
-        "period_end": period_end,
-        "cluster_cards": cluster_cards
-    }
+    return judge_output(raw_response_text, cluster_data)
 
 
 def _process_clusters_parallel(
     llm_config: LLMConfig,
     model: str,
-    packed_data: dict,
+    packed_data: Dict[str, Any],
     template_content: str,
-    monthly_data: dict,
+    monthly_data: Dict[str, Any],
     snapshot_id: str,
     period_start: str,
     period_end: str,
@@ -446,25 +276,39 @@ def _process_clusters_parallel(
         period_start: Period start date
         period_end: Period end date
         logger: Logger instance
+        run_results_dir: Optional directory to save raw responses
     
     Returns:
-        Synthesized output dict matching OutputSchema
+        Dictionary with synthesized output containing:
+        - snapshot_id: Snapshot identifier
+        - cluster_run_id: Cluster run identifier (empty string)
+        - period_start: Period start date
+        - period_end: Period end date
+        - cluster_reports: List of cluster report dictionaries
+        - cluster_judges: List of judge output dictionaries
     """
-    clusters = packed_data.get("clusters", [])
-    
-    # Build papers lookup for enriching reading order
-    papers_lookup = {paper["paper_id"]: paper for paper in monthly_data.get("papers", [])}
-    
+    clusters = packed_data.get("clusters", [])   
     # Process clusters in parallel
-    cluster_cards = []
     cluster_reports = []
+    cluster_judges = []
     
-    def process_single_cluster(cluster_data: dict, cluster_idx: int) -> Tuple[int, Optional[ClusterReport]]:
-        """Process a single cluster and return (index, report)"""
+    def process_single_cluster(cluster_data: Dict[str, Any], cluster_idx: int) -> Tuple[Optional[JudgeOutput], Optional[ClusterReport]]:
+        """
+        Process a single cluster and return judge output and report.
+        
+        Args:
+            cluster_data: Cluster data dictionary
+            cluster_idx: Cluster index
+            
+        Returns:
+            Tuple of (Optional[JudgeOutput], Optional[ClusterReport]):
+            - JudgeOutput: Judge results if successful, None on error
+            - ClusterReport: Parsed cluster report if successful, None on error
+        """
         try:
             # Extract just the papers for the prompt
             cluster_for_prompt = {"papers": cluster_data.get("papers", [])}
-            report = _call_llm_per_cluster(
+            judge_output, report = _call_llm_per_cluster(
                 llm_config=llm_config,
                 model=model,
                 cluster_data=cluster_for_prompt,
@@ -473,11 +317,11 @@ def _process_clusters_parallel(
                 run_results_dir=run_results_dir,
                 cluster_index=cluster_idx
             )
-            return cluster_idx, report
+            return judge_output, report
         except Exception as e:
             logger._log("cluster.error", f"Cluster {cluster_idx} failed: {str(e)}", level=logging.ERROR)
             logger._log("cluster.error", f"Cluster {cluster_idx} failed: {str(e)}\n{traceback.format_exc()}", level=logging.DEBUG)
-            return cluster_idx, None
+            return None, None
     
     # Process clusters in parallel
     with ThreadPoolExecutor(max_workers=len(clusters)) as executor:
@@ -490,79 +334,44 @@ def _process_clusters_parallel(
         # Collect results
         for future, cluster_index in futures:
             try:
-                idx, report = future.result()
-                if report:
-                    cluster_reports.append((cluster_index, report))
+                judge_output, report = future.result()
+                if judge_output and report:
+                    cluster_reports.append(report.model_dump())
+                    cluster_judges.append(asdict(judge_output))
             except Exception as e:
-                logger._log("cluster.collect_error", f"Error collecting cluster result: {str(e)}", level=logging.ERROR)
+                logger._log("cluster.collect_error", f"Error collecting cluster {cluster_index} result: {str(e)}", level=logging.ERROR)
+
     
-    # Map reports to cluster cards
-    for cluster_index, report in cluster_reports:
-        try:
-            cluster_card = _map_cluster_report_to_card(report, cluster_index, papers_lookup)
-            cluster_cards.append(cluster_card)
-        except Exception as e:
-            logger._log("cluster.map_error", f"Error mapping cluster {cluster_index}: {str(e)}", level=logging.ERROR)
-    
-    # Synthesize final output
-    output = _synthesize_output(cluster_cards, snapshot_id, period_start, period_end)
-    
-    return output
+    return {
+        "snapshot_id": snapshot_id,
+        "cluster_run_id": "",  # Will be set by caller if needed
+        "period_start": period_start,
+        "period_end": period_end,
+        "cluster_reports": cluster_reports,
+        "cluster_judges": cluster_judges,
+    }
 
 
-def _judge_output(output_json: dict, monthly_data: dict, schema_path: Path, response_file_path: Path, logger: EvalLogger) -> Tuple[Optional[JudgeOutput], Optional[OutputSchema]]:
-    """Judge output: validate using Pydantic and heuristics"""
-    # Save output JSON to file
-    response_file_path.parent.mkdir(parents=True, exist_ok=True)
-    model_name = response_file_path.stem.replace("model_output_", "")
+def _generate_summary(run_id: str, snapshot_id: str, month: str, packing_variant: str, prompt_variant: str, template_hash: str, models: List[str], model_results: List[Dict[str, Any]], response_file_paths: Dict[str, str], run_results_dir: Path, logger: EvalLogger) -> Dict[str, Any]:
+    """
+    Generate summary of evaluation results.
     
-    json_path = response_file_path.with_suffix('.json')
-    with open(json_path, 'w', encoding='utf-8') as f:
-        json.dump({"model": model_name, **output_json}, f, indent=2, ensure_ascii=False)
-    
-    try:
-        # Convert dict to JSON string for judge_output
-        output_json_str = json.dumps(output_json, ensure_ascii=False)
+    Args:
+        run_id: Run identifier
+        snapshot_id: Snapshot identifier
+        month: Month key (e.g., "2025-01")
+        packing_variant: Packing variant name
+        prompt_variant: Prompt variant ID
+        template_hash: Template hash
+        models: List of model names evaluated
+        model_results: List of model result dictionaries
+        response_file_paths: Dictionary mapping model names to response file paths
+        run_results_dir: Directory to save summary
+        logger: Logger instance
         
-        # Call judge (now returns tuple of JudgeOutput and Optional[OutputSchema])
-        judge_result, validated_output = judge_output(
-            raw_text=output_json_str,
-            input_data=monthly_data,
-            schema_path=schema_path
-        )
-        
-        # Save judge result (convert to dict for JSON serialization)
-        judge_result_path = response_file_path.parent / f"judge_result_{model_name}.json"
-        judge_result_dict = {
-            "model": model_name,
-            "sub_scores": judge_result.sub_scores,
-            "overall": judge_result.overall,
-            "reasons": judge_result.reasons
-        }
-        with open(judge_result_path, 'w', encoding='utf-8') as f:
-            json.dump(judge_result_dict, f, indent=2, ensure_ascii=False)
-        
-        # Log judge results at INFO level
-        logger._log("judge.results", 
-                   f"json_valid={'pass' if judge_result.sub_scores.get('json_valid', 0.0) == 1.0 else 'fail'}, "
-                   f"schema_valid={'pass' if judge_result.sub_scores.get('schema_valid', 0.0) == 1.0 else 'fail'}, "
-                   f"citations_ok={'pass' if judge_result.sub_scores.get('citations_ok', 0.0) == 1.0 else 'fail'}, "
-                   f"name_generic_score={judge_result.sub_scores.get('name_generic_penalty', 0.0):.3f}, "
-                   f"overall={judge_result.overall:.3f}",
-                   level=logging.INFO)
-        
-        return judge_result, validated_output
-        
-    except Exception as e:
-        # Log error at ERROR level
-        logger._log("judge.error", f"error={str(e)}", level=logging.ERROR)
-        # Log traceback at DEBUG level
-        logger._log("judge.error", f"error={str(e)}\n{traceback.format_exc()}", level=logging.DEBUG)
-        return None, None
-
-
-def _generate_summary(run_id: str, snapshot_id: str, month: str, packing_variant: str, prompt_variant: str, template_hash: str, models: List[str], model_results: List[dict], response_file_paths: Dict[str, str], run_results_dir: Path, logger: EvalLogger) -> dict:
-    """Generate summary of evaluation results"""
+    Returns:
+        Summary dictionary with run metadata and aggregate scores
+    """
     # Aggregate scores across all models
     # Bool fields (json_valid, schema_valid, citations_ok): 1 only if all are true, else 0
     # Score fields (name_generic_penalty): average
@@ -617,8 +426,20 @@ def _generate_summary(run_id: str, snapshot_id: str, month: str, packing_variant
     return summary
 
 
-def load_monthly_data(data_dir: str, month: str) -> dict:
-    """Load monthly clustering JSON"""
+def load_monthly_data(data_dir: str, month: str) -> Dict[str, Any]:
+    """
+    Load monthly clustering JSON file.
+    
+    Args:
+        data_dir: Directory containing monthly data files
+        month: Month key (e.g., "2025-01")
+        
+    Returns:
+        Monthly data dictionary
+        
+    Raises:
+        FileNotFoundError: If monthly data file doesn't exist
+    """
     month_file = os.path.join(data_dir, f"{month}.json")
     if not os.path.exists(month_file):
         raise FileNotFoundError(f"Monthly data file not found: {month_file}")
@@ -626,37 +447,12 @@ def load_monthly_data(data_dir: str, month: str) -> dict:
     with open(month_file, 'r', encoding='utf-8') as f:
         return json.load(f)
 
-def extract_json(text: str) -> dict:
-    # 1. Try fenced code block
-    match = re.search(
-        r"```(?:json)?\s*\n([\s\S]*?)\n```",
-        text,
-        re.IGNORECASE
-    )
-    if match:
-        try:
-            return json.loads(match.group(1))
-        except json.JSONDecodeError:
-            pass
-
-    # 2. Try raw JSON object
-    match = re.search(r"(\{[\s\S]*\})", text)
-    if match:
-        print(f"Found JSON object: {match.group(1)}")
-        try:
-            return json.loads(match.group(1))
-        except Exception:
-            traceback.print_exc()
-            raise
-
-    raise ValueError("No JSON found")
-
 def _process_single_model(
     model: str,
     llm_config: LLMConfig,
-    packed_data: dict,
+    packed_data: Dict[str, Any],
     template_content: str,
-    monthly_data: dict,
+    monthly_data: Dict[str, Any],
     snapshot_id: str,
     period_start: str,
     period_end: str,
@@ -668,8 +464,24 @@ def _process_single_model(
     """
     Process a single model evaluation using per-cluster parallel processing.
     
+    Args:
+        model: Model name
+        llm_config: LLM configuration
+        packed_data: Packed data dictionary
+        template_content: Prompt template content
+        monthly_data: Original monthly data dictionary
+        snapshot_id: Snapshot identifier
+        period_start: Period start date
+        period_end: Period end date
+        schema_path: Path to output schema (unused, kept for compatibility)
+        response_file_path: Path to save model output JSON
+        run_results_dir: Results directory
+        logger: Logger instance
+        
     Returns:
-        Tuple of (result_dict, response_file_path_str)
+        Tuple of (result_dict, response_file_path_str):
+        - result_dict: Dictionary with model, scores, duration, parsed_output, and optional error
+        - response_file_path_str: Relative path to response file
     """
     model_start_time = time.time()
     
@@ -688,30 +500,18 @@ def _process_single_model(
             run_results_dir=run_results_dir
         )
         
-        # Step 5: Judge output (validates using Pydantic and heuristics)
-        judge_result, validated_output = _judge_output(
-            output_json=output_json,
-            monthly_data=monthly_data,
-            schema_path=schema_path,
-            response_file_path=response_file_path,
-            logger=logger
-        )
+        # Save output JSON to file
+        response_file_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(response_file_path, 'w', encoding='utf-8') as f:
+            json.dump(output_json, f, indent=2, ensure_ascii=False)
         
-        # Compute overall scores
-        if judge_result:
+        # Compute overall scores from cluster judges
+        if output_json['cluster_judges']:
             overall_scores = {
-                "json_valid": judge_result.sub_scores.get("json_valid", 0.0),
-                "schema_valid": judge_result.sub_scores.get("schema_valid", 0.0),
-                "citations_ok": judge_result.sub_scores.get("citations_ok", 0.0),
-                "name_generic_penalty": judge_result.sub_scores.get("name_generic_penalty", 0.0),
+                "overall": sum(judge['overall'] for judge in output_json['cluster_judges']) / len(output_json['cluster_judges'])
             }
         else:
-            overall_scores = {
-                "json_valid": 0.0,
-                "schema_valid": 0.0,
-                "citations_ok": 0.0,
-                "name_generic_penalty": 0.0,
-            }
+            overall_scores = {"overall": 0.0}
         
         duration = time.time() - model_start_time
         logger._log("run.model_end", f"[MODEL: {model}] - duration={duration:.3f}s, overall_scores={overall_scores}", level=logging.INFO)
@@ -723,7 +523,7 @@ def _process_single_model(
             "model": model,
             "scores": overall_scores,
             "duration": duration,
-            "parsed_output": validated_output is not None
+            "parsed_output": len(output_json.get('cluster_reports', [])) > 0
         }, response_file_rel
         
     except Exception as e:
@@ -736,7 +536,7 @@ def _process_single_model(
         
         return {
             "model": model,
-            "scores": {"json_valid": 0.0, "schema_valid": 0.0, "citations_ok": 0.0, "name_generic_penalty": 0.0},
+            "scores": {"overall": 0.0},
             "duration": duration,
             "parsed_output": False,
             "error": str(e)
@@ -747,10 +547,16 @@ def run_evaluation(config_path: Path, month: str, dry_run: bool) -> None:
     """
     Run evaluation for a single month.
     
+    Main entry point that orchestrates the entire evaluation pipeline:
+    1. Loads configuration and monthly data
+    2. Packs input data
+    3. Processes all models in parallel (each processing clusters in parallel)
+    4. Generates summary with aggregate scores
+    
     Args:
         config_path: Path to eval.yaml config file
         month: Month key (e.g., "2025-01")
-        dry_run: If True, skip LLM calls
+        dry_run: If True, skip LLM calls and exit early
     """
     start_time = time.time()
     
@@ -878,7 +684,7 @@ def run_evaluation(config_path: Path, month: str, dry_run: bool) -> None:
                 response_file_paths[model] = response_file_rel
                 model_results.append({
                     "model": model,
-                    "scores": {"json_valid": 0.0, "schema_valid": 0.0, "citations_ok": 0.0, "name_generic_penalty": 0.0},
+                    "scores": {"overall": 0.0},
                     "duration": 0.0,
                     "parsed_output": False,
                     "error": str(e)
@@ -917,8 +723,12 @@ def run_evaluation(config_path: Path, month: str, dry_run: bool) -> None:
     print(f"Evaluated {len(models)} models: {', '.join(models)}")
 
 
-def main():
-    """Main entry point"""
+def main() -> None:
+    """
+    Main entry point for command-line interface.
+    
+    Parses command-line arguments and runs evaluation.
+    """
     parser = argparse.ArgumentParser(description="Run evaluation pipeline")
     parser.add_argument(
         "--config",

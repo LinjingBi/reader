@@ -227,19 +227,10 @@ class LLMClient:
         if self.provider != "gemini":
             raise ValueError(f"Structured output only supported for Gemini, got {self.provider}")
         
-        system_prompt, user_prompt = self._parse_prompt(prompt)
-        
-        # Combine system and user prompts
-        full_prompt = ""
-        if system_prompt:
-            full_prompt = f"{system_prompt}\n\n{user_prompt}"
-        else:
-            full_prompt = user_prompt
-        
         # Use Gemini's structured output API
         response = self.client.models.generate_content(
             model=self.model,
-            contents=full_prompt,
+            contents=prompt,
             config={
                 "temperature": self.temperature,
                 "max_output_tokens": self.max_tokens,

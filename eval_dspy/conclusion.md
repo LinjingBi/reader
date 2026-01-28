@@ -1,4 +1,4 @@
-## Why DSPy Is Not a Good Fit for This Summarization Task - from the exploration with ChatGPT
+## Why DSPy Is Not a Good Fit for Paper Summarization Task - from the exploration with ChatGPT
 
 ### 1. The task is already well-specified, not exploratory
 Your cluster summarization task has:

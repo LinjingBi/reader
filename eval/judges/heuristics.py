@@ -22,14 +22,13 @@ class JudgeOutput:
     overall: float  # 0.0 if any must-pass fails, else 1.0 + soft_schema_valid.score
     reasons: Dict[str, str]  # Human-readable reasons for each rule
 
-def judge_output(raw_text: str, input_data: dict, schema_path: Path) -> Tuple[JudgeOutput, Optional[ClusterReport]]:
+def judge_output(raw_text: str, input_data: dict) -> Tuple[JudgeOutput, Optional[ClusterReport]]:
     """
     Judge LLM output using JSON parsing, Pydantic validation, and heuristic checks.
     
     Args:
         raw_text: Raw text response from LLM (may contain JSON in markdown or raw format)
         input_data: Original input data (for citation validation)
-        schema_path: Path to JSON schema file (unused, kept for compatibility)
     
     Returns:
         Tuple of (JudgeOutput, Optional[ClusterReport])

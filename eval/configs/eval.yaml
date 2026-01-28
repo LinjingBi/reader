@@ -1,5 +1,4 @@
 dataset:
-  months: ["2025-01"]
   input_dir: "data/monthly_clusters"
 
 packers:
