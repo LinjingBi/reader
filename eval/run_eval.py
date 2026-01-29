@@ -39,7 +39,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from packers.p0 import build_input, get_packer_stats
 from judges.heuristics import judge_output, JudgeOutput
-from utils.llm_client import LLMClient
+from utils.llm_client import LLMClient, TokenBucket
 from utils.logger import EvalLogger
 from utils.template_loader import load_template, compute_template_hash, render_template_per_cluster
 from schemas.cluster_response import ClusterReport
@@ -69,6 +69,10 @@ class LLMConfig(BaseModel):
     temperature: float
     max_tokens: int
     api_key_env: str
+    gemini_rpm_limit: Optional[int] = 15
+    gemini_tpm_limit: Optional[int] = 250000
+    openai_rpm_limit: Optional[int] = 15
+    openai_tpm_limit: Optional[int] = 250000
 
 
 class JudgeConfig(BaseModel):
@@ -191,7 +195,7 @@ def _pack_input_data(monthly_data: Dict[str, Any], logger: EvalLogger) -> Tuple[
 
 
 def _call_llm_per_cluster(
-    llm_config: LLMConfig,
+    llm_client: LLMClient,
     model: str,
     cluster_data: Dict[str, Any],
     template_content: str,
@@ -203,7 +207,7 @@ def _call_llm_per_cluster(
     Call LLM for a single cluster using structured output.
     
     Args:
-        llm_config: LLM configuration
+        llm_client: LLM client instance (with token buckets configured)
         model: Model name
         cluster_data: Single cluster dict with papers array
         template_content: Prompt template content
@@ -216,19 +220,6 @@ def _call_llm_per_cluster(
         - JudgeOutput: Contains sub_scores, overall, and reasons
         - ClusterReport: Validated Pydantic object if validation passes, None otherwise
     """
-    # Initialize LLM client
-    api_key = os.getenv(llm_config.api_key_env)
-    if not api_key:
-        raise ValueError(f"API key not found in environment variable: {llm_config.api_key_env}")
-    
-    llm_client = LLMClient(
-        provider=llm_config.provider,
-        model=model,
-        temperature=llm_config.temperature,
-        max_tokens=llm_config.max_tokens,
-        api_key=api_key
-    )
-    
     # Render template for this cluster
     prompt = render_template_per_cluster(template_content, cluster_data)
     
@@ -288,6 +279,46 @@ def _process_clusters_parallel(
         - cluster_judges: List of judge output dictionaries
     """
     clusters = packed_data.get("clusters", [])   
+    
+    # Get API key from environment variable
+    api_key = os.getenv(llm_config.api_key_env)
+    if not api_key:
+        raise ValueError(f"API key not found in environment variable: {llm_config.api_key_env}")
+    
+    # Determine provider-specific rate limits
+    if llm_config.provider == "gemini":
+        rpm_limit = llm_config.gemini_rpm_limit
+        tpm_limit = llm_config.gemini_tpm_limit
+    elif llm_config.provider == "openai":
+        rpm_limit = llm_config.openai_rpm_limit
+        tpm_limit = llm_config.openai_tpm_limit
+    else:
+        raise ValueError(f"Unsupported provider: {llm_config.provider}")
+    
+    # Initialize token buckets per thread pool
+    req_bucket = TokenBucket(
+        capacity=rpm_limit,
+        refill_rate=rpm_limit / 60.0,
+        name=f"{llm_config.provider}_rpm"
+    )
+    
+    tpm_bucket = TokenBucket(
+        capacity=tpm_limit,
+        refill_rate=tpm_limit / 60.0,
+        name=f"{llm_config.provider}_tpm"
+    )
+    
+    # Create LLM client once per thread pool
+    llm_client = LLMClient(
+        provider=llm_config.provider,
+        model=model,
+        temperature=llm_config.temperature,
+        max_tokens=llm_config.max_tokens,
+        api_key=api_key,
+        rpm_bucket=req_bucket,
+        tpm_bucket=tpm_bucket
+    )
+    
     # Process clusters in parallel
     cluster_reports = []
     cluster_judges = []
@@ -309,7 +340,7 @@ def _process_clusters_parallel(
             # Extract just the papers for the prompt
             cluster_for_prompt = {"papers": cluster_data.get("papers", [])}
             judge_output, report = _call_llm_per_cluster(
-                llm_config=llm_config,
+                llm_client=llm_client,
                 model=model,
                 cluster_data=cluster_for_prompt,
                 template_content=template_content,
@@ -332,14 +363,23 @@ def _process_clusters_parallel(
             futures.append((future, cluster_index))
         
         # Collect results
+        missing_report = []
+        missing_judge = []
         for future, cluster_index in futures:
             try:
                 judge_output, report = future.result()
                 if judge_output and report:
                     cluster_reports.append(report.model_dump())
                     cluster_judges.append(asdict(judge_output))
+                else:
+                    if not report:
+                        missing_report.append(cluster_index)
+                    if not judge_output:
+                        missing_judge.append(cluster_index)
             except Exception as e:
                 logger._log("cluster.collect_error", f"Error collecting cluster {cluster_index} result: {str(e)}", level=logging.ERROR)
+                missing_report.append(cluster_index)
+                missing_judge.append(cluster_index)
 
     
     return {
@@ -349,6 +389,8 @@ def _process_clusters_parallel(
         "period_end": period_end,
         "cluster_reports": cluster_reports,
         "cluster_judges": cluster_judges,
+        "missing_report": missing_report,
+        "missing_judge": missing_judge,
     }
 
 
@@ -370,31 +412,8 @@ def _generate_summary(run_id: str, snapshot_id: str, month: str, packing_variant
         logger: Logger instance
         
     Returns:
-        Summary dictionary with run metadata and aggregate scores
+        Summary dictionary with run metadata
     """
-    # Aggregate scores across all models
-    # Bool fields (json_valid, schema_valid, citations_ok): 1 only if all are true, else 0
-    # Score fields (name_generic_penalty): average
-    if model_results:
-        # Bool fields: all must be true for 1, else 0
-        json_valid_values = [r["scores"].get("json_valid", 0.0) for r in model_results]
-        schema_valid_values = [r["scores"].get("schema_valid", 0.0) for r in model_results]
-        citations_ok_values = [r["scores"].get("citations_ok", 0.0) for r in model_results]
-        
-        aggregate_scores = {
-            "json_valid": 1.0 if all(v == 1.0 for v in json_valid_values) else 0.0,
-            "schema_valid": 1.0 if all(v == 1.0 for v in schema_valid_values) else 0.0,
-            "citations_ok": 1.0 if all(v == 1.0 for v in citations_ok_values) else 0.0,
-            "name_generic_penalty": sum(r["scores"].get("name_generic_penalty", 0.0) for r in model_results) / len(model_results),
-        }
-    else:
-        aggregate_scores = {
-            "json_valid": 0.0,
-            "schema_valid": 0.0,
-            "citations_ok": 0.0,
-            "name_generic_penalty": 0.0,
-        }
-    
     # Add response file paths to model results
     for result in model_results:
         model = result["model"]
@@ -411,7 +430,6 @@ def _generate_summary(run_id: str, snapshot_id: str, month: str, packing_variant
         "prompt_hash": template_hash,
         "models_evaluated": models,
         "model_results": model_results,
-        "aggregate_scores": aggregate_scores,
         "timestamp": datetime.now().isoformat(),
     }
     
@@ -523,7 +541,9 @@ def _process_single_model(
             "model": model,
             "scores": overall_scores,
             "duration": duration,
-            "parsed_output": len(output_json.get('cluster_reports', [])) > 0
+            "parsed_output": len(output_json.get('cluster_reports', [])) > 0,
+            "missing_report": output_json.get('missing_report', []),
+            "missing_judge": output_json.get('missing_judge', [])
         }, response_file_rel
         
     except Exception as e:
@@ -628,7 +648,7 @@ def run_evaluation(config_path: Path, month: str, dry_run: bool) -> None:
     # Log template hash at INFO level
     logger._log("prompt.hash", f"template_hash={template_hash}", level=logging.INFO)
     # Copy prompt template file to results directory for record-keeping
-    prompt_template_path = run_results_dir / prompt_variant_config.path.name
+    prompt_template_path = run_results_dir
     shutil.copy(prompt_path, prompt_template_path)
     logger._log("prompt.template", f"Prompt template saved to {prompt_template_path}", level=logging.INFO)
     
@@ -674,7 +694,7 @@ def run_evaluation(config_path: Path, month: str, dry_run: bool) -> None:
                 result, response_file_rel = future.result()
                 model_results.append(result)
                 response_file_paths[model] = response_file_rel
-                logger._log("run.model_complete", f"[MODEL: {model}] - Completed successfully", level=logging.INFO)
+                logger._log("run.model_complete", f"[MODEL: {model}] - Completed", level=logging.INFO)
             except Exception as e:
                 logger._log("run.model_error", f"[MODEL: {model}] - Failed with error: {str(e)}", level=logging.ERROR)
                 logger._log("run.model_error", f"[MODEL: {model}] - Failed with error: {str(e)}\n{traceback.format_exc()}", level=logging.DEBUG)
@@ -694,7 +714,7 @@ def run_evaluation(config_path: Path, month: str, dry_run: bool) -> None:
     logger._log("run.parallel_complete", f"All {len(models)} models completed", level=logging.INFO)
     
     # Step 6: Generate summary
-    summary = _generate_summary(
+    _generate_summary(
         run_id=base_run_id,
         snapshot_id=snapshot_id,
         month=month,
@@ -708,19 +728,19 @@ def run_evaluation(config_path: Path, month: str, dry_run: bool) -> None:
         logger=logger
     )
     
-    # Log run end with aggregate scores
+    # Log run end
     duration = time.time() - start_time
-    logger.run_end(duration, summary["aggregate_scores"])
+    logger.run_end(duration)
     
     # Log individual model scores
     for result in model_results:
         scores_str = ",".join(f"{k}={v}" for k, v in result["scores"].items())
         logger._log("run.model_summary", 
-                   f"[MODEL: {result['model']}] - duration={result['duration']:.3f}s, scores={{{scores_str}}}", 
+                   f"[MODEL: {result['model']}] - duration={result['duration']:.3f}s, scores={{{scores_str}}}, missing cluster report: {len(result.get("missing_report", []))}, missing cluster judge: {len(result.get("missing_judge", []))}", 
                    level=logging.INFO)
     
-    print(f"\nEvaluation complete. Results saved to: {run_results_dir}")
-    print(f"Evaluated {len(models)} models: {', '.join(models)}")
+    logger._log("run.summary", f"\nEvaluation complete. Results saved to: {run_results_dir}")
+    logger._log("run.summary", f"Evaluated {len(models)} models: {', '.join(models)}")
 
 
 def main() -> None:

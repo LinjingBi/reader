@@ -21,7 +21,7 @@ sub(issue, bug level)
 [x] - [eval-dspy] explore to use dspy powered eval pipeline.  
 [x] - [eval] merge the eval-dspy's heuristic rules into eval's heuristic rules.  
 [x] - [eval] integrate new heuristic rules into run_eval.py and refactor run_eval.py.  
-[ ] - [eval] test for new heuristic rules.  
+[x] - [eval] test for new heuristic rules.  
 [ ] - [reader,eval] port llm request logic out of eval to reader.  
 
 [ ] - [chat,memo] check before implementing step4. do i need both topic_event and topic_lineage?  

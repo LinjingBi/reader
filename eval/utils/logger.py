@@ -80,11 +80,8 @@ class EvalLogger:
         self._log("config.artifact", config_str)
     
     
-    def run_end(self, duration: float, overall_scores: dict, winner: Optional[str] = None):
+    def run_end(self, duration: float):
         """Log run completion"""
-        scores_str = ",".join(f"{k}={v}" for k, v in overall_scores.items())
-        msg = f"duration={duration:.3f}s, overall_scores={{{scores_str}}}"
-        if winner:
-            msg += f", winner={winner}"
+        msg = f"duration={duration:.3f}s"
         self._log("run.end", msg)
 

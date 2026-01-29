@@ -7,7 +7,7 @@ packers:
 prompts:
   variants:
     - id: "enrich_p0_per_cluster"
-      path: "prompts/enrich_p0_per_cluster.txt"
+      path: "prompts/enrich_p0_per_cluster_gemini.txt"
 
 llm:
   provider: "gemini"  # Required: "openai" or "gemini"
@@ -17,6 +17,11 @@ llm:
   temperature: 0.2
   max_tokens: 2500
   api_key_env: "GEMINI_API_KEY"  # Environment variable name for API key
+  # Optional: Provider-specific rate limits (defaults: gemini_rpm_limit=15, gemini_tpm_limit=250000, openai_rpm_limit=15, openai_tpm_limit=250000)
+  gemini_rpm_limit: 15
+  gemini_tpm_limit: 250000
+  # openai_rpm_limit: 15
+  # openai_tpm_limit: 250000
 
 judge:
   schema_path: "schemas/p0_output_json_schema.json"

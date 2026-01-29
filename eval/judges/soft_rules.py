@@ -8,19 +8,37 @@ from typing import Optional, Tuple
 
 from schemas.cluster_response import (
     ClusterReport,
+    TITLE_MAX_WORDS,
     ONE_LINER_MAX_WORDS,
+    ABOUT_MIN_WORDS,
+    ABOUT_MAX_WORDS,
+    WHY_MIN_WORDS,
+    WHY_MAX_WORDS,
+    KEYWORDS_MIN_ITEMS,
+    KEYWORDS_MAX_ITEMS,
+    KEYWORD_MIN_WORDS,
+    KEYWORD_MAX_WORDS,
     CONF_RATIONALE_MAX_WORDS_PER_ITEM,
     SEARCH_QUERY_MIN_TERMS,
     SEARCH_QUERY_MAX_TERMS,
     NOTES_MAX_WORDS_PER_ITEM,
     READING_ORDER_MAX_WORDS_PER_ITEM_REASON,
 )
-from judges import ValidationReport, CheckFn, word_count, run_checks
+from judges import ValidationReport, CheckFn, word_count, tag_word_count, run_checks
 
 
 # ----------------------------
 # Soft validation checks
 # ----------------------------
+
+def check_title_word_count(report: ClusterReport) -> Tuple[bool, str]:
+    """Check title word count"""
+    v = (report.title or "").strip()
+    wc = word_count(v)
+    if wc < 1 or wc > TITLE_MAX_WORDS:
+        return False, f"title must be 1–{TITLE_MAX_WORDS} words, got {wc}"
+    return True, ""
+
 
 def check_one_liner(report: ClusterReport) -> Tuple[bool, str]:
     """Check one_liner word count"""
@@ -28,6 +46,24 @@ def check_one_liner(report: ClusterReport) -> Tuple[bool, str]:
     wc = word_count(v)
     if wc < 1 or wc > ONE_LINER_MAX_WORDS:
         return False, f"one_liner must be 1–{ONE_LINER_MAX_WORDS} words, got {wc}"
+    return True, ""
+
+
+def check_about_word_count(report: ClusterReport) -> Tuple[bool, str]:
+    """Check what_this_cluster_is_about word count"""
+    v = (report.what_this_cluster_is_about or "").strip()
+    wc = word_count(v)
+    if not (ABOUT_MIN_WORDS <= wc <= ABOUT_MAX_WORDS):
+        return False, f"what_this_cluster_is_about must be {ABOUT_MIN_WORDS}–{ABOUT_MAX_WORDS} words, got {wc}"
+    return True, ""
+
+
+def check_why_it_matters_word_count(report: ClusterReport) -> Tuple[bool, str]:
+    """Check why_it_matters word count"""
+    v = (report.why_it_matters or "").strip()
+    wc = word_count(v)
+    if not (WHY_MIN_WORDS <= wc <= WHY_MAX_WORDS):
+        return False, f"why_it_matters must be {WHY_MIN_WORDS}–{WHY_MAX_WORDS} words, got {wc}"
     return True, ""
 
 
@@ -70,12 +106,43 @@ def check_reading_order_item_reasons(report: ClusterReport) -> Tuple[bool, str]:
     return True, ""
 
 
+def check_keyword_word_counts(report: ClusterReport) -> Tuple[bool, str]:
+    """Check keyword_list word counts per item"""
+    raw = report.keyword_list
+    cleaned = [k.strip() for k in raw if k and k.strip()]
+    
+    for i, k in enumerate(cleaned):
+        wc = tag_word_count(k)
+        if wc < KEYWORD_MIN_WORDS or wc > KEYWORD_MAX_WORDS:
+            return False, f"keyword_list[{i}] must be {KEYWORD_MIN_WORDS}–{KEYWORD_MAX_WORDS} words: {k!r}"
+    return True, ""
+
+
+def check_keyword_list_count(report: ClusterReport) -> Tuple[bool, str]:
+    """Check keyword_list count after deduplication"""
+    raw = report.keyword_list
+    cleaned = [k.strip() for k in raw if k and k.strip()]
+    
+    # Dedupe (case-insensitive)
+    seen = set()
+    deduped = []
+    for k in cleaned:
+        k_lower = k.lower()
+        if k_lower not in seen:
+            seen.add(k_lower)
+            deduped.append(k)
+    
+    if not (KEYWORDS_MIN_ITEMS <= len(deduped) <= KEYWORDS_MAX_ITEMS):
+        return False, f"keyword_list must be {KEYWORDS_MIN_ITEMS}–{KEYWORDS_MAX_ITEMS} unique items after dedupe; got {len(deduped)}"
+    return True, ""
+
+
 def check_name_generic(report: ClusterReport) -> Tuple[bool, str]:
     """
     Check for generic topic names.
     
     Generic names: "AI", "LLM", "Vision", "Machine Learning", etc.
-    Returns (True, "OK") if no penalty, (False, reason) if penalty exists.
+    Returns (True, "") if no penalty, (False, reason) if penalty exists.
     """
     title = report.title
     generic_terms = {
@@ -89,15 +156,20 @@ def check_name_generic(report: ClusterReport) -> Tuple[bool, str]:
     if not title_lower or title_lower in generic_terms:
         return False, "Generic title detected (too generic)"
     
-    return True, "OK"
+    return True, ""
 
 
 SOFT_CHECKS: tuple[CheckFn, ...] = (
+    check_title_word_count,
     check_one_liner,
+    check_about_word_count,
+    check_why_it_matters_word_count,
     check_confidence_rationale,
     check_search_query_seed,
     check_notes,
     check_reading_order_item_reasons,
+    check_keyword_word_counts,
+    check_keyword_list_count,
     check_name_generic,
 )
 

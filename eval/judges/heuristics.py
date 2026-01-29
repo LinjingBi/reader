@@ -51,13 +51,17 @@ def judge_output(raw_text: str, input_data: dict) -> Tuple[JudgeOutput, Optional
     # 2. Hard validation (includes parsing, field validation, and citation checks)
     hard_result = hard_validate_cluster_report(cluster_report, input_data)
     sub_scores["hard_schema_valid"] = hard_result.score
-    reasons["hard_schema_valid"] = hard_result.reasons
+    # Only include reasons if there are failure messages (not empty string)
+    if hard_result.reasons:
+        reasons["hard_schema_valid"] = hard_result.reasons
     
     # 3. Soft validation (includes name_generic check)
 
     soft_result = soft_validate_cluster_report(cluster_report)
     sub_scores["soft_schema_valid"] = soft_result.score
-    reasons["soft_schema_valid"] = soft_result.reasons
+    # Only include reasons if there are failure messages (not empty string)
+    if soft_result.reasons:
+        reasons["soft_schema_valid"] = soft_result.reasons
 
     
     # Compute overall score

@@ -8,27 +8,11 @@ from typing import Optional, Set, Tuple
 
 from pydantic import ValidationError
 
-from schemas.cluster_response import (
-    ClusterReport,
-    TITLE_MAX_WORDS,
-    ABOUT_MIN_WORDS,
-    ABOUT_MAX_WORDS,
-    WHY_MIN_WORDS,
-    WHY_MAX_WORDS,
-    KEYWORDS_MIN_ITEMS,
-    KEYWORDS_MAX_ITEMS,
-    KEYWORD_MIN_WORDS,
-    KEYWORD_MAX_WORDS,
-)
-from judges import ValidationReport, CheckFn, word_count, run_checks
+from schemas.cluster_response import ClusterReport
+from judges import ValidationReport, CheckFn, run_checks
 
 # Regex pattern for citation matching
 _CITATION_RE = re.compile(r"\[[^\[\]]+\]")  # basic [paper_id] matcher
-
-
-def tag_word_count(tag: str) -> int:
-    """Count words separated by whitespace (after lowering/stripping)"""
-    return len([w for w in (tag or "").strip().split() if w])
 
 
 def is_title_case_no_colon(title: str) -> bool:
@@ -36,7 +20,32 @@ def is_title_case_no_colon(title: str) -> bool:
     t = (title or "").strip()
     if ":" in t:
         return False
-    return t == t.title()
+    
+    # Standard title case: capitalize first word and major words
+    # Lowercase articles, conjunctions, and short prepositions
+    words = t.split()
+    if not words:
+        return False
+    
+    # First word must be capitalized
+    if not words[0][0].isupper():
+        return False
+    
+    # Small words that should be lowercase (unless first word)
+    small_words = {"a", "an", "and", "as", "at", "but", "by", "for", "from", 
+                   "in", "into", "of", "on", "or", "the", "to", "with"}
+    
+    for word in words[1:]:  # Skip first word
+        # If it's a small word, it should be lowercase
+        if word.lower() in small_words:
+            if word[0].isupper():
+                return False
+        else:
+            # Major words should be capitalized
+            if not word[0].isupper():
+                return False
+    
+    return True
 
 
 def has_inline_citation(s: str) -> bool:
@@ -65,23 +74,17 @@ def try_parse_cluster_report(json_text: str) -> Tuple[ClusterReport | None, Vali
 # Hard validation checks
 # ----------------------------
 
-def check_title(report: ClusterReport) -> Tuple[bool, str]:
-    """Check title word count and format"""
+def check_title_format(report: ClusterReport) -> Tuple[bool, str]:
+    """Check title format (Title Case and no colon)"""
     v = (report.title or "").strip()
-    wc = word_count(v)
-    if wc < 1 or wc > TITLE_MAX_WORDS:
-        return False, f"title must be 1–{TITLE_MAX_WORDS} words, got {wc}"
     if not is_title_case_no_colon(v):
         return False, "title must be Title Case and contain no colon"
     return True, ""
 
 
-def check_about(report: ClusterReport) -> Tuple[bool, str]:
-    """Check what_this_cluster_is_about word count, citations, and terminology"""
+def check_about_citations(report: ClusterReport) -> Tuple[bool, str]:
+    """Check what_this_cluster_is_about citations requirement"""
     v = (report.what_this_cluster_is_about or "").strip()
-    wc = word_count(v)
-    if not (ABOUT_MIN_WORDS <= wc <= ABOUT_MAX_WORDS):
-        return False, f"what_this_cluster_is_about must be {ABOUT_MIN_WORDS}–{ABOUT_MAX_WORDS} words, got {wc}"
     if not has_inline_citation(v):
         return False, "what_this_cluster_is_about must include at least one inline citation like [paper_id]"
     if "cluster" in v.lower():
@@ -89,50 +92,25 @@ def check_about(report: ClusterReport) -> Tuple[bool, str]:
     return True, ""
 
 
-def check_why_it_matters(report: ClusterReport) -> Tuple[bool, str]:
-    """Check why_it_matters word count"""
-    v = (report.why_it_matters or "").strip()
-    wc = word_count(v)
-    if not (WHY_MIN_WORDS <= wc <= WHY_MAX_WORDS):
-        return False, f"why_it_matters must be {WHY_MIN_WORDS}–{WHY_MAX_WORDS} words, got {wc}"
-    return True, ""
-
-
-def check_keyword_list(report: ClusterReport) -> Tuple[bool, str]:
-    """Check keyword_list format, word counts, and deduplication"""
+def check_keyword_list_format(report: ClusterReport) -> Tuple[bool, str]:
+    """Check keyword_list format (no empty items, no hashtags)"""
     raw = report.keyword_list
     cleaned = [k.strip() for k in raw if k and k.strip()]
     if len(cleaned) != len(raw):
         return False, "keyword_list contains empty/whitespace-only items"
 
-    # lowercase + validate
-    lowered = [k.lower() for k in cleaned]
-    for k in lowered:
-        wc = tag_word_count(k)
-        if wc < KEYWORD_MIN_WORDS or wc > KEYWORD_MAX_WORDS:
-            return False, f"keyword must be {KEYWORD_MIN_WORDS}–{KEYWORD_MAX_WORDS} words: {k!r}"
+    # Check for hashtags
+    for k in cleaned:
         if "#" in k:
             return False, f"keyword must not include hashtags: {k!r}"
-
-    # dedupe
-    seen = set()
-    deduped = []
-    for k in lowered:
-        if k not in seen:
-            seen.add(k)
-            deduped.append(k)
-
-    if not (KEYWORDS_MIN_ITEMS <= len(deduped) <= KEYWORDS_MAX_ITEMS):
-        return False, f"keyword_list must be {KEYWORDS_MIN_ITEMS}–{KEYWORDS_MAX_ITEMS} unique items after dedupe; got {len(deduped)}"
 
     return True, ""
 
 
 HARD_CHECKS: tuple[CheckFn, ...] = (
-    check_title,
-    check_about,
-    check_why_it_matters,
-    check_keyword_list,
+    check_title_format,
+    check_about_citations,
+    check_keyword_list_format,
 )
 
 
@@ -225,7 +203,8 @@ def hard_validate_cluster_report(cluster_report: Optional[ClusterReport], input_
     
     # Step 1: Field validation
     field_result = _hard_report_field_validation(cluster_report)
-    reasons_lines.append(field_result.reasons)
+    if field_result.reasons:  # Only append if there are failure messages
+        reasons_lines.append(field_result.reasons)
     if field_result.score != 1.0:
         all_passed = False
     

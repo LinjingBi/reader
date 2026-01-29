@@ -28,6 +28,11 @@ def word_count(s: str) -> int:
     return len(_WORD_RE.findall((s or "").strip()))
 
 
+def tag_word_count(tag: str) -> int:
+    """Count words separated by whitespace (after lowering/stripping)"""
+    return len([w for w in (tag or "").strip().split() if w])
+
+
 def run_checks(report: ClusterReport, checks: Sequence[CheckFn]) -> ValidationReport:
     """Run a sequence of checks and return ValidationReport"""
     passed = 0
@@ -36,7 +41,7 @@ def run_checks(report: ClusterReport, checks: Sequence[CheckFn]) -> ValidationRe
         ok, msg = fn(report)
         if ok:
             passed += 1
-            lines.append(f"{fn.__name__}: pass")
+            # Only record failure messages, not pass messages
         else:
             lines.append(f"{fn.__name__}: error: {msg}")
     score = passed / max(1, len(checks))
