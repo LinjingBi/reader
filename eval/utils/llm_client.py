@@ -1,21 +1,17 @@
 """LLM client supporting OpenAI and Gemini APIs"""
 
-import re
-import json
 import logging
 import time
 import threading
 
 from google import genai
 import openai
-from typing import Optional, Tuple, TypeVar, Type
+from typing import TypeVar, Type
 from pydantic import BaseModel
 from tenacity import (
     retry,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
-    retry_if_exception_message,
     before_sleep_log,
     retry_if_exception,
 )

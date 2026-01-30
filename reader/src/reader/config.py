@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import List, Optional
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 
 class RunConfig(BaseModel):
@@ -11,7 +11,8 @@ class RunConfig(BaseModel):
     month_key: str = Field(..., description="Month key in format 'month=YYYY-MM'")
     max_papers: int = Field(default=50, description="Maximum papers to process")
     artifacts_dir: str = Field(default="artifacts", description="Directory for artifacts")
-    log_level: str = Field(default="INFO", description="Logging level")
+    log_config_path: str = Field(..., description="Path to logging configuration YAML file")
+    log_file_path: str = Field(..., description="Path to log file")
 
 
 class HuggingFaceSourceConfig(BaseModel):
@@ -66,6 +67,49 @@ class MemoConfig(BaseModel):
     timeout_sec: int = Field(default=60, description="Timeout for memo CLI calls")
 
 
+class LLMGeminiConfig(BaseModel):
+    """Gemini LLM API configuration"""
+    models: List[str] = Field(..., description="List of Gemini model names")
+    temperature: float = Field(..., description="Temperature parameter")
+    max_tokens: int = Field(..., description="Maximum tokens to generate")
+    api_key_env: str = Field(..., description="Environment variable name for API key")
+    gemini_rpm_limit: int = Field(default=15, description="Requests per minute limit")
+    gemini_tpm_limit: int = Field(default=250000, description="Tokens per minute limit")
+
+
+class ClusterSummarizationConfig(BaseModel):
+    """Cluster summarization configuration"""
+    enable: bool = Field(default=False, description="Whether to enable cluster summarization")
+    llm_model: str = Field(..., description="Model name (must exist in llm_gemini.models list)")
+    prompt_template: str = Field(..., description="Path to prompt template file (relative to prompts directory)")
+    
+    @computed_field
+    @property
+    def prompt_template_path(self) -> Path:
+        """
+        Resolve and validate prompt template path.
+        
+        Returns:
+            Resolved Path to prompt template file
+            
+        Raises:
+            FileNotFoundError: If template file doesn't exist
+        """
+        # Resolve template path relative to reader/src/reader/prompts/
+        # This assumes config.py is at reader/src/reader/config.py
+        config_file = Path(__file__)
+        prompts_dir = config_file.parent / "prompts"
+        template_path = prompts_dir / self.prompt_template
+        
+        if not template_path.exists():
+            raise FileNotFoundError(
+                f"Prompt template not found: {template_path}. "
+                f"Expected location: {prompts_dir}/"
+            )
+        
+        return template_path
+
+
 class ReaderConfig(BaseModel):
     """Main reader configuration"""
     run: RunConfig
@@ -73,6 +117,8 @@ class ReaderConfig(BaseModel):
     algos: AlgosConfig
     outputs: OutputsConfig
     memo: MemoConfig
+    llm_gemini: LLMGeminiConfig
+    cluster_summarization: Optional[ClusterSummarizationConfig] = Field(default=None, description="Cluster summarization configuration")
 
 
 def load_config(path: str) -> ReaderConfig:
@@ -97,7 +143,17 @@ def load_config(path: str) -> ReaderConfig:
         data = yaml.safe_load(f)
     
     try:
-        return ReaderConfig(**data)
+        config = ReaderConfig(**data)
+        
+        # Validate cluster_summarization config if enabled
+        if config.cluster_summarization and config.cluster_summarization.enable:
+            if config.cluster_summarization.llm_model not in config.llm_gemini.models:
+                raise ValueError(
+                    f"cluster_summarization.llm_model '{config.cluster_summarization.llm_model}' "
+                    f"not found in llm_gemini.models. Available models: {config.llm_gemini.models}"
+                )
+        
+        return config
     except Exception as e:
         raise ValueError(f"Invalid configuration: {e}") from e
 

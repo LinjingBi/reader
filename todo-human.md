@@ -4,6 +4,8 @@ main(feature level)
 [ ] - add e2e test for reader and memo  
 [ ] - algo version control: move algo_libs to a new git repo  
 [ ] - [cursor] set minimum functional requirements to force coding agent follow them while refactoring.  
+[ ] - [eval] implement a llm request&response cache mechanism  
+[ ] - [eval, reader] design a structure to share the llm evaluation logic between eval pipeline and reader. f.e use the llm heuristic rules and judge from reader.  
 
 
 sub(issue, bug level)  
@@ -22,7 +24,11 @@ sub(issue, bug level)
 [x] - [eval] merge the eval-dspy's heuristic rules into eval's heuristic rules.  
 [x] - [eval] integrate new heuristic rules into run_eval.py and refactor run_eval.py.  
 [x] - [eval] test for new heuristic rules.  
-[ ] - [reader,eval] port llm request logic out of eval to reader.  
+
+[x] - [reader,eval] port llm request logic out of eval to reader.  
+
+[ ] - [reader,memo] integration test for fetch, cluster+embed, memo fresh paper, memo get clusters, llm enrichment
+
 
 [ ] - [chat,memo] check before implementing step4. do i need both topic_event and topic_lineage?  
 [ ] - [reader,memo] implement step 4 - prompt user to choose one topic from step 3, and save to memo  

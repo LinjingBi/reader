@@ -2,28 +2,75 @@
 
 import json
 import subprocess
-from typing import Dict, Optional
+from typing import List, Optional
+
+from pydantic import BaseModel
 
 from reader.config import ReaderConfig
+from reader.pipelines.report import FreshPaperPayload
+from reader.logging.logging_setup import get_logger
+
+logger = get_logger()
 
 
-def fresh_paper(payload: dict, config: ReaderConfig) -> dict:
+# Pydantic response models matching Rust CLI contracts
+
+class FreshPaperResponse(BaseModel):
+    """Response from fresh-paper command."""
+    snapshot_id: str
+    cluster_run_id: str
+
+
+class PaperCard(BaseModel):
+    """Paper card in cluster response."""
+    paper_id: str
+    title: str
+    summary: str
+    keywords: List[str]
+    url: str
+    rank_in_cluster: int
+    sim_to_centroid: Optional[float] = None
+
+
+class ClusterCard(BaseModel):
+    """Cluster card in best run response."""
+    cluster_id: str
+    cluster_index: int
+    size: int
+    cohesion: Optional[float] = None
+    papers: List[PaperCard]
+
+
+class GetBestRunResponse(BaseModel):
+    """Response from get-best-run command."""
+    snapshot_id: str
+    cluster_run_id: str
+    source: str
+    period_start: str
+    period_end: str
+    embed_config_id: str
+    cluster_config_id: str
+    clusters: List[ClusterCard]
+
+
+def fresh_paper(payload: FreshPaperPayload, config: ReaderConfig) -> Optional[FreshPaperResponse]:
     """
     Call memo CLI fresh-paper command to ingest papers and clustering.
     
     Args:
-        payload: Fresh paper payload dictionary matching fresh_paper_payload.json format
+        payload: FreshPaperPayload instance.
         config: ReaderConfig instance
         
     Returns:
-        Dictionary with 'snapshot_id' and 'cluster_run_id' keys, or empty dict if disabled/error
+        FreshPaperResponse instance, or None if disabled/error
     """
     if not config.memo.enabled:
-        return {}
+        return None
     
     try:
         # Convert payload to JSON string
-        payload_json = json.dumps(payload, ensure_ascii=False, indent=2)
+        payload_json = payload.model_dump_json(indent=2, exclude_none=False)
+       
         
         # Build command (use '-' to read from stdin)
         cmd = [
@@ -43,22 +90,22 @@ def fresh_paper(payload: dict, config: ReaderConfig) -> dict:
             check=True,
         )
         
-        # Parse JSON output
-        output = json.loads(result.stdout)
-        return output
+        # Parse JSON output and create Pydantic model
+        output_dict = json.loads(result.stdout)
+        return FreshPaperResponse(**output_dict)
             
     except subprocess.TimeoutExpired:
-        print(f"Warning: memo fresh-paper timed out after {config.memo.timeout_sec}s")
-        return {}
+        logger.warning(f"memo fresh-paper timed out after {config.memo.timeout_sec}s")
+        return None
     except subprocess.CalledProcessError as e:
-        print(f"Error calling memo fresh-paper: {e.stderr}")
-        return {}
+        logger.error(f"Error calling memo fresh-paper: {e.stderr}")
+        return None
     except json.JSONDecodeError as e:
-        print(f"Error parsing memo output: {e}")
-        return {}
+        logger.error(f"Error parsing memo output: {e}")
+        return None
     except Exception as e:
-        print(f"Unexpected error in memo fresh-paper: {e}")
-        return {}
+        logger.error(f"Unexpected error in memo fresh-paper: {e}", exc_info=True)
+        return None
 
 
 def get_best_clustering(
@@ -67,7 +114,7 @@ def get_best_clustering(
     period_end: str,
     config: ReaderConfig,
     top_n: int = 10,
-) -> dict:
+) -> Optional[GetBestRunResponse]:
     """
     Call memo CLI get-best-run command to retrieve best clustering.
     
@@ -79,10 +126,10 @@ def get_best_clustering(
         top_n: Maximum papers per cluster to include (default: 10)
         
     Returns:
-        Dictionary with clustering data, or empty dict if disabled/error
+        GetBestRunResponse instance, or None if disabled/error
     """
     if not config.memo.enabled:
-        return {}
+        return None
     
     try:
         # Build command
@@ -105,22 +152,22 @@ def get_best_clustering(
             check=True,
         )
         
-        # Parse JSON output
-        output = json.loads(result.stdout)
-        return output
+        # Parse JSON output and create Pydantic model
+        output_dict = json.loads(result.stdout)
+        return GetBestRunResponse(**output_dict)
         
     except subprocess.TimeoutExpired:
-        print(f"Warning: memo get-best-run timed out after {config.memo.timeout_sec}s")
-        return {}
+        logger.warning(f"memo get-best-run timed out after {config.memo.timeout_sec}s")
+        return None
     except subprocess.CalledProcessError as e:
-        print(f"Error calling memo get-best-run: {e.stderr}")
-        return {}
+        logger.error(f"Error calling memo get-best-run: {e.stderr}")
+        return None
     except json.JSONDecodeError as e:
-        print(f"Error parsing memo output: {e}")
-        return {}
+        logger.error(f"Error parsing memo output: {e}")
+        return None
     except Exception as e:
-        print(f"Unexpected error in memo get-best-run: {e}")
-        return {}
+        logger.error(f"Unexpected error in memo get-best-run: {e}", exc_info=True)
+        return None
 
 
 def fresh_topic(payload: dict, config: ReaderConfig) -> dict:

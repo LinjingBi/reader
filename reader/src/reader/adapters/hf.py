@@ -8,6 +8,9 @@ from datetime import datetime
 
 from reader.models import Paper
 from reader.config import ReaderConfig
+from reader.logging.logging_setup import get_logger
+
+logger = get_logger()
 
 
 async def fetch_papers(client: httpx.AsyncClient, url: str, params: str) -> List[Dict]:
@@ -36,7 +39,8 @@ async def fetch_papers(client: httpx.AsyncClient, url: str, params: str) -> List
             papers = []
         return papers
     except Exception as e:
-        print(f"Error fetching papers for {params}: {e}. hf err: {r.text if 'r' in locals() else 'N/A'}")
+        hf_err = r.text if 'r' in locals() else 'N/A'
+        logger.error(f"Error fetching papers for {params}: {e}. hf err: {hf_err}", exc_info=True)
         return []
 
 

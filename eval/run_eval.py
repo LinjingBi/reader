@@ -247,7 +247,6 @@ def _process_clusters_parallel(
     model: str,
     packed_data: Dict[str, Any],
     template_content: str,
-    monthly_data: Dict[str, Any],
     snapshot_id: str,
     period_start: str,
     period_end: str,
@@ -262,7 +261,6 @@ def _process_clusters_parallel(
         model: Model name
         packed_data: Packed data with clusters
         template_content: Prompt template content
-        monthly_data: Original monthly data for paper lookup
         snapshot_id: Snapshot ID
         period_start: Period start date
         period_end: Period end date

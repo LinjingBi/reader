@@ -2,9 +2,11 @@
 
 import argparse
 import sys
+from pathlib import Path
 
 from reader.config import load_config
 from reader.pipelines.monthly import run_monthly
+from reader.logging.logging_setup import setup_logging, get_logger
 
 
 def main():
@@ -23,7 +25,7 @@ def main():
     
     args = parser.parse_args()
     
-    # Load config
+    # Load config first to get artifacts_dir
     try:
         config = load_config(args.config)
     except FileNotFoundError as e:
@@ -33,11 +35,16 @@ def main():
         print(f"Error loading config: {e}", file=sys.stderr)
         sys.exit(1)
     
+    # Resolve log_config_path relative to project root (current working directory)
+    log_config_path = Path(config.run.log_config_path).resolve()
+    
+    # Setup logging using paths from config
+    setup_logging(log_config_path, config.run.log_file_path)
+    logger = get_logger()
+    
     # Run pipeline
     try:
         run_monthly(config)
     except Exception as e:
-        print(f"Error running pipeline: {e}", file=sys.stderr)
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Error running pipeline: {e}", exc_info=True)
         sys.exit(1)
