@@ -1,13 +1,12 @@
 use crate::commands::validation::{self, ValidationResult};
 use crate::db;
 use anyhow::Result;
-use std::fs;
-use std::path::Path;
+use std::io::{self, Write};
 
-fn validate_get_best_run(period_start: &str, period_end: &str, db_path: &str, schema_path: &str) -> ValidationResult {
+fn validate_get_best_run(period_start: &str, period_end: &str, db_path: &str, schema_path: Option<&str>) -> ValidationResult {
     let mut validation = ValidationResult::new();
 
-    println!("Validation starts...");
+    eprintln!("Validation starts...");
     
     let mut date_validation_passed = true;
     
@@ -36,16 +35,18 @@ fn validate_get_best_run(period_start: &str, period_end: &str, db_path: &str, sc
         Err(e) => validation.add_fail("Checking database path", e.to_string()),
     }
 
-    match validation::validate_schema_path(schema_path) {
-        Ok(()) => validation.add_pass("Checking schema path"),
-        Err(e) => validation.add_fail("Checking schema path", e.to_string()),
+    if let Some(schema_path) = schema_path {
+        match validation::validate_schema_path(schema_path) {
+            Ok(()) => validation.add_pass("Checking schema path"),
+            Err(e) => validation.add_fail("Checking schema path", e.to_string()),
+        }
     }
 
-    validation.print_summary();
+    validation.print_summary_to_stderr();
     validation
 }
 
-pub fn handle(dry_run: bool, db_path: &str, schema_path: &str, source: &str, period_start: &str, period_end: &str, top_n: usize, out_dir: Option<&str>) -> Result<()> {
+pub fn handle(dry_run: bool, db_path: &str, schema_path: Option<&str>, source: &str, period_start: &str, period_end: &str, top_n: usize) -> Result<()> {
     let validation = validate_get_best_run(period_start, period_end, db_path, schema_path);
 
     if !validation.is_all_passed() {
@@ -53,30 +54,22 @@ pub fn handle(dry_run: bool, db_path: &str, schema_path: &str, source: &str, per
     }
 
     if dry_run {
-        println!("\nAll validations passed (dry-run mode)");
+        eprintln!("\nAll validations passed (dry-run mode)");
         return Ok(());
     }
 
     let conn = db::open(db_path)?;
-    db::migrate::apply_schema(&conn, schema_path)?;
+    if let Some(schema_path) = schema_path {
+        db::migrate::apply_schema(&conn, schema_path)?;
+    }
 
     let store = db::store::Store::new(&conn);
     let resp = store.get_best_run(source, period_start, period_end, top_n)?;
-    let out = serde_json::to_string_pretty(&resp)?;
     
-    if let Some(dir) = out_dir {
-        // Create directory if it doesn't exist
-        fs::create_dir_all(dir)?;
-        
-        // Create filename: best_run_{source}_{period_start}_{period_end}.json
-        let filename = format!("best_run_{}_{}_{}.json", source, period_start, period_end);
-        let file_path = Path::new(dir).join(&filename);
-        
-        fs::write(&file_path, &out)?;
-        println!("Result JSON written to: {}", file_path.display());
-    } else {
-        println!("{out}");
-    }
+    // Output JSON to stdout (compact format for machine parsing)
+    let out = serde_json::to_string(&resp)?;
+    io::stdout().write_all(out.as_bytes())?;
+    io::stdout().flush()?;
     
     Ok(())
 }

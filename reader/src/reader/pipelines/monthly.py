@@ -39,3 +39,4 @@ def run_monthly(cfg: ReaderConfig) -> None:
                     logger.info(f"Cluster report: {cluster_report}")
                 if judge_output:
                     logger.info(f"Judge output: {judge_output}")
+

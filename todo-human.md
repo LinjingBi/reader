@@ -28,7 +28,8 @@ sub(issue, bug level)
 
 [x] - [reader,eval] port llm request logic out of eval to reader.  
 
-[ ] - [reader,memo] integration test for fetch, cluster+embed, memo fresh paper, memo get clusters, llm enrichment
+[x] - [reader,memo] integration test for fetch, cluster+embed, memo fresh paper, memo get clusters, llm enrichment  
+
 
 
 [ ] - [chat,memo] check before implementing step4. do i need both topic_event and topic_lineage?  

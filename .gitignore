@@ -69,3 +69,9 @@ temp/
 # Database files
 **/memo.sqlite
 
+# Reader artifacts and outputs
+reader/artifacts/
+reader/papers_report.json
+reader/*best_clustering_*.json
+reader/*best_clustering_*.md
+reader/configs/reader.yaml

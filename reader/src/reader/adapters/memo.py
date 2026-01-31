@@ -29,7 +29,6 @@ class PaperCard(BaseModel):
 
 class ClusterCard(BaseModel):
     """Cluster card in best run response."""
-    cluster_id: str
     cluster_index: int
     size: int
     cohesion: Optional[float] = None
@@ -68,10 +67,14 @@ def fresh_paper(payload: FreshPaperPayload, config: ReaderConfig) -> None:
         # Build command (use '-' to read from stdin)
         cmd = [
             config.memo.bin,
-            'fresh-paper',
-            '--input', '-',
-            '--db', config.memo.db_path,
         ]
+        if config.memo.db_path:
+            cmd.append('--db')
+            cmd.append(config.memo.db_path)
+        if config.memo.db_schema_path:
+            cmd.append('--schema')
+            cmd.append(config.memo.db_schema_path)
+        cmd.extend(['fresh-paper', '--input', '-'])
         
         # Run memo CLI with stdin input
         subprocess.run(
@@ -126,13 +129,14 @@ def get_best_clustering(
         # Build command
         cmd = [
             config.memo.bin,
-            'get-best-run',
-            '--source', source,
-            '--period-start', period_start,
-            '--period-end', period_end,
-            '--top-n', str(top_n),
-            '--db', config.memo.db_path,
         ]
+        if config.memo.db_path:
+            cmd.append('--db')
+            cmd.append(config.memo.db_path)
+        if config.memo.db_schema_path:
+            cmd.append('--schema')
+            cmd.append(config.memo.db_schema_path)
+        cmd.extend(['get-best-run', '--source', source, '--period-start', period_start, '--period-end', period_end, '--top-n', str(top_n)])
         
         # Run memo CLI
         result = subprocess.run(
@@ -144,8 +148,7 @@ def get_best_clustering(
         )
         
         # Parse JSON output and create Pydantic model
-        output_dict = json.loads(result.stdout)
-        return GetBestRunResponse(**output_dict)
+        return GetBestRunResponse.model_validate_json(result.stdout)
         
     except subprocess.TimeoutExpired:
         logger.warning(f"memo get-best-run timed out after {config.memo.timeout_sec}s")
@@ -154,6 +157,7 @@ def get_best_clustering(
         logger.error(f"Error calling memo get-best-run: {e.stderr}")
         return None
     except json.JSONDecodeError as e:
+        logger.error(f"memo get-best-run output: {result.stdout}")
         logger.error(f"Error parsing memo output: {e}")
         return None
     except Exception as e:

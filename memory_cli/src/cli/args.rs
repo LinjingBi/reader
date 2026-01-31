@@ -17,13 +17,9 @@ pub struct Args {
     #[arg(long, env = "MEMO_DB", default_value = "memo.sqlite")]
     pub db: String,
 
-    /// Path to schema SQL (used for bootstrap/migrations).
-    #[arg(long, env = "MEMO_SCHEMA", default_value = "schemas/schema.sql")]
-    pub schema: String,
-
-    /// Optional directory to write cmd artifacts(if any), otherwise stdout.
-    #[arg(long)]
-    pub out_dir: Option<String>,
+    /// Optional Path to schema SQL (used for bootstrap/migrations).
+    #[arg(long, env = "MEMO_SCHEMA")]
+    pub schema: Option<String>,
 
     /// Dry-run mode: validate inputs without performing DB operations. false by default.
     #[arg(long)]

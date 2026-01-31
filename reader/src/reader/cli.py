@@ -35,11 +35,8 @@ def main():
         print(f"Error loading config: {e}", file=sys.stderr)
         sys.exit(1)
     
-    # Resolve log_config_path relative to project root (current working directory)
-    log_config_path = Path(config.run.log_config_path).resolve()
-    
     # Setup logging using paths from config
-    setup_logging(log_config_path, config.run.log_file_path)
+    setup_logging(config.run.log_config_path, config.run.log_file_path)
     logger = get_logger()
     
     # Run pipeline

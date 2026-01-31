@@ -62,8 +62,9 @@ class OutputsConfig(BaseModel):
 class MemoConfig(BaseModel):
     """Memo CLI configuration"""
     enabled: bool = Field(default=False, description="Enable memo CLI integration")
-    bin: str = Field(default="./memo", description="Path to memo binary")
-    db_path: str = Field(default="./memo.db", description="Path to memo database")
+    bin: str = Field(..., description="Path to memo binary")
+    db_path: str = Field(default=None, description="Path to memo database")
+    db_schema_path: str = Field(default=None, description="Path to memo database schema")
     timeout_sec: int = Field(default=60, description="Timeout for memo CLI calls")
 
 

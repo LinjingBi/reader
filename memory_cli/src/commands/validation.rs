@@ -40,6 +40,16 @@ impl ValidationResult {
         }
     }
 
+    pub fn print_summary_to_stderr(&self) {
+        eprintln!("\nValidation Summary:");
+        for step in &self.passed {
+            eprintln!("  ✓ {}... PASSED", step);
+        }
+        for (step, error) in &self.failed {
+            eprintln!("  ✗ {}... FAILED: {}", step, error);
+        }
+    }
+
     pub fn to_error(&self) -> Option<anyhow::Error> {
         if self.failed.is_empty() {
             None

@@ -17,7 +17,7 @@ class ClusterMemberInput(BaseModel):
 
 class PaperInput(BaseModel):
     """Paper entry in the payload."""
-    _raw_paper_id: str = Field(..., exclude=True, description="Raw paper ID (excluded from serialization)")
+    raw_paper_id: str = Field(..., exclude=True, description="Raw paper ID (excluded from serialization)")
     title: str = Field(..., description="Paper title")
     summary: str = Field(..., description="Paper summary/abstract")
     keywords: List[str] = Field(..., description="List of keywords")
@@ -26,13 +26,13 @@ class PaperInput(BaseModel):
     
     def __init__(self, raw_paper_id: str, **kwargs):
         """Initialize PaperInput with raw paper ID."""
-        super().__init__(_raw_paper_id=raw_paper_id, **kwargs)
+        super().__init__(raw_paper_id=raw_paper_id, **kwargs)
     
     @computed_field
     @property
     def paper_id(self) -> str:
         """Format paper ID with 'hf:' prefix."""
-        return f"hf:{self._raw_paper_id}"
+        return f"hf:{self.raw_paper_id}"
 
 
 class EmbedConfigPayload(BaseModel):

@@ -7,6 +7,7 @@ pub use fresh_paper::{
     ClusterMemberInput,
     EmbedConfig,
     FreshPaperRequest,
+    FreshPaperResponse,
     PaperInput,
 };
 pub use get_best_run::{ClusterCard, GetBestRunResponse, PaperCard};

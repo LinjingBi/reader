@@ -13,6 +13,7 @@ handlers:
     rich_tracebacks: true
     tracebacks_show_locals: false
     markup: true
+    omit_repeated_times: true  # net to repeat the same message
 
   file:
     class: logging.handlers.RotatingFileHandler

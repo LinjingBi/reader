@@ -54,3 +54,14 @@ pub struct ClusterMemberInput {
     pub rank_in_cluster: i64,
     pub sim_to_centroid: Option<f64>,
 }
+
+/// Response for `fresh-paper` command.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FreshPaperResponse {
+    pub success: bool,
+    pub source: String,
+    pub period_start: String,
+    pub period_end: String,
+    pub papers_count: usize,
+    pub clusters_count: usize,
+}
