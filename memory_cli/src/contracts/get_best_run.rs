@@ -3,8 +3,6 @@ use serde::{Deserialize, Serialize};
 /// Response for `get-best-run` used to build the LLM enrichment prompt.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GetBestRunResponse {
-    pub snapshot_id: String,
-    pub cluster_run_id: String,
     pub source: String,
     pub period_start: String,
     pub period_end: String,
@@ -15,7 +13,6 @@ pub struct GetBestRunResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClusterCard {
-    pub cluster_id: String,
     pub cluster_index: i64,
     pub size: i64,
     pub cohesion: Option<f64>,

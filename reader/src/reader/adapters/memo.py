@@ -15,11 +15,6 @@ logger = get_logger()
 
 # Pydantic response models matching Rust CLI contracts
 
-class FreshPaperResponse(BaseModel):
-    """Response from fresh-paper command."""
-    snapshot_id: str
-    cluster_run_id: str
-
 
 class PaperCard(BaseModel):
     """Paper card in cluster response."""
@@ -43,8 +38,6 @@ class ClusterCard(BaseModel):
 
 class GetBestRunResponse(BaseModel):
     """Response from get-best-run command."""
-    snapshot_id: str
-    cluster_run_id: str
     source: str
     period_start: str
     period_end: str
@@ -53,7 +46,7 @@ class GetBestRunResponse(BaseModel):
     clusters: List[ClusterCard]
 
 
-def fresh_paper(payload: FreshPaperPayload, config: ReaderConfig) -> Optional[FreshPaperResponse]:
+def fresh_paper(payload: FreshPaperPayload, config: ReaderConfig) -> None:
     """
     Call memo CLI fresh-paper command to ingest papers and clustering.
     
@@ -81,7 +74,7 @@ def fresh_paper(payload: FreshPaperPayload, config: ReaderConfig) -> Optional[Fr
         ]
         
         # Run memo CLI with stdin input
-        result = subprocess.run(
+        subprocess.run(
             cmd,
             input=payload_json,
             capture_output=True,
@@ -90,9 +83,7 @@ def fresh_paper(payload: FreshPaperPayload, config: ReaderConfig) -> Optional[Fr
             check=True,
         )
         
-        # Parse JSON output and create Pydantic model
-        output_dict = json.loads(result.stdout)
-        return FreshPaperResponse(**output_dict)
+        return
             
     except subprocess.TimeoutExpired:
         logger.warning(f"memo fresh-paper timed out after {config.memo.timeout_sec}s")

@@ -59,11 +59,13 @@ pub fn validate_date_format(date_str: &str, field_name: &str) -> Result<()> {
 }
 
 /// Validate DB path: file exists.
-pub fn validate_db_path(db_path: &str) -> Result<()> {
-    let path = Path::new(db_path);
-    if !path.exists() {
-        return Err(anyhow::anyhow!("Database file does not exist: {}", db_path));
-    }
+pub fn validate_db_path(_db_path: &str) -> Result<()> {
+    // let path = Path::new(db_path);
+    // if !path.exists() {
+    //     return Err(anyhow::anyhow!("Database file does not exist: {}", db_path));
+    // }
+
+    // mute only for sqlite db as it will create one automatically if empty.
     Ok(())
 }
 

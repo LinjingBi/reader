@@ -6,6 +6,7 @@ main(feature level)
 [ ] - [cursor] set minimum functional requirements to force coding agent follow them while refactoring.  
 [ ] - [eval] implement a llm request&response cache mechanism  
 [ ] - [eval, reader] design a structure to share the llm evaluation logic between eval pipeline and reader. f.e use the llm heuristic rules and judge from reader.  
+[ ] - [reader] consider kmeans++?  
 
 
 sub(issue, bug level)  

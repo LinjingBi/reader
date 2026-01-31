@@ -66,3 +66,6 @@ temp/
 *.bak
 *.cache
 
+# Database files
+**/memo.sqlite
+

@@ -14,124 +14,143 @@ impl<'a> Store<'a> {
     }
 
     /// Atomic ingest of month snapshot + papers + best clustering (Step 1–2).
-    pub fn fresh_paper(&self, req: &FreshPaperRequest) -> Result<(String, String)> {
-        let tx = self.conn.unchecked_transaction()?;
+    /// Split into two transactions: Tx A (ingest) and Tx B (clusters).
+    pub fn fresh_paper(&self, req: &FreshPaperRequest) -> Result<()> {
         let now = Utc::now().to_rfc3339();
+        let role = req.role.clone().unwrap_or_else(|| "hf_batch".to_string());
 
-        // Upsert configs
-        self.upsert_embed_config(&tx, &req.embed_config.embed_config_id, &req.embed_config.json_payload.to_string(), &now)?;
-        self.upsert_cluster_config(&tx, &req.cluster_config.cluster_config_id, &req.cluster_config.json_payload.to_string(), &now)?;
+        // Tx A: Ingest (configs, snapshot, papers)
+        {
+            let tx_a = self.conn.unchecked_transaction()?;
+            
+            // Upsert configs
+            self.upsert_embed_config(&tx_a, &req.embed_config.embed_config_id, &req.embed_config.json_payload.to_string(), &now)?;
+            self.upsert_cluster_config(&tx_a, &req.cluster_config.cluster_config_id, &req.cluster_config.json_payload.to_string(), &now)?;
 
-        // Snapshot
-        let snapshot_id = req.snapshot_id.clone().unwrap_or_else(|| {
-            format!("{}|{}|{}", req.source, req.period_start, req.period_end)
-        });
-        let raw_json = req.raw_json.clone().unwrap_or_else(|| "{}".to_string());
-        self.upsert_snapshot(&tx, &snapshot_id, &req.source, &req.period_start, &req.period_end, &raw_json, &now)?;
+            // Snapshot
+            let raw_json = req.raw_json.clone().unwrap_or_else(|| "{}".to_string());
+            self.upsert_snapshot(&tx_a, &req.source, &req.period_start, &req.period_end, &raw_json, &now)?;
 
-        // Papers + snapshot links
-        for p in &req.papers {
-            self.upsert_paper(&tx, p, &now)?;
-            self.link_snapshot_paper(&tx, &snapshot_id, &p.paper_id)?;
+            // Papers + snapshot links
+            for p in &req.papers {
+                self.upsert_paper(&tx_a, p, &now)?;
+                self.link_snapshot_paper(&tx_a, &req.source, &req.period_start, &req.period_end, &p.paper_id)?;
+            }
+
+            tx_a.commit()?;
         }
 
-        // Cluster run (selected_best=1)
-        let role = req.role.clone().unwrap_or_else(|| "hf_batch".to_string());
-        let cluster_run_id = format!(
-            "{}|{}|{}|{}",
-            snapshot_id, req.embed_config.embed_config_id, req.cluster_config.cluster_config_id, role
-        );
+        // Tx B: Clusters
+        {
+            let tx_b = self.conn.unchecked_transaction()?;
 
-        // Ensure only one selected_best per snapshot+role (MVP)
-        tx.execute(
-            "UPDATE cluster_run SET selected_best=0 WHERE snapshot_id=?1 AND role=?2",
-            params![snapshot_id, role],
-        )?;
+            // Ensure only one selected_best per snapshot+role (enforced by partial unique index)
+            tx_b.execute(
+                "UPDATE cluster_run SET selected_best=0 WHERE source=?1 AND period_start=?2 AND period_end=?3 AND role=?4",
+                params![req.source, req.period_start, req.period_end, role],
+            )?;
 
-        self.upsert_cluster_run(
-            &tx,
-            &cluster_run_id,
-            &snapshot_id,
-            &req.embed_config.embed_config_id,
-            &req.cluster_config.cluster_config_id,
-            &role,
-            &now,
-        )?;
-
-        // Delete old clusters for this run id (idempotent rerun)
-        tx.execute("DELETE FROM cluster WHERE cluster_run_id=?1", params![cluster_run_id])?;
-        // cluster_member is cascaded by cluster delete.
-
-        // Insert clusters + members
-        for c in &req.clusters {
-            let cluster_id = format!("{}|c{}", cluster_run_id, c.cluster_index);
-            self.insert_cluster(
-                &tx,
-                &cluster_id,
-                &cluster_run_id,
-                c.cluster_index,
-                c.size,
-                c.centroid_b64.as_deref(),
-                c.cohesion,
+            self.upsert_cluster_run(
+                &tx_b,
+                &req.source,
+                &req.period_start,
+                &req.period_end,
+                &req.embed_config.embed_config_id,
+                &req.cluster_config.cluster_config_id,
+                &role,
                 &now,
             )?;
 
-            for m in &c.members {
-                self.insert_cluster_member(
-                    &tx,
-                    &cluster_id,
-                    &m.paper_id,
-                    m.rank_in_cluster,
-                    m.sim_to_centroid,
+            // Delete old clusters for this run (idempotent rerun)
+            tx_b.execute(
+                "DELETE FROM cluster WHERE source=?1 AND period_start=?2 AND period_end=?3 AND embed_config_id=?4 AND cluster_config_id=?5 AND role=?6",
+                params![req.source, req.period_start, req.period_end, req.embed_config.embed_config_id, req.cluster_config.cluster_config_id, role],
+            )?;
+            // cluster_member is cascaded by cluster delete.
+
+            // Update cluster_updated_at timestamp when clusters are regenerated
+            let cluster_update_time = Utc::now().to_rfc3339();
+            tx_b.execute(
+                "UPDATE cluster_run SET updated_at=?1 WHERE source=?2 AND period_start=?3 AND period_end=?4 AND embed_config_id=?5 AND cluster_config_id=?6 AND role=?7",
+                params![cluster_update_time, req.source, req.period_start, req.period_end, req.embed_config.embed_config_id, req.cluster_config.cluster_config_id, role],
+            )?;
+
+            // Insert clusters + members
+            for c in &req.clusters {
+                self.insert_cluster(
+                    &tx_b,
+                    &req.source,
+                    &req.period_start,
+                    &req.period_end,
+                    &req.embed_config.embed_config_id,
+                    &req.cluster_config.cluster_config_id,
+                    &role,
+                    c.cluster_index,
+                    c.size,
+                    c.centroid_b64.as_deref(),
+                    c.cohesion,
+                    &now,
                 )?;
+
+                for m in &c.members {
+                    self.insert_cluster_member(
+                        &tx_b,
+                        &req.source,
+                        &req.period_start,
+                        &req.period_end,
+                        &req.embed_config.embed_config_id,
+                        &req.cluster_config.cluster_config_id,
+                        &role,
+                        c.cluster_index,
+                        &m.paper_id,
+                        m.rank_in_cluster,
+                        m.sim_to_centroid,
+                    )?;
+                }
             }
+
+            tx_b.commit()?;
         }
 
-        tx.commit()?;
-        Ok((snapshot_id, cluster_run_id))
+        Ok(())
     }
 
     /// Read the selected best run for a snapshot period.
     pub fn get_best_run(&self, source: &str, period_start: &str, period_end: &str, top_n: usize) -> Result<GetBestRunResponse> {
-        let snapshot_id = format!("{}|{}|{}", source, period_start, period_end);
-
-        let (cluster_run_id, embed_config_id, cluster_config_id) = self.conn.query_row(
-            "SELECT cluster_run_id, embed_config_id, cluster_config_id
+        let (embed_config_id, cluster_config_id) = self.conn.query_row(
+            "SELECT embed_config_id, cluster_config_id
              FROM cluster_run
-             WHERE snapshot_id=?1 AND role='hf_batch' AND selected_best=1
+             WHERE source=?1 AND period_start=?2 AND period_end=?3 AND role='hf_batch' AND selected_best=1
              ORDER BY created_at DESC
              LIMIT 1",
-            params![snapshot_id],
-            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, String>(2)?)),
-        ).with_context(|| format!("no selected best run found for snapshot_id={snapshot_id}"))?;
+            params![source, period_start, period_end],
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+        ).with_context(|| format!("no selected best run found for source={source}, period_start={period_start}, period_end={period_end}"))?;
 
         // Load clusters
         let mut stmt = self.conn.prepare(
-            "SELECT cluster_id, cluster_index, size, cohesion
+            "SELECT cluster_index, size, cohesion
              FROM cluster
-             WHERE cluster_run_id=?1
+             WHERE source=?1 AND period_start=?2 AND period_end=?3 AND embed_config_id=?4 AND cluster_config_id=?5 AND role='hf_batch'
              ORDER BY cluster_index ASC"
         )?;
 
-        let clusters_iter = stmt.query_map(params![cluster_run_id], |row| {
+        let clusters_iter = stmt.query_map(params![source, period_start, period_end, embed_config_id, cluster_config_id], |row| {
             Ok((
-                row.get::<_, String>(0)?,
+                row.get::<_, i64>(0)?,
                 row.get::<_, i64>(1)?,
-                row.get::<_, i64>(2)?,
-                row.get::<_, Option<f64>>(3)?,
+                row.get::<_, Option<f64>>(2)?,
             ))
         })?;
 
         let mut clusters: Vec<ClusterCard> = Vec::new();
         for r in clusters_iter {
-            let (cluster_id, cluster_index, size, cohesion) = r?;
-            let papers = self.get_cluster_papers(&cluster_id, top_n)?;
-            clusters.push(ClusterCard { cluster_id, cluster_index, size, cohesion, papers });
+            let (cluster_index, size, cohesion) = r?;
+            let papers = self.get_cluster_papers(source, period_start, period_end, &embed_config_id, &cluster_config_id, cluster_index, top_n)?;
+            clusters.push(ClusterCard { cluster_index, size, cohesion, papers });
         }
 
         Ok(GetBestRunResponse {
-            snapshot_id,
-            cluster_run_id,
             source: source.to_string(),
             period_start: period_start.to_string(),
             period_end: period_end.to_string(),
@@ -141,17 +160,17 @@ impl<'a> Store<'a> {
         })
     }
 
-    fn get_cluster_papers(&self, cluster_id: &str, top_n: usize) -> Result<Vec<PaperCard>> {
+    fn get_cluster_papers(&self, source: &str, period_start: &str, period_end: &str, embed_config_id: &str, cluster_config_id: &str, cluster_index: i64, top_n: usize) -> Result<Vec<PaperCard>> {
         let mut stmt = self.conn.prepare(
             "SELECT p.paper_id, p.title, p.summary, p.keywords_json, p.url, cm.rank_in_cluster, cm.sim_to_centroid
              FROM cluster_member cm
              JOIN paper p ON p.paper_id = cm.paper_id
-             WHERE cm.cluster_id=?1
+             WHERE cm.source=?1 AND cm.period_start=?2 AND cm.period_end=?3 AND cm.embed_config_id=?4 AND cm.cluster_config_id=?5 AND cm.role='hf_batch' AND cm.cluster_index=?6
              ORDER BY cm.rank_in_cluster ASC
-             LIMIT ?2"
+             LIMIT ?7"
         )?;
 
-        let iter = stmt.query_map(params![cluster_id, top_n as i64], |row| {
+        let iter = stmt.query_map(params![source, period_start, period_end, embed_config_id, cluster_config_id, cluster_index, top_n as i64], |row| {
             let kw_json: String = row.get(3)?;
             let keywords: Vec<String> = serde_json::from_str(&kw_json).unwrap_or_default();
             Ok(PaperCard {
@@ -192,12 +211,12 @@ impl<'a> Store<'a> {
         Ok(())
     }
 
-    fn upsert_snapshot(&self, tx: &Transaction, snapshot_id: &str, source: &str, start: &str, end: &str, raw_json: &str, now: &str) -> Result<()> {
+    fn upsert_snapshot(&self, tx: &Transaction, source: &str, start: &str, end: &str, raw_json: &str, now: &str) -> Result<()> {
         tx.execute(
-            "INSERT INTO source_snapshot(snapshot_id, source, period_start, period_end, raw_json, created_at)
-             VALUES(?1, ?2, ?3, ?4, ?5, ?6)
-             ON CONFLICT(snapshot_id) DO UPDATE SET raw_json=excluded.raw_json",
-            params![snapshot_id, source, start, end, raw_json, now],
+            "INSERT INTO source_snapshot(source, period_start, period_end, raw_json, created_at)
+             VALUES(?1, ?2, ?3, ?4, ?5)
+             ON CONFLICT(source, period_start, period_end) DO UPDATE SET raw_json=excluded.raw_json",
+            params![source, start, end, raw_json, now],
         )?;
         Ok(())
     }
@@ -218,39 +237,43 @@ impl<'a> Store<'a> {
         Ok(())
     }
 
-    fn link_snapshot_paper(&self, tx: &Transaction, snapshot_id: &str, paper_id: &str) -> Result<()> {
+    fn link_snapshot_paper(&self, tx: &Transaction, source: &str, period_start: &str, period_end: &str, paper_id: &str) -> Result<()> {
         tx.execute(
-            "INSERT OR IGNORE INTO snapshot_paper(snapshot_id, paper_id) VALUES(?1, ?2)",
-            params![snapshot_id, paper_id],
+            "INSERT OR IGNORE INTO snapshot_paper(source, period_start, period_end, paper_id) VALUES(?1, ?2, ?3, ?4)",
+            params![source, period_start, period_end, paper_id],
         )?;
         Ok(())
     }
 
-    fn upsert_cluster_run(&self, tx: &Transaction, cluster_run_id: &str, snapshot_id: &str, embed_config_id: &str, cluster_config_id: &str, role: &str, now: &str) -> Result<()> {
+    fn upsert_cluster_run(&self, tx: &Transaction, source: &str, period_start: &str, period_end: &str, embed_config_id: &str, cluster_config_id: &str, role: &str, now: &str) -> Result<()> {
         tx.execute(
-            "INSERT INTO cluster_run(cluster_run_id, snapshot_id, embed_config_id, cluster_config_id, role, selected_best, created_at)
-             VALUES(?1, ?2, ?3, ?4, ?5, 1, ?6)
-             ON CONFLICT(cluster_run_id) DO UPDATE SET
+            "INSERT INTO cluster_run(source, period_start, period_end, embed_config_id, cluster_config_id, role, selected_best, created_at, updated_at)
+             VALUES(?1, ?2, ?3, ?4, ?5, ?6, 1, ?7, ?7)
+             ON CONFLICT(source, period_start, period_end, embed_config_id, cluster_config_id, role) DO UPDATE SET
                selected_best=1",
-            params![cluster_run_id, snapshot_id, embed_config_id, cluster_config_id, role, now],
+            params![source, period_start, period_end, embed_config_id, cluster_config_id, role, now],
         )?;
         Ok(())
     }
 
-    fn insert_cluster(&self, tx: &Transaction, cluster_id: &str, cluster_run_id: &str, cluster_index: i64, size: i64, centroid_b64: Option<&str>, cohesion: Option<f64>, now: &str) -> Result<()> {
+    fn insert_cluster(&self, tx: &Transaction, source: &str, period_start: &str, period_end: &str, embed_config_id: &str, cluster_config_id: &str, role: &str, cluster_index: i64, size: i64, centroid_b64: Option<&str>, cohesion: Option<f64>, now: &str) -> Result<()> {
         tx.execute(
-            "INSERT INTO cluster(cluster_id, cluster_run_id, cluster_index, size, centroid_b64, cohesion, created_at)
-             VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            params![cluster_id, cluster_run_id, cluster_index, size, centroid_b64, cohesion, now],
+            "INSERT INTO cluster(source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index, size, centroid_b64, cohesion, created_at)
+             VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+             ON CONFLICT(source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index) DO UPDATE SET
+               size=excluded.size,
+               centroid_b64=excluded.centroid_b64,
+               cohesion=excluded.cohesion",
+            params![source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index, size, centroid_b64, cohesion, now],
         )?;
         Ok(())
     }
 
-    fn insert_cluster_member(&self, tx: &Transaction, cluster_id: &str, paper_id: &str, rank_in_cluster: i64, sim_to_centroid: Option<f64>) -> Result<()> {
+    fn insert_cluster_member(&self, tx: &Transaction, source: &str, period_start: &str, period_end: &str, embed_config_id: &str, cluster_config_id: &str, role: &str, cluster_index: i64, paper_id: &str, rank_in_cluster: i64, sim_to_centroid: Option<f64>) -> Result<()> {
         tx.execute(
-            "INSERT INTO cluster_member(cluster_id, paper_id, rank_in_cluster, sim_to_centroid)
-             VALUES(?1, ?2, ?3, ?4)",
-            params![cluster_id, paper_id, rank_in_cluster, sim_to_centroid],
+            "INSERT INTO cluster_member(source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index, paper_id, rank_in_cluster, sim_to_centroid)
+             VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            params![source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index, paper_id, rank_in_cluster, sim_to_centroid],
         )?;
         Ok(())
     }

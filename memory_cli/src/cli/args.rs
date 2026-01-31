@@ -21,7 +21,7 @@ pub struct Args {
     #[arg(long, env = "MEMO_SCHEMA", default_value = "schemas/schema.sql")]
     pub schema: String,
 
-    /// Optional directory to write JSON outputs (otherwise stdout).
+    /// Optional directory to write cmd artifacts(if any), otherwise stdout.
     #[arg(long)]
     pub out_dir: Option<String>,
 

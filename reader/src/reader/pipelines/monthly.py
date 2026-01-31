@@ -23,14 +23,16 @@ def run_monthly(cfg: ReaderConfig) -> None:
 
     # Optionally call memo adapter if enabled
     if cfg.memo.enabled:
-        memo_result = memo.fresh_paper(fresh_paper_payload, cfg)
-        if memo_result:
-            logger.info(f"Memo ingest successful: snapshot_id={memo_result.snapshot_id}, cluster_run_id={memo_result.cluster_run_id}")
+        logger.info(f"Memo ingest started: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
+        memo.fresh_paper(fresh_paper_payload, cfg)
+
+        logger.info(f"Memo ingest successful: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
     
     if cfg.cluster_summarization.enable and cfg.memo.enabled:
+        logger.info("Memo get-best-run started: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
         best_cluster_run = memo.get_best_clustering(fresh_paper_payload.source, period_start, period_end, cfg)
         if best_cluster_run:
-            logger.info(f"Memo get-best-run successful: snapshot_id={best_cluster_run.snapshot_id}, cluster_run_id={best_cluster_run.cluster_run_id}")
+            logger.info(f"Memo get-best-run successful: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
             cluster_reports = summarize_clusters_parallel(cfg, best_cluster_run)
             for cluster_report, judge_output in cluster_reports:
                 if cluster_report:
