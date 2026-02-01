@@ -6,7 +6,9 @@ main(feature level)
 [ ] - [cursor] set minimum functional requirements to force coding agent follow them while refactoring.  
 [ ] - [eval] implement a llm request&response cache mechanism  
 [ ] - [eval, reader] design a structure to share the llm evaluation logic between eval pipeline and reader. f.e use the llm heuristic rules and judge from reader.  
-[ ] - [reader] consider kmeans++?  
+[ ] - [reader] **consider kmeans++?**  
+[...] - [reader] implement step 3 - llm enrichment for monthly clusterings   
+[ ] - [memo] enforce machine-only design in logging system: diagnostic logs -> stderr, cmd output -> stdout  
 
 
 sub(issue, bug level)  
@@ -19,7 +21,7 @@ sub(issue, bug level)
 [x] - [reader] refactor reader, make it scalable.  
 [x] - [reader] manual test after refactor.  
 
-[...] - [reader] implement step 3 - llm enrichment for monthly clusterings  
+ 
 [x] - [eval] implement step 3 - setup eval pipeline for llm enrichment: metadata, prompt template.  
 [x] - [eval-dspy] explore to use dspy powered eval pipeline.  
 [x] - [eval] merge the eval-dspy's heuristic rules into eval's heuristic rules.  
@@ -29,6 +31,8 @@ sub(issue, bug level)
 [x] - [reader,eval] port llm request logic out of eval to reader.  
 
 [x] - [reader,memo] integration test for fetch, cluster+embed, memo fresh paper, memo get clusters, llm enrichment  
+[x] - [reader-evolution-pip] draft design  
+[...] - [reader,memo,chat?] llm-enrichment UX and db storage. Note. current db storage operations for fetch+embed+cluster using memo fesh-paper and memo get-best-cluster are enough in terms of metadata reproducibility. for the llm-enrichment storage, only save the chosen cluster as new topic/merge to existing topic by comparing cheap and fast embedding(topic name, summary, labels). PS. make sure the db operations do not break the evolution pipeline design.     
 
 
 
