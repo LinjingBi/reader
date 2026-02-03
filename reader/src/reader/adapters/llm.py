@@ -6,7 +6,7 @@ import threading
 
 from google import genai
 from typing import TypeVar, Type
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -21,16 +21,49 @@ T = TypeVar('T', bound=BaseModel)
 
 logger = get_logger()
 
+class LLMGenerationError(Exception):
+    """
+    Exception raised when LLM generation API call fails.
+    
+    This exception wraps errors from the Gemini API and preserves
+    status_code/code attributes for retry logic.
+    """
+    def __init__(self, message: str, original_error: Exception):
+        """
+        Initialize LLM generation error.
+        
+        Args:
+            message: Error message indicating this is an LLM generation API error
+            original_error: The original exception from the API call
+        """
+        super().__init__(message)
+        self.original_error = original_error
+        
+        # Preserve status_code and code attributes from original error for retry logic
+        self.status_code = getattr(original_error, 'status_code', None)
+        self.code = getattr(original_error, 'code', None)
+        
+        # If original error doesn't have status_code but has code, use code as status_code
+        if self.status_code is None and self.code is not None:
+            self.status_code = self.code
+
+
 
 def _should_retry_exception(exception: Exception) -> bool:
     """
     Check if exception should trigger a retry.
-    Only retries on HTTP 5xx server errors (500-599).
+    Retries on:
+    - HTTP 5xx server errors (500-599)
+    - ValidationError (Pydantic validation errors - may be transient LLM formatting issues)
     Does not retry on:
     - ValueError (programming errors)
     - HTTP 4xx errors (client errors like bad requests)
     - Other exceptions that don't represent server-side issues
     """
+    # Retry on ValidationError (may be transient LLM formatting issues)
+    if isinstance(exception, ValidationError):
+        return True
+    
     # Never retry on ValueError (programming errors)
     if isinstance(exception, ValueError):
         return False
@@ -183,9 +216,9 @@ class LLMClient:
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
     )
-    def call_structured_raw(self, prompt: str, response_model: Type[T], temperature: float, max_tokens: int) -> str:
+    def call_structured_raw(self, prompt: str, response_model: Type[T], temperature: float, max_tokens: int) -> T:
         """
-        Call Gemini LLM with structured output and return raw text response.
+        Call Gemini LLM with structured output and return parsed Pydantic model instance.
         
         Args:
             prompt: Full prompt string
@@ -194,9 +227,10 @@ class LLMClient:
             max_tokens: Maximum tokens to generate
             
         Returns:
-            Raw text response from LLM (JSON string)
+            Parsed Pydantic model instance of type T
             
         Raises:
+            ValidationError: If JSON parsing/validation fails after all retries
             Exception: If API call fails after all retries
         """
         logger.debug("Sending request to Gemini API...")
@@ -224,9 +258,19 @@ class LLMClient:
             # Check for HTTP errors in response
             self._raise_for_status(response)
             
-            # Return raw text response (JSON extraction will be handled by caller)
-            return response.text or ""
+            # Parse JSON response into Pydantic model
+            json_text = response.text or ""
+            if not json_text:
+                raise ValueError("Empty response from LLM")
             
+            parsed_model = response_model.model_validate_json(json_text)
+            return parsed_model
+            
+        except ValidationError as e:
+            # Log validation errors
+            logger.error("Pydantic validation error: %s", str(e))
+            # Re-raise to allow retry logic to handle it
+            raise
         except Exception as e:
             # Extract status code from exception for logging
             status_code = getattr(e, 'status_code', None) or getattr(e, 'code', None)
@@ -241,4 +285,6 @@ class LLMClient:
                 logger.error("Gemini API error: %s", str(e))
             
             # Re-raise to allow retry logic to handle it
-            raise
+            # Wrap the exception in LLMGenerationError with clear error message
+            error_message = f"LLM generation API error: {str(e)}"
+            raise LLMGenerationError(error_message, e) from e

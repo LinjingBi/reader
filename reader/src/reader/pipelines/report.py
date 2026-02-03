@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
-from typing import List, Literal
+from typing import List, Literal, Dict, Any
 
 from pydantic import BaseModel, Field, computed_field, conlist
 
-
+# ----------------------------
+#  Paper, cluster, embed geometric Models
+# ----------------------------
 # Pydantic models for fresh paper payload
 class ClusterMemberInput(BaseModel):
     """Cluster member entry with paper ID, rank, and similarity to centroid."""
     paper_id: str = Field(..., description="Formatted paper ID (e.g., 'hf:2501.12948')")
-    rank_in_cluster: int = Field(..., description="Rank of paper within cluster")
+    rank_in_cluster: int = Field(..., description="Rank of paper within cluster group")
     sim_to_centroid: float = Field(..., description="Similarity to cluster centroid")
 
 
@@ -100,7 +102,7 @@ class FreshPaperPayload(BaseModel):
 
 
 # ----------------------------
-# Cluster Report Models
+# Cluster Report Models(llm enriched report)
 # ----------------------------
 # Global constraints (single source of truth)
 
@@ -165,12 +167,12 @@ class ClusterReport(BaseModel):
         ...,
         description=f"Plain-English summary. Target <= {ONE_LINER_MAX_WORDS} words.",
     )
-    what_this_cluster_is_about: str = Field(
+    what_this_topic_is_about: str = Field(
         ...,
         description=(
             "Describe the shared theme using only provided information. Explain how multiple papers relate. "
             f"Target {ABOUT_MIN_WORDS}–{ABOUT_MAX_WORDS} words. Include inline citations [paper_id]. "
-            "Use the word \"topic\", not \"cluster\"."
+
         ),
     )
     why_it_matters: str = Field(
@@ -189,7 +191,7 @@ class ClusterReport(BaseModel):
     confidence_rationale: conlist(str, min_length=CONF_RATIONALE_MIN_ITEMS, max_length=CONF_RATIONALE_MAX_ITEMS) = Field(
         ...,
         description=(
-            "Bullet list justifying confidence using cluster size, cohesion, and evidence quality. "
+            "Bullet list justifying confidence using the group size, cohesion, and evidence quality. "
             f"{CONF_RATIONALE_MIN_ITEMS}–{CONF_RATIONALE_MAX_ITEMS} items, each <= {CONF_RATIONALE_MAX_WORDS_PER_ITEM} words."
         ),
     )
@@ -228,4 +230,29 @@ class ClusterReport(BaseModel):
             f"each item {KEYWORD_MIN_WORDS}–{KEYWORD_MAX_WORDS} words; no hashtags."
         ),
     )
+
+# ----------------------------
+# cluster semantic models(for memo cluster injection)
+# ----------------------------
+
+
+class LLMConfigInput(BaseModel):
+    """LLM config input matching the llm_config table structure."""
+    llm_config_id: str = Field(..., description="LLM config ID in format: model|prompt_template")
+    json_payload: Dict[str, Any] = Field(..., description="LLM config JSON payload with provider, model, temperature, max_tokens, endpoint")
+
+
+class ClusterObservation(BaseModel):
+    """Observation data for a single cluster."""
+    llm_config: LLMConfigInput = Field(..., description="LLM configuration used")
+    payload_json: Dict[str, Any] = Field(..., description="Cluster observation payload JSON")
+
+
+# Type alias for inject-clusters-observation input (map of pk_hash -> ClusterObservation)
+InjectClustersObservationInput = Dict[str, ClusterObservation]
+
+
+class InjectClustersObservationResponse(BaseModel):
+    """Response for inject-clusters-observation command."""
+    status: str = Field(..., description="Status of the operation")
 

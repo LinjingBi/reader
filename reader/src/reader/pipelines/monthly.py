@@ -2,8 +2,10 @@
 
 from reader.config import ReaderConfig
 from reader.adapters import memo
-from reader.pipelines.blocks import get_hf_paper_metadata, generate_clustering_reports, summarize_clusters_parallel
+from reader.pipelines.blocks import get_hf_paper_metadata, generate_clustering_reports, summarize_clusters_parallel, serialize_cluster_reports, convert_cluster_reports_to_memo_payload
 from reader.logging.logging_setup import get_logger
+from reader.pipelines.metrics import JudgeOutput, ClusterReport
+from typing import Dict, Tuple, Optional
 
 logger = get_logger()
 
@@ -31,12 +33,11 @@ def run_monthly(cfg: ReaderConfig) -> None:
     if cfg.cluster_summarization.enable and cfg.memo.enabled:
         logger.info("Memo get-best-run started: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
         best_cluster_run = memo.get_best_clustering(fresh_paper_payload.source, period_start, period_end, cfg)
-        if best_cluster_run:
-            logger.info(f"Memo get-best-run successful: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
-            cluster_reports = summarize_clusters_parallel(cfg, best_cluster_run)
-            for cluster_report, judge_output in cluster_reports:
-                if cluster_report:
-                    logger.info(f"Cluster report: {cluster_report}")
-                if judge_output:
-                    logger.info(f"Judge output: {judge_output}")
 
+        logger.info(f"Memo get-best-run successful: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
+        cluster_reports: Dict[str, Tuple[Optional[ClusterReport], JudgeOutput]] = summarize_clusters_parallel(cfg, best_cluster_run)
+        
+        inject_clusters_observation_payload = convert_cluster_reports_to_memo_payload(cluster_reports, cfg)
+        logger.info(f"Memo inject-clusters-observation started: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
+        memo.inject_clusters_observation(inject_clusters_observation_payload, cfg)
+        logger.info(f"Memo inject-clusters-observation successful: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")

@@ -8,7 +8,6 @@ import re
 from dataclasses import dataclass
 from typing import Callable, Dict, Optional, Sequence, Set, Tuple
 
-from pydantic import ValidationError
 
 from reader.pipelines.report import (
     ClusterReport,
@@ -81,11 +80,12 @@ def run_checks(report: ClusterReport, checks: Sequence[CheckFn]) -> ValidationRe
 _CITATION_RE = re.compile(r"\[[^\[\]]+\]")  # basic [paper_id] matcher
 
 
-def is_title_case_no_colon(title: str) -> bool:
-    """Check if title is Title Case and contains no colon"""
+# current rules too rigid, muted.
+def is_title_case(title: str) -> bool:
+    """Check if title is Title Case"""
+
     t = (title or "").strip()
-    if ":" in t:
-        return False
+
     
     # Standard title case: capitalize first word and major words
     # Lowercase articles, conjunctions, and short prepositions
@@ -119,42 +119,25 @@ def has_inline_citation(s: str) -> bool:
     return bool(_CITATION_RE.search(s or ""))
 
 
-# ----------------------------
-# Parsing helpers
-# ----------------------------
-
-def parse_cluster_report(json_text: str) -> ClusterReport:
-    """Parse LLM JSON into a typed ClusterReport. Raises ValidationError if shape/type mismatches."""
-    return ClusterReport.model_validate_json(json_text)
-
-
-def try_parse_cluster_report(json_text: str) -> Tuple[ClusterReport | None, ValidationError | None]:
-    """Best-effort parse: returns (report, error)."""
-    try:
-        return parse_cluster_report(json_text), None
-    except ValidationError as e:
-        return None, e
-
-
-# ----------------------------
-# Hard validation checks
-# ----------------------------
+# ---------------------------------
+# Hard validation checks per field
+# ---------------------------------
 
 def check_title_format(report: ClusterReport) -> Tuple[bool, str]:
-    """Check title format (Title Case and no colon)"""
+    """Check title format (no colon)"""
     v = (report.title or "").strip()
-    if not is_title_case_no_colon(v):
-        return False, "title must be Title Case and contain no colon"
+    if ":" in v:
+        return False, "title must contain no colon"
     return True, ""
 
 
-def check_about_citations(report: ClusterReport) -> Tuple[bool, str]:
-    """Check what_this_cluster_is_about citations requirement"""
-    v = (report.what_this_cluster_is_about or "").strip()
+def check_what_this_topic_is_about(report: ClusterReport) -> Tuple[bool, str]:
+    """Check what_this_topic_is_about requirement"""
+    v = (report.what_this_topic_is_about or "").strip()
     if not has_inline_citation(v):
-        return False, "what_this_cluster_is_about must include at least one inline citation like [paper_id]"
+        return False, "what_this_topic_is_about must include at least one inline citation like [paper_id]"
     if "cluster" in v.lower():
-        return False, 'what_this_cluster_is_about should say "topic" not "cluster"'
+        return False, 'what_this_topic_is_about should say "topic" not "cluster"'
     return True, ""
 
 
@@ -175,7 +158,7 @@ def check_keyword_list_format(report: ClusterReport) -> Tuple[bool, str]:
 
 HARD_CHECKS: tuple[CheckFn, ...] = (
     check_title_format,
-    check_about_citations,
+    check_what_this_topic_is_about,
     check_keyword_list_format,
 )
 
@@ -186,9 +169,9 @@ def _hard_report_field_validation(report: ClusterReport) -> ValidationReport:
     return ValidationReport(score=1.0 if r.score == 1.0 else 0.0, reasons=r.reasons)
 
 
-# ----------------------------
-# Citation validation
-# ----------------------------
+# -------------------------------------
+# Hard validation checks cross fields
+# -------------------------------------
 
 def _extract_input_paper_ids(input_data: dict) -> Set[str]:
     """Extract all paper_ids from input papers"""
@@ -217,7 +200,7 @@ def _extract_output_paper_ids_from_cluster_report(cluster_report: ClusterReport)
 
     return paper_ids
 
-
+# Citation validation for representative_papers and reading_order
 def _validate_citations(cluster_report: Optional[ClusterReport], input_data: dict) -> tuple[bool, str]:
     """
     Validate that all cited paper_ids exist in input data.
@@ -274,7 +257,7 @@ def hard_validate_cluster_report(cluster_report: Optional[ClusterReport], input_
     if field_result.score != 1.0:
         all_passed = False
     
-    # Step 2: Citation check
+    # Step 2: Citation check for representative_papers and reading_order
     citations_passed, citations_reason = _validate_citations(cluster_report, input_data)
     if not citations_passed:
         reasons_lines.append(f"_validate_citations: error: {citations_reason}")
@@ -311,11 +294,11 @@ def check_one_liner(report: ClusterReport) -> Tuple[bool, str]:
 
 
 def check_about_word_count(report: ClusterReport) -> Tuple[bool, str]:
-    """Check what_this_cluster_is_about word count"""
-    v = (report.what_this_cluster_is_about or "").strip()
+    """Check what_this_topic_is_about word count"""
+    v = (report.what_this_topic_is_about or "").strip()
     wc = word_count(v)
     if not (ABOUT_MIN_WORDS <= wc <= ABOUT_MAX_WORDS):
-        return False, f"what_this_cluster_is_about must be {ABOUT_MIN_WORDS}–{ABOUT_MAX_WORDS} words, got {wc}"
+        return False, f"what_this_topic_is_about must be {ABOUT_MIN_WORDS}–{ABOUT_MAX_WORDS} words, got {wc}"
     return True, ""
 
 
@@ -464,40 +447,28 @@ class JudgeOutput:
     reasons: Dict[str, str]  # Human-readable reasons for each rule
 
 
-def judge_output(raw_text: str, input_data: dict) -> Tuple[JudgeOutput, Optional[ClusterReport]]:
+def judge_output(cluster_report: ClusterReport, input_data: dict) -> JudgeOutput:
     """
-    Judge LLM output using JSON parsing, Pydantic validation, and heuristic checks.
+    Judge LLM output using Pydantic validation and heuristic checks.
     
     Args:
-        raw_text: Raw text response from LLM (may contain JSON in markdown or raw format)
+        cluster_report: Parsed ClusterReport instance from LLM
         input_data: Original input data (for citation validation)
     
     Returns:
-        Tuple of (JudgeOutput, Optional[ClusterReport])
-        - JudgeOutput: Contains sub_scores, overall, and reasons
-        - ClusterReport: Validated Pydantic object if validation passes, None otherwise
+        JudgeOutput: Contains sub_scores, overall, and reasons
     """
     sub_scores: Dict[str, float] = {}
     reasons: Dict[str, str] = {}
     
-    # 1. Parse JSON to get ClusterReport (needed for return value and soft validation)
-    cluster_report, parse_error = try_parse_cluster_report(raw_text)
-    if cluster_report is not None:
-        sub_scores["json_valid"] = 1.0
-        reasons["json_valid"] = "OK"
-    else:
-        sub_scores["json_valid"] = 0.0
-        error_msg = str(parse_error) if parse_error else "Unknown cluster report parse error"
-        reasons["json_valid"] = f"JSON parse error: {error_msg}"
-    
-    # 2. Hard validation (includes parsing, field validation, and citation checks)
+    # 1. Hard validation (includes field validation and citation checks)
     hard_result = hard_validate_cluster_report(cluster_report, input_data)
     sub_scores["hard_schema_valid"] = hard_result.score
     # Only include reasons if there are failure messages (not empty string)
     if hard_result.reasons:
         reasons["hard_schema_valid"] = hard_result.reasons
     
-    # 3. Soft validation (includes name_generic check)
+    # 2. Soft validation (includes name_generic check)
     soft_result = soft_validate_cluster_report(cluster_report)
     sub_scores["soft_schema_valid"] = soft_result.score
     # Only include reasons if there are failure messages (not empty string)
@@ -506,8 +477,8 @@ def judge_output(raw_text: str, input_data: dict) -> Tuple[JudgeOutput, Optional
 
     
     # Compute overall score
-    # Must-pass rules: json_valid, hard_schema_valid
-    must_pass_rules = ["json_valid", "hard_schema_valid"]
+    # Must-pass rules: hard_schema_valid
+    must_pass_rules = ["hard_schema_valid"]
     must_pass_failed = any(sub_scores.get(rule, 0.0) == 0.0 for rule in must_pass_rules)
     
     if must_pass_failed:
@@ -520,5 +491,5 @@ def judge_output(raw_text: str, input_data: dict) -> Tuple[JudgeOutput, Optional
         sub_scores=sub_scores,
         overall=overall,
         reasons=reasons
-    ), cluster_report
+    )
 
