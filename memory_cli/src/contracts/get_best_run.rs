@@ -14,6 +14,7 @@ pub struct GetBestRunResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClusterCard {
     pub cluster_index: i64,
+    pub pk_hash: String,
     pub size: i64,
     pub cohesion: Option<f64>,
     pub papers: Vec<PaperCard>,

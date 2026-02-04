@@ -2,13 +2,14 @@
 
 import json
 import subprocess
-from typing import List, Optional
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 import pydantic
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 from reader.config import ReaderConfig
-from reader.pipelines.report import FreshPaperPayload, InjectClustersObservationInput, InjectClustersObservationResponse
+from reader.pipelines.report import FreshPaperPayload, InjectClustersObservationInput
 from reader.logging.logging_setup import get_logger
 
 logger = get_logger()
@@ -27,6 +28,11 @@ class MemoGetBestRunError(Exception):
 
 class MemoInjectClustersObservationError(Exception):
     """Exception raised when inject-clusters-observation subcommand fails."""
+    pass
+
+
+class MemoGetClustersObservationError(Exception):
+    """Exception raised when get-clusters-observation subcommand fails."""
     pass
 
 
@@ -53,11 +59,28 @@ class ClusterCard(BaseModel):
     pk_hash: str
 
 
+class ClusterObservationData(BaseModel):
+    """Observation data for a single cluster."""
+    observation_created_time: datetime  # YYYY-MM-DD format, parsed by Pydantic
+    json_payload: Any
+    cluster_period_start: datetime  # YYYY-MM-DD format, parsed by Pydantic
+    cluster_period_end: datetime  # YYYY-MM-DD format, parsed by Pydantic
+
+
+class GetClusterObservationResponse(RootModel[Dict[str, ClusterObservationData]]):
+    """Response from get-clusters-observation command.
+    
+    Maps pk_hash to ClusterObservationData.
+    Access the dictionary via .root attribute.
+    """
+    pass
+
+
 class GetBestRunResponse(BaseModel):
     """Response from get-best-run command."""
     source: str
-    period_start: str
-    period_end: str
+    period_start: str # YYYY-MM-DD
+    period_end: str # YYYY-MM-DD
     embed_config_id: str
     cluster_config_id: str
     clusters: List[ClusterCard]
@@ -185,58 +208,7 @@ def get_best_clustering(
         raise MemoGetBestRunError(f"Unexpected error in memo get-best-run: {e}") from e
 
 
-def fresh_topic(payload: dict, config: ReaderConfig) -> dict:
-    """
-    Stub for future topic creation.
-    
-    Args:
-        payload: Topic payload dictionary
-        config: ReaderConfig instance
-        
-    Returns:
-        Empty dict (not implemented)
-    """
-    if not config.memo.enabled:
-        return {}
-    # TODO: Implement when topic functionality is added
-    return {}
-
-
-def get_topic_metadata(topic_id: str, config: ReaderConfig) -> dict:
-    """
-    Stub for future topic metadata retrieval.
-    
-    Args:
-        topic_id: Topic identifier
-        config: ReaderConfig instance
-        
-    Returns:
-        Empty dict (not implemented)
-    """
-    if not config.memo.enabled:
-        return {}
-    # TODO: Implement when topic functionality is added
-    return {}
-
-
-def fresh_report(payload: dict, config: ReaderConfig) -> dict:
-    """
-    Stub for future report creation.
-    
-    Args:
-        payload: Report payload dictionary
-        config: ReaderConfig instance
-        
-    Returns:
-        Empty dict (not implemented)
-    """
-    if not config.memo.enabled:
-        return {}
-    # TODO: Implement when report functionality is added
-    return {}
-
-
-def inject_clusters_observation(payload: InjectClustersObservationInput, config: ReaderConfig) -> InjectClustersObservationResponse:
+def inject_clusters_observation(payload: InjectClustersObservationInput, config: ReaderConfig) -> None:
     """
     Call memo CLI inject-clusters-observation command to inject cluster observations.
     
@@ -244,8 +216,7 @@ def inject_clusters_observation(payload: InjectClustersObservationInput, config:
         payload: InjectClustersObservationInput dict mapping pk_hash to ClusterObservation
         config: ReaderConfig instance
         
-    Returns:
-        InjectClustersObservationResponse instance, or None if memo is disabled
+    Returns: none
         
     Raises:
         MemoInjectClustersObservationError: If the subcommand execution fails
@@ -275,7 +246,7 @@ def inject_clusters_observation(payload: InjectClustersObservationInput, config:
         cmd.extend(['inject-clusters-observation', '--input', '-'])
         
         # Run memo CLI with stdin input
-        result = subprocess.run(
+        subprocess.run(
             cmd,
             input=payload_json,
             capture_output=True,
@@ -284,8 +255,7 @@ def inject_clusters_observation(payload: InjectClustersObservationInput, config:
             check=True,
         )
         
-        # Parse JSON output and create Pydantic model
-        return InjectClustersObservationResponse.model_validate_json(result.stdout)
+        return None
         
     except subprocess.TimeoutExpired as e:
         logger.warning(f"memo inject-clusters-observation timed out after {config.memo.timeout_sec}s")
@@ -299,3 +269,66 @@ def inject_clusters_observation(payload: InjectClustersObservationInput, config:
     except Exception as e:
         logger.error(f"Unexpected error in memo inject-clusters-observation: {e}", exc_info=True)
         raise MemoInjectClustersObservationError(f"Unexpected error in memo inject-clusters-observation: {e}") from e
+
+
+def get_clusters_observation(
+    source: str,
+    period_start: str,
+    period_end: str,
+    config: ReaderConfig,
+) -> Optional[Dict[str, ClusterObservationData]]:
+    """
+    Call memo CLI get-clusters-observation command to retrieve cluster observations.
+    
+    Args:
+        source: Snapshot source (e.g., 'hf_monthly')
+        period_start: Period start date (YYYY-MM-DD)
+        period_end: Period end date (YYYY-MM-DD)
+        config: ReaderConfig instance
+        
+    Returns:
+        Dict mapping pk_hash to ClusterObservationData, or None if memo is disabled
+        
+    Raises:
+        MemoGetClustersObservationError: If the subcommand execution fails
+    """
+    if not config.memo.enabled:
+        return None
+    
+    try:
+        # Build command
+        cmd = [
+            config.memo.bin,
+        ]
+        if config.memo.db_path:
+            cmd.append('--db')
+            cmd.append(config.memo.db_path)
+        if config.memo.db_schema_path:
+            cmd.append('--schema')
+            cmd.append(config.memo.db_schema_path)
+        cmd.extend(['get-clusters-observation', '--source', source, '--period-start', period_start, '--period-end', period_end])
+        
+        # Run memo CLI
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=config.memo.timeout_sec,
+            check=True,
+        )
+        
+        # Parse JSON output and create Pydantic model, then return the dict
+        return GetClusterObservationResponse.model_validate_json(result.stdout).root
+        
+    except subprocess.TimeoutExpired as e:
+        logger.warning(f"memo get-clusters-observation timed out after {config.memo.timeout_sec}s")
+        raise MemoGetClustersObservationError(f"memo get-clusters-observation timed out after {config.memo.timeout_sec}s") from e
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Error calling memo get-clusters-observation: {e.stderr}")
+        raise MemoGetClustersObservationError(f"Error calling memo get-clusters-observation: {e.stderr}") from e
+    except pydantic.ValidationError as e:
+        logger.error(f"Error validating memo output: {e}")
+        raise MemoGetClustersObservationError(f"Error validating memo output: {e}") from e
+    except Exception as e:
+        logger.error(f"Unexpected error in memo get-clusters-observation: {e}", exc_info=True)
+        raise MemoGetClustersObservationError(f"Unexpected error in memo get-clusters-observation: {e}") from e

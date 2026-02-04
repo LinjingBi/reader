@@ -1,4 +1,4 @@
-"""Pydantic models for fresh paper payload"""
+"""Pydantic models for pipeline outputs/reports"""
 
 from __future__ import annotations
 
@@ -250,9 +250,3 @@ class ClusterObservation(BaseModel):
 
 # Type alias for inject-clusters-observation input (map of pk_hash -> ClusterObservation)
 InjectClustersObservationInput = Dict[str, ClusterObservation]
-
-
-class InjectClustersObservationResponse(BaseModel):
-    """Response for inject-clusters-observation command."""
-    status: str = Field(..., description="Status of the operation")
-

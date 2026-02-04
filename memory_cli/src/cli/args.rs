@@ -67,6 +67,39 @@ EXAMPLES:
         #[arg(long, default_value_t = 10)]
         top_n: usize,
     },
+
+    /// Get cluster observations for clusters within a period range.
+    #[command(
+        long_about = "Get cluster observations for clusters within a period range.
+
+EXAMPLES:
+  memo get-clusters-observation --source hf_monthly --period-start 2024-01-01 --period-end 2024-01-31"
+    )]
+    GetClustersObservation {
+        /// Snapshot source, e.g., 'hf_monthly'.
+        #[arg(long)]
+        source: String,
+        /// Period start date (YYYY-MM-DD) - start of range filter.
+        #[arg(long)]
+        period_start: String,
+        /// Period end date (YYYY-MM-DD) - end of range filter.
+        #[arg(long)]
+        period_end: String,
+    },
+
+    /// Write LLM enrichment results back into DB as cluster-attached semantic records.
+    #[command(
+        long_about = "Write LLM enrichment results back into DB as cluster-attached semantic records.
+
+EXAMPLES:
+  memo inject-clusters-observation --input observations.json
+  cat observations.json | memo inject-clusters-observation --input -"
+    )]
+    InjectClustersObservation {
+        /// JSON payload path. Use '-' to read from stdin.
+        #[arg(long)]
+        input: String,
+    },
 }
 
 impl Args {

@@ -83,12 +83,12 @@ def check_title_format(report: ClusterReport) -> Tuple[bool, str]:
 
 
 def check_about_citations(report: ClusterReport) -> Tuple[bool, str]:
-    """Check what_this_cluster_is_about citations requirement"""
-    v = (report.what_this_cluster_is_about or "").strip()
+    """Check what_this_topic_is_about citations requirement"""
+    v = (report.what_this_topic_is_about or "").strip()
     if not has_inline_citation(v):
-        return False, "what_this_cluster_is_about must include at least one inline citation like [paper_id]"
+        return False, "what_this_topic_is_about must include at least one inline citation like [paper_id]"
     if "cluster" in v.lower():
-        return False, 'what_this_cluster_is_about should say "topic" not "cluster"'
+        return False, 'what_this_topic_is_about should say "topic" not "cluster"'
     return True, ""
 
 

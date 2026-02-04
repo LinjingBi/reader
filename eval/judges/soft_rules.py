@@ -50,11 +50,11 @@ def check_one_liner(report: ClusterReport) -> Tuple[bool, str]:
 
 
 def check_about_word_count(report: ClusterReport) -> Tuple[bool, str]:
-    """Check what_this_cluster_is_about word count"""
-    v = (report.what_this_cluster_is_about or "").strip()
+    """Check what_this_topic_is_about word count"""
+    v = (report.what_this_topic_is_about or "").strip()
     wc = word_count(v)
     if not (ABOUT_MIN_WORDS <= wc <= ABOUT_MAX_WORDS):
-        return False, f"what_this_cluster_is_about must be {ABOUT_MIN_WORDS}–{ABOUT_MAX_WORDS} words, got {wc}"
+        return False, f"what_this_topic_is_about must be {ABOUT_MIN_WORDS}–{ABOUT_MAX_WORDS} words, got {wc}"
     return True, ""
 
 

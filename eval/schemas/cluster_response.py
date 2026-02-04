@@ -81,7 +81,7 @@ class ClusterReport(BaseModel):
         ...,
         description=f"Plain-English summary. Target <= {ONE_LINER_MAX_WORDS} words.",
     )
-    what_this_cluster_is_about: str = Field(
+    what_this_topic_is_about: str = Field(
         ...,
         description=(
             "Describe the shared theme using only provided information. Explain how multiple papers relate. "

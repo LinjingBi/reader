@@ -340,7 +340,7 @@ def generate_clustering_reports(
 
 
 # ============================================================================
-# LLM summarization blocks
+# LLM clusters summarization/enrichment blocks
 # ============================================================================
 
 def load_template(template_path: Path) -> str:
@@ -655,3 +655,7 @@ def convert_cluster_reports_to_memo_payload(
     logger.info(f"Converted {len(payload)} cluster reports to memo payload format")
     return payload
 
+
+# -------------------------
+
+# -------------------------

@@ -120,7 +120,7 @@ Constraints for SECTION B:
 
 * `title` must **exactly match** the SECTION A title.
 * `summary` must be **60–110 words**, derived from
-  `what_this_cluster_is_about` + `why_it_matters`.
+  `what_this_topic_is_about` + `why_it_matters`.
 * Do not introduce new concepts or claims.
 * If the cluster is thematically mixed, the summary must narrow scope and confidence should be MEDIUM or LOW.
 

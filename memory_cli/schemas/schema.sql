@@ -25,10 +25,7 @@ CREATE TABLE IF NOT EXISTS cluster_config (
 
 CREATE TABLE IF NOT EXISTS llm_config (
   llm_config_id TEXT PRIMARY KEY,
-  provider      TEXT NOT NULL,     -- e.g., 'openai'|'anthropic'|'google'|'openrouter'
-  model         TEXT NOT NULL,     -- model name as used by the API
-  endpoint      TEXT,              -- base URL or routing identifier (nullable)
-  params_json   TEXT NOT NULL,     -- JSON: temperature, top_p, max_tokens, etc.
+  json_payload  TEXT NOT NULL,  -- model name, provider, endpoint, params, etc.
   created_at    TEXT NOT NULL
 );
 
@@ -112,6 +109,7 @@ CREATE TABLE IF NOT EXISTS cluster (
   cluster_config_id TEXT NOT NULL,
   role             TEXT NOT NULL,
   cluster_index    INTEGER NOT NULL, -- 0..k-1
+  pk_hash          TEXT NOT NULL UNIQUE, -- SHA256 hex hash of primary key fields
   size             INTEGER NOT NULL,
   -- OPTIONAL geometry artifacts for display/matching/debug
   centroid_b64     TEXT,             -- base64 float32 bytes (nullable if not storing)
@@ -120,6 +118,25 @@ CREATE TABLE IF NOT EXISTS cluster (
   PRIMARY KEY (source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index),
   FOREIGN KEY (source, period_start, period_end, embed_config_id, cluster_config_id, role) 
     REFERENCES cluster_run(source, period_start, period_end, embed_config_id, cluster_config_id, role) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS cluster_observation (
+  -- same pk_hash as in cluster table
+  pk_hash TEXT PRIMARY KEY,
+
+  -- provenance / record
+  created_at        TEXT NOT NULL,
+  llm_config_id     TEXT NOT NULL,
+
+  -- LLM output (opaque JSON)
+  payload_json      TEXT NOT NULL,
+
+  FOREIGN KEY (pk_hash)
+    REFERENCES cluster(pk_hash)
+    ON DELETE CASCADE,
+
+  FOREIGN KEY (llm_config_id)
+    REFERENCES llm_config(llm_config_id)
 );
 
 CREATE TABLE IF NOT EXISTS cluster_member (
@@ -295,6 +312,7 @@ CREATE INDEX IF NOT EXISTS idx_topic_status ON topic(status);
 -- Performance indexes for fresh_paper operations
 CREATE INDEX IF NOT EXISTS idx_cluster_run_snapshot_role ON cluster_run(source, period_start, period_end, role);
 CREATE INDEX IF NOT EXISTS idx_cluster_cluster_run ON cluster(source, period_start, period_end, embed_config_id, cluster_config_id, role);
+-- Note: pk_hash has UNIQUE constraint which automatically creates an index
 
 -- Partial unique index to enforce single best run per snapshot+role
 CREATE UNIQUE INDEX IF NOT EXISTS ux_cluster_run_best 

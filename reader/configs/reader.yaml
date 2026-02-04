@@ -29,7 +29,7 @@ outputs:
 memo:
   enabled: true                    # Set to true to enable memo CLI integration
   bin: "/Users/bii/reader/memory_cli/target/debug/memo"
-  db_path: "/Users/bii/reader/memory_cli/memo.sqlite"  # optional, if not provided, a temporary database will be created
+  # db_path: "/Users/bii/reader/memory_cli/memo.sqlite"  # optional, if not provided, a temporary database will be created
   db_schema_path: "/Users/bii/reader/memory_cli/schemas/schema.sql" # optional, if not provided, no schema will be applied
   timeout_sec: 60
 
@@ -43,7 +43,7 @@ llm_gemini:
   gemini_tpm_limit: 250000       # Tokens per minute limit
 
 cluster_summarization:
-  enable: true  # Set to true to enable cluster summarization
+  enable: false  # Set to true to enable cluster summarization
   llm_model: "models/gemini-2.5-flash-lite"  # Must match one from llm_gemini.models
   prompt_template: "enrich_p0_per_cluster_gemini.txt" # all prompts must under reader/src/reader/prompts/
 

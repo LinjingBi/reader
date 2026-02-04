@@ -7,9 +7,9 @@ main(feature level)
 [ ] - [eval] implement a llm request&response cache mechanism  
 [ ] - [eval, reader] design a structure to share the llm evaluation logic between eval pipeline and reader. f.e use the llm heuristic rules and judge from reader.  
 [ ] - [reader] **consider kmeans++?**  
-[...] - [reader] implement step 3 - llm enrichment for monthly clusterings   
 [ ] - [memo] enforce machine-only design in logging system: diagnostic logs -> stderr, cmd output -> stdout  
-
+[ ] - now we have tokenbucket per pipeline execution time. consider adding a second layer of tokenbucket for per llm provider: pipeline token bucket -> llm provider token bucket. and also consider caching them in db.  
+[ ] - [memo] auto db migration. because the sqlite is designed to be a local db/memory system and is tighted to the memo cli. woould be interested to think of a way to handle local db migration after cli upgrade. a classical way just use a bunch of migration scripts. but since this is a machine-only/agent facing tool, maybe the migration can be some sort of prompt files and let agent drives/suggests the local db change vs new db schema.  
 
 sub(issue, bug level)  
 [x] - [chat] finalize the reader_algos package skeleton with chat.  
@@ -32,12 +32,23 @@ sub(issue, bug level)
 
 [x] - [reader,memo] integration test for fetch, cluster+embed, memo fresh paper, memo get clusters, llm enrichment  
 [x] - [reader-evolution-pip] draft design  
-[...] - [reader,memo,chat?] llm-enrichment UX and db storage. Note. current db storage operations for fetch+embed+cluster using memo fesh-paper and memo get-best-cluster are enough in terms of metadata reproducibility. for the llm-enrichment storage, only save the chosen cluster as new topic/merge to existing topic by comparing cheap and fast embedding(topic name, summary, labels). PS. make sure the db operations do not break the evolution pipeline design.     
+[x] - [reader,memo,chat?] llm-enrichment UX and db storage. edit: llm-enrichment UX is under tui/.  llm-enrichment db storage is adding new memo injest-cluster-observation cmd.  
 
+[x] - [reader] implement llm-enrichment UX under pipelines/tui.  
+[x] - [memo] add new ingest cluster observation(llm enrichment) cmd.  
+[x] - [reader] integrate new memo ingest cluster observation cmd.  
+[x] -  [reader,memo] test new memo ingest cluster observation cmd.  
+
+
+[x] - [memo,reader] add new memo get-cluster-observation cmd.  
+[x] - [reader] integrate tui into monthly pipeline.  
 
 
 [ ] - [chat,memo] check before implementing step4. do i need both topic_event and topic_lineage?  
-[ ] - [reader,memo] implement step 4 - prompt user to choose one topic from step 3, and save to memo  
+[ ] - [reader,memo] implement step4, write chosen topic to memo.  
+
+[ ] - [reader] handle llm enrichment retry cases when N number of cluster report is none?  
+
 
 random(spikes, explore)  
 [ ] - [reader] use lite llm and lite metadata(name, title, keywords) for summarization and thinking llm and depth-aware metadata for report genereation.  

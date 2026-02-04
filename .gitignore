@@ -68,9 +68,12 @@ temp/
 
 # Database files
 **/memo.sqlite
+memory_cli/memo.sqlite-shm
+memory_cli/memo.sqlite-wal
 
 # Reader artifacts and outputs
 reader/artifacts/
+reader/src/artifacts/
 reader/papers_report.json
 reader/*best_clustering_*.json
 reader/*best_clustering_*.md

@@ -22,6 +22,17 @@ Schema is applied automatically on each command (idempotent): `schemas/schema.sq
 ./target/release/memo-cli get-best-run --source hf_monthly --period-start 2025-01-01 --period-end 2025-01-31 --top-n 10 --db memo.sqlite
 ```
 
+### 3) Inject cluster observations (LLM enrichment results)
+```bash
+./target/release/memo-cli inject-clusters-observation --input observations.json --db memo.sqlite
+cat observations.json | ./target/release/memo-cli inject-clusters-observation --input -
+```
+
+### 4) Get cluster observations for clusters within a period range
+```bash
+./target/release/memo-cli get-clusters-observation --source hf_monthly --period-start 2025-01-01 --period-end 2025-01-31 --db memo.sqlite
+```
+
 ## Docs
 - `docs/design.md`
 - `docs/contracts.md`

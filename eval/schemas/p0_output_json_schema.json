@@ -17,7 +17,7 @@
           "topic_name",
           "one_liner",
           "tags",
-          "what_this_cluster_is_about",
+          "what_this_topic_is_about",
           "why_it_matters",
           "confidence",
           "confidence_rationale",
@@ -40,7 +40,7 @@
             "maxItems": 7,
             "items": { "type": "string", "minLength": 1, "maxLength": 40 }
           },
-          "what_this_cluster_is_about": { "type": "string", "minLength": 1, "maxLength": 1200 },
+          "what_this_topic_is_about": { "type": "string", "minLength": 1, "maxLength": 1200 },
           "why_it_matters": { "type": "string", "minLength": 1, "maxLength": 1200 },
           "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
           "confidence_rationale": { "type": "string", "minLength": 1, "maxLength": 300 },
