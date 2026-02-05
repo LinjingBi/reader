@@ -173,18 +173,6 @@ CREATE TABLE IF NOT EXISTS topic (
   updated_at         TEXT NOT NULL
 );
 
--- OPTIONAL: embed canonical topic card for quick matching (can also compute on the fly)
-CREATE TABLE IF NOT EXISTS topic_embedding (
-  topic_id        TEXT NOT NULL,
-  embed_config_id TEXT NOT NULL,
-  dim             INTEGER NOT NULL,
-  vector_b64      TEXT NOT NULL,
-  created_at      TEXT NOT NULL,
-  PRIMARY KEY (topic_id, embed_config_id),
-  FOREIGN KEY (topic_id)        REFERENCES topic(topic_id)        ON DELETE CASCADE,
-  FOREIGN KEY (embed_config_id) REFERENCES embed_config(embed_config_id) ON DELETE RESTRICT
-);
-
 -- Observations are per-period semantic snapshots produced by LLM during attachment
 CREATE TABLE IF NOT EXISTS topic_observation (
   observation_id       TEXT PRIMARY KEY,
@@ -227,7 +215,8 @@ CREATE TABLE IF NOT EXISTS topic_cluster_link (
     REFERENCES cluster(source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index) ON DELETE CASCADE
 );
 
--- Topic events: canonical changes (rename/merge/split/refresh) with provenance
+-- for evlution pipeline
+-- Topic events: canonical changes (rename/merge/split) with provenance
 CREATE TABLE IF NOT EXISTS topic_event (
   event_id            TEXT PRIMARY KEY,
   event_type          TEXT NOT NULL,  -- 'rename'|'merge'|'split'|'refresh'|'deprecate',
@@ -244,6 +233,7 @@ CREATE TABLE IF NOT EXISTS topic_event (
   FOREIGN KEY (llm_config_id) REFERENCES llm_config(llm_config_id) ON DELETE SET NULL
 );
 
+-- for evlution pipeline
 -- Lineage edges to preserve history without rewriting old links
 CREATE TABLE IF NOT EXISTS topic_lineage (
   topic_id          TEXT NOT NULL, -- current/survivor topic
@@ -268,7 +258,7 @@ CREATE TABLE IF NOT EXISTS report (
   cluster_config_id TEXT NOT NULL,
   role             TEXT NOT NULL,
   cluster_index    INTEGER NOT NULL,
-  report_md        TEXT NOT NULL,   -- full report content,
+  report_md        TEXT NOT NULL,
   created_at       TEXT NOT NULL,
   llm_config_id    TEXT,           -- provenance for report_md (nullable),
   FOREIGN KEY (source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index) 
@@ -318,3 +308,48 @@ CREATE INDEX IF NOT EXISTS idx_cluster_cluster_run ON cluster(source, period_sta
 CREATE UNIQUE INDEX IF NOT EXISTS ux_cluster_run_best 
   ON cluster_run(source, period_start, period_end, role) 
   WHERE selected_best=1;
+
+-- -----------------------------
+-- MIGRATION: topic centroid snapshot + report metadata (MVP+)
+-- Only touches tables starting with topic / report
+-- -----------------------------
+
+-- Topic: store an optional centroid embedding for the canonical topic card
+ALTER TABLE topic ADD COLUMN embed_config_id TEXT;          -- embedding space used for topic_centroid_b64
+ALTER TABLE topic ADD COLUMN topic_centroid_b64 TEXT;       -- base64 float32 bytes (same dim as cluster centroid)
+ALTER TABLE topic ADD COLUMN topic_centroid_updated_at TEXT;-- ISO timestamp when centroid last updated
+
+-- Report: compressed metadata so you don't need full report bodies for future history-aware prompts
+ALTER TABLE report ADD COLUMN title TEXT;
+ALTER TABLE report ADD COLUMN summary TEXT;                -- 80-120 words target (enforce in app)
+ALTER TABLE report ADD COLUMN keywords_json TEXT;          -- JSON list of strings
+
+ALTER TABLE report ADD COLUMN intent_mode TEXT;            -- quick_background|research_briefing|brainstorm_directions|implementation_angle
+ALTER TABLE report ADD COLUMN user_intent_note TEXT;       -- optional user free-text
+ALTER TABLE report ADD COLUMN declared_level TEXT;         -- intro|intermediate|deep-dive
+
+ALTER TABLE report ADD COLUMN covered_bullets_json TEXT;   -- JSON list (3-6)
+ALTER TABLE report ADD COLUMN next_targets_json TEXT;      -- JSON list (3-8)
+ALTER TABLE report ADD COLUMN subthreads_json TEXT;        -- JSON list of {name, paper_ids:[...]}
+
+-- Optional: store LLM's interpretation of cohesion/mixedness (NOT the embedding cohesion itself)
+ALTER TABLE report ADD COLUMN cohesion_label TEXT;         -- cohesive|mixed
+ALTER TABLE report ADD COLUMN cohesion_confidence REAL;    -- 0..1
+ALTER TABLE report ADD COLUMN evidence_gaps_json TEXT;     -- JSON list (0-5)
+
+-- Faster "latest report per topic" + coverage counts
+CREATE INDEX IF NOT EXISTS idx_report_created_at ON report(created_at);
+CREATE INDEX IF NOT EXISTS idx_report_intent_mode ON report(intent_mode);
+CREATE INDEX IF NOT EXISTS idx_report_declared_level ON report(declared_level);
+
+-- topic_observation continuity queries (per-topic timeline)
+CREATE INDEX IF NOT EXISTS idx_topic_observation_topic_period
+  ON topic_observation(topic_id, period_start, period_end);
+
+-- topic_cluster_link queries (find all clusters attached to a topic / find match_score distributions)
+CREATE INDEX IF NOT EXISTS idx_topic_cluster_link_topic
+  ON topic_cluster_link(topic_id);
+
+CREATE INDEX IF NOT EXISTS idx_topic_cluster_link_match_score
+  ON topic_cluster_link(match_score);
+2. 

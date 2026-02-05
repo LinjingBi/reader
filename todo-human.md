@@ -44,8 +44,15 @@ sub(issue, bug level)
 [x] - [reader] integrate tui into monthly pipeline.  
 
 
-[ ] - [chat,memo] check before implementing step4. do i need both topic_event and topic_lineage?  
+[x] - [chat,memo] check before implementing step4. do i need both topic_event and topic_lineage?YES and even more...  
+[x] - [chat] report generation design doc.  
+[ ] - [reader,tui] ask user to choose a prefered report style:
+       Quick background (5–10 min)
+       Research briefing (decision-oriented)
+       Brainstorm directions (novelty hunting)
+       Implementation angle (what to build / how to test)  
 [ ] - [reader,memo] implement step4, write chosen topic to memo.  
+
 
 [ ] - [reader] handle llm enrichment retry cases when N number of cluster report is none?  
 
