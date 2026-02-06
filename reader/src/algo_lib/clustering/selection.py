@@ -89,7 +89,7 @@ def _grid_search(
             
             # Compute metrics
             gm = safe_global_metrics(X, labels)
-            member_sims = member_similarities(X, labels)
+            member_sims, _ = member_similarities(X, labels)
             coh_mean = cluster_cohesion(member_sims)
             avg_coh = float(np.mean(list(coh_mean.values()))) if coh_mean else float("nan")
             min_coh = float(np.min(list(coh_mean.values()))) if coh_mean else float("nan")
@@ -192,8 +192,8 @@ def get_best_clustering(
     )
     best_labels = kmeans.fit_predict()
     
-    # Step 4: Compute member similarities and cluster cohesion
-    member_sims = member_similarities(best_embeddings, best_labels)
+    # Step 4: Compute member similarities, cluster cohesion, and centroids
+    member_sims, cluster_centroids = member_similarities(best_embeddings, best_labels)
     coh_mean = cluster_cohesion(member_sims)
     
     # Step 5: Order cluster members by similarity (derived from member_sims)
@@ -205,4 +205,5 @@ def get_best_clustering(
         cluster_members_ordered=cluster_members_ordered_dict,
         cluster_members_similarities=member_sims,
         cluster_cohesion=coh_mean,
+        cluster_centroids=cluster_centroids,
     )

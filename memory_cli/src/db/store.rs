@@ -112,7 +112,7 @@ impl<'a> Store<'a> {
                     &role,
                     c.cluster_index,
                     c.size,
-                    c.centroid_b64.as_deref(),
+                    &c.centroid_b64,
                     c.cohesion,
                     &now,
                 )?;
@@ -282,7 +282,7 @@ impl<'a> Store<'a> {
         Ok(())
     }
 
-    fn insert_cluster(&self, tx: &Transaction, source: &str, period_start: &str, period_end: &str, embed_config_id: &str, cluster_config_id: &str, role: &str, cluster_index: i64, size: i64, centroid_b64: Option<&str>, cohesion: Option<f64>, now: &str) -> Result<()> {
+    fn insert_cluster(&self, tx: &Transaction, source: &str, period_start: &str, period_end: &str, embed_config_id: &str, cluster_config_id: &str, role: &str, cluster_index: i64, size: i64, centroid_b64: &str, cohesion: Option<f64>, now: &str) -> Result<()> {
         let pk_hash = Self::compute_cluster_pk_hash(source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index);
         tx.execute(
             "INSERT INTO cluster(source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index, pk_hash, size, centroid_b64, cohesion, created_at)

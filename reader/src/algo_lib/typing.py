@@ -7,6 +7,7 @@ Defines PaperLike Protocol to decouple algorithms from fetch.Paper.
 from __future__ import annotations
 from typing import Protocol, Dict, List
 from dataclasses import dataclass
+import numpy as np
 
 class PaperLike(Protocol):
     """
@@ -35,3 +36,4 @@ class BestClusteringResult:
     cluster_members_ordered: Dict[int, List[int]]  # cluster_label -> list of paper indices
     cluster_members_similarities: Dict[int, Dict[int, float]]  # cluster_label -> paper_index -> similarity to centroid
     cluster_cohesion: Dict[int, float]  # cluster_label -> cohesion
+    cluster_centroids: Dict[int, np.ndarray]  # cluster_label -> centroid vector (normalized numpy array)

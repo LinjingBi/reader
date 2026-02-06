@@ -56,7 +56,7 @@ def safe_global_metrics(
 def member_similarities(
     embeddings: np.ndarray,
     labels: np.ndarray,
-) -> Dict[int, Dict[int, float]]:
+) -> tuple[Dict[int, Dict[int, float]], Dict[int, np.ndarray]]:
     """
     Cosine similarity to centroid per cluster member.
     X is normalized -> cosine = dot(x, centroid_norm).
@@ -66,9 +66,12 @@ def member_similarities(
         labels: Cluster labels
     
     Returns:
-        Dictionary mapping cluster_id -> Dict[paper_idx] -> similarity to centroid
+        Tuple of:
+        - Dictionary mapping cluster_id -> Dict[paper_idx] -> similarity to centroid
+        - Dictionary mapping cluster_id -> centroid vector (normalized numpy array)
     """
     out: Dict[int, Dict[int, float]] = {}
+    centroids: Dict[int, np.ndarray] = {}
     for c in sorted(set(labels.tolist())):
         idx = np.where(labels == c)[0]
         if len(idx) == 0:
@@ -78,7 +81,8 @@ def member_similarities(
         centroid /= np.linalg.norm(centroid) + 1e-12
         sims = C @ centroid  # cosine similarity since embeddings normalized
         out[int(c)] = {int(idx[i]): float(sims[i]) for i in range(len(idx))}
-    return out
+        centroids[int(c)] = centroid
+    return out, centroids
 
 
 def cluster_cohesion(

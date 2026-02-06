@@ -111,8 +111,8 @@ CREATE TABLE IF NOT EXISTS cluster (
   cluster_index    INTEGER NOT NULL, -- 0..k-1
   pk_hash          TEXT NOT NULL UNIQUE, -- SHA256 hex hash of primary key fields
   size             INTEGER NOT NULL,
-  -- OPTIONAL geometry artifacts for display/matching/debug
-  centroid_b64     TEXT,             -- base64 float32 bytes (nullable if not storing)
+  -- Geometry artifacts for display/matching/debug
+  centroid_b64     TEXT NOT NULL,    -- base64 float32 bytes
   cohesion         REAL,             -- avg cosine to centroid (nullable)
   created_at       TEXT NOT NULL,
   PRIMARY KEY (source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index),

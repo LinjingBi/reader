@@ -43,7 +43,7 @@ pub struct PaperInput {
 pub struct ClusterInput {
     pub cluster_index: i64,
     pub size: i64,
-    pub centroid_b64: Option<String>,
+    pub centroid_b64: String,
     pub cohesion: Option<f64>,
     pub members: Vec<ClusterMemberInput>,
 }

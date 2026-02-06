@@ -46,6 +46,7 @@ sub(issue, bug level)
 
 [x] - [chat,memo] check before implementing step4. do i need both topic_event and topic_lineage?YES and even more...  
 [x] - [chat] report generation design doc.  
+[x] - [reader] add scriptes to simulate past 12 months data to find the "merge/create" threshold.  
 [ ] - [reader,tui] ask user to choose a prefered report style:
        Quick background (5–10 min)
        Research briefing (decision-oriented)

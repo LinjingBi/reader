@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Literal, Dict, Any
+from typing import List, Literal, Dict, Any, Optional
 
 from pydantic import BaseModel, Field, computed_field, conlist
 
@@ -86,6 +86,7 @@ class ClusterInput(BaseModel):
     cluster_index: int = Field(..., description="Cluster index")
     size: int = Field(..., description="Number of papers in cluster")
     cohesion: float = Field(..., description="Cluster cohesion score")
+    centroid_b64: str = Field(..., description="Cluster centroid as base64-encoded float32 bytes")
     members: List[ClusterMemberInput] = Field(..., description="List of cluster members")
 
 

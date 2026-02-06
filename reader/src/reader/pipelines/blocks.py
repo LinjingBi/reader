@@ -4,10 +4,12 @@ import json
 import os
 import calendar
 import hashlib
+import base64
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict
 from pathlib import Path
 from typing import Dict, List, Sequence, Optional, Any, Tuple
+import numpy as np
 
 from algo_lib.clustering import get_best_clustering
 from algo_lib.typing import PaperLike
@@ -164,6 +166,7 @@ def generate_fresh_paper_payload(
     papers: Sequence[PaperLike],
     member_similarities: Dict[int, Dict[int, float]],
     cluster_cohesion_dict: Dict[int, float],
+    cluster_centroids: Dict[int, np.ndarray],
     period_start: str,
     period_end: str,
     embed_model_name: str,
@@ -182,6 +185,7 @@ def generate_fresh_paper_payload(
         papers: Sequence of paper-like objects (must have published_at field)
         member_similarities: Dict[cluster_id] -> Dict[paper_idx] -> similarity to centroid
         cluster_cohesion_dict: Dict[cluster_id] -> average cohesion
+        cluster_centroids: Dict[cluster_id] -> centroid vector (normalized numpy array)
         period_start: Start date in YYYY-MM-DD format
         period_end: End date in YYYY-MM-DD format
         embed_model_name: Embedding model name
@@ -226,10 +230,20 @@ def generate_fresh_paper_payload(
                 sim_to_centroid=sim,
             ))
         
+        # Convert centroid to base64-encoded float32 bytes
+        if c not in cluster_centroids:
+            raise ValueError(f"Cluster {c} missing centroid in cluster_centroids")
+        centroid = cluster_centroids[c]
+        # Convert numpy array to float32 bytes (little-endian)
+        centroid_bytes = centroid.astype(np.float32).tobytes()
+        # Encode to base64
+        centroid_b64 = base64.b64encode(centroid_bytes).decode('utf-8')
+        
         clusters_list.append(ClusterInput(
             cluster_index=c,
             size=len(idxs),
             cohesion=cluster_cohesion_dict[c],
+            centroid_b64=centroid_b64,
             members=members_list,
         ))
     
@@ -309,6 +323,7 @@ def generate_clustering_reports(
         papers=papers,
         member_similarities=result.cluster_members_similarities,
         cluster_cohesion_dict=result.cluster_cohesion,
+        cluster_centroids=result.cluster_centroids,
         period_start=period_start,
         period_end=period_end,
         embed_model_name=cfg.algos.embedding.model,
