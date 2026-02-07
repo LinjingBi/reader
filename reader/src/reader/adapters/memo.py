@@ -36,6 +36,11 @@ class MemoGetClustersObservationError(Exception):
     pass
 
 
+class MemoStartReportJobError(Exception):
+    """Exception raised when start-report-job subcommand fails."""
+    pass
+
+
 # Pydantic response models matching Rust CLI contracts
 
 
@@ -63,8 +68,12 @@ class ClusterObservationData(BaseModel):
     """Observation data for a single cluster."""
     observation_created_time: datetime  # YYYY-MM-DD format, parsed by Pydantic
     json_payload: Any
+    summary: str  # Cluster summary (what_this_topic_is_about + why_it_matters)
+    title: str  # Cluster title
+    keywords_json: List[str]  # Keywords as JSON list
     cluster_period_start: datetime  # YYYY-MM-DD format, parsed by Pydantic
     cluster_period_end: datetime  # YYYY-MM-DD format, parsed by Pydantic
+    centroid_b64: str  # Cluster centroid as base64-encoded float32 bytes
 
 
 class GetClusterObservationResponse(RootModel[Dict[str, ClusterObservationData]]):
@@ -74,6 +83,14 @@ class GetClusterObservationResponse(RootModel[Dict[str, ClusterObservationData]]
     Access the dictionary via .root attribute.
     """
     pass
+
+
+class StartReportJobResponse(BaseModel):
+    """Response from start-report-job command."""
+    status: str  # 'running' | 'done' | 'error'
+    new_job: bool
+    report_id: Optional[str] = None  # Only present when status is 'done'
+    message: str
 
 
 class GetBestRunResponse(BaseModel):
@@ -332,3 +349,62 @@ def get_clusters_observation(
     except Exception as e:
         logger.error(f"Unexpected error in memo get-clusters-observation: {e}", exc_info=True)
         raise MemoGetClustersObservationError(f"Unexpected error in memo get-clusters-observation: {e}") from e
+
+
+def start_report_job(
+    cluster_pk_hash: str,
+    config: ReaderConfig,
+) -> Optional[StartReportJobResponse]:
+    """
+    Call memo CLI start-report-job command to start a report generation job for a cluster.
+    
+    Args:
+        cluster_pk_hash: Cluster pk_hash (primary key hash from cluster table)
+        config: ReaderConfig instance
+        
+    Returns:
+        StartReportJobResponse instance, or None if memo is disabled
+        
+    Raises:
+        MemoStartReportJobError: If the subcommand execution fails
+    """
+    if not config.memo.enabled:
+        return None
+    
+    try:
+        # Build command
+        cmd = [
+            config.memo.bin,
+        ]
+        if config.memo.db_path:
+            cmd.append('--db')
+            cmd.append(config.memo.db_path)
+        if config.memo.db_schema_path:
+            cmd.append('--schema')
+            cmd.append(config.memo.db_schema_path)
+        cmd.extend(['start-report-job', '--cluster-pk-hash', cluster_pk_hash])
+        
+        # Run memo CLI
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=config.memo.timeout_sec,
+            check=True,
+        )
+        
+        # Parse JSON output and create Pydantic model
+        return StartReportJobResponse.model_validate_json(result.stdout)
+        
+    except subprocess.TimeoutExpired as e:
+        logger.warning(f"memo start-report-job timed out after {config.memo.timeout_sec}s")
+        raise MemoStartReportJobError(f"memo start-report-job timed out after {config.memo.timeout_sec}s") from e
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Error calling memo start-report-job: {e.stderr}")
+        raise MemoStartReportJobError(f"Error calling memo start-report-job: {e.stderr}") from e
+    except pydantic.ValidationError as e:
+        logger.error(f"Error validating memo output: {e}")
+        raise MemoStartReportJobError(f"Error validating memo output: {e}") from e
+    except Exception as e:
+        logger.error(f"Unexpected error in memo start-report-job: {e}", exc_info=True)
+        raise MemoStartReportJobError(f"Unexpected error in memo start-report-job: {e}") from e

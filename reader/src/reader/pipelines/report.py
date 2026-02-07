@@ -247,6 +247,9 @@ class ClusterObservation(BaseModel):
     """Observation data for a single cluster."""
     llm_config: LLMConfigInput = Field(..., description="LLM configuration used")
     payload_json: Dict[str, Any] = Field(..., description="Cluster observation payload JSON")
+    summary: str = Field(..., description="Cluster summary")
+    title: str = Field(..., description="Cluster title")
+    keywords_json: List[str] = Field(..., description="Keywords as JSON list")
 
 
 # Type alias for inject-clusters-observation input (map of pk_hash -> ClusterObservation)

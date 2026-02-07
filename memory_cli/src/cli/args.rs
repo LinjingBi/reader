@@ -100,6 +100,19 @@ EXAMPLES:
         #[arg(long)]
         input: String,
     },
+
+    /// Start a report generation job for a cluster.
+    #[command(
+        long_about = "Start a report generation job for a cluster.
+
+EXAMPLES:
+  memo start-report-job --cluster-pk-hash abc123def456"
+    )]
+    StartReportJob {
+        /// Cluster pk_hash (primary key hash from cluster table).
+        #[arg(long)]
+        cluster_pk_hash: String,
+    },
 }
 
 impl Args {

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import sys
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from textual.app import App, ComposeResult
 from textual.reactive import reactive
@@ -277,29 +277,126 @@ class TopicBrowser(App[str]):
                 event.stop()
 
 
-def display_clusters_observation(observations: Dict[str, ClusterObservationData]) -> str:
+class UserIntentSelector(App[str]):
+    """TUI widget for selecting user intent from a list of options."""
+    
+    CSS = """
+    MarkdownViewer {
+        padding: 0 1;
+    }
+    """
+    
+    BINDINGS = [
+        ("up", "prev", "Prev intent"),
+        ("down", "next", "Next intent"),
+        ("left", "prev", "Prev intent"),
+        ("right", "next", "Next intent"),
+        ("enter", "select", "Select intent"),
+        ("q", "quit", "Quit"),
+        ("escape", "quit", "Quit"),
+    ]
+    
+    current_index = reactive(0)
+    
+    def __init__(self, intent_options: List[str]):
+        super().__init__()
+        # intent_options is a list of display-ready strings
+        self.intent_options = intent_options
+    
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock=False)
+        yield MarkdownViewer(show_table_of_contents=False)
+        yield Footer()
+    
+    def on_mount(self) -> None:
+        self._render_current()
+    
+    def watch_current_index(self, _old: int, _new: int) -> None:
+        self._render_current()
+    
+    def _selector_string(self, n: int, idx: int) -> str:
+        parts = []
+        for i in range(n):
+            label = str(i + 1)
+            parts.append(f"[{label}]" if i == idx else label)
+        return "Intent Options: " + " ".join(parts) + "   |   ↑/↓/number, Enter=select"
+    
+    def _format_intent_markdown(self) -> str:
+        """Format intent options as markdown for display."""
+        lines = ["# Select Report Intent\n"]
+        lines.append("Choose your preferred report style:\n")
+        
+        for i, intent_text in enumerate(self.intent_options):
+            marker = "**→**" if i == self.current_index else "  "
+            lines.append(f"{marker} {i + 1}. **{intent_text}**")
+            lines.append("")
+        
+        return "\n".join(lines)
+    
+    def _render_current(self) -> None:
+        self.title = self._selector_string(len(self.intent_options), self.current_index)
+        
+        viewer = self.query_one(MarkdownViewer)
+        viewer.document.update(self._format_intent_markdown())
+        viewer.scroll_home(animate=False)
+    
+    def action_prev(self) -> None:
+        if self.current_index > 0:
+            self.current_index -= 1
+    
+    def action_next(self) -> None:
+        if self.current_index < len(self.intent_options) - 1:
+            self.current_index += 1
+    
+    def action_select(self) -> None:
+        # Return the selected intent string directly
+        self.exit(self.intent_options[self.current_index])
+    
+    def on_key(self, event) -> None:
+        # Number jump: 1..9 etc.
+        if event.key.isdigit():
+            idx = int(event.key) - 1
+            if 0 <= idx < len(self.intent_options):
+                self.current_index = idx
+                event.stop()
+
+
+def display_clusters_observation(observations: Dict[str, ClusterObservationData], user_intent_options: Optional[List[str]] = None) -> Tuple[str, Optional[str]]:
     """
     Main entry point for the TUI browser.
     
+    Two-stage selection: first select a topic/cluster, then select a user intent (if options provided).
+    
     Args:
         observations: Dictionary mapping pk_hash to ClusterObservationData
+        user_intent_options: Optional list of display-ready user intent option strings
         
     Returns:
-        selected pk_hash as string
+        Tuple of (selected pk_hash, selected user intent string or None if skipped)
         
     Raises:
-        ClusterObservationError: If observations are empty or no selection was made
+        ClusterObservationError: If observations are empty
     """
     if not observations:
         logger.error("Empty observations: no topics to display.")
         raise ClusterObservationError("Empty observations: no topics to display.")
     
-    try:
-        selected = TopicBrowser(observations).run()
-        if selected is None:
-            logger.error("No topic was selected (user quit without selection).")
-            raise ClusterObservationError("No topic was selected (user quit without selection).")
-        return str(selected)
-    except Exception as e:
-        logger.error(f"Error displaying clusters observation: {e}", exc_info=True)
-        raise ClusterObservationError(f"Error displaying clusters observation: {e}") from e
+    # Stage 1: Select topic/cluster
+    selected_pk_hash = TopicBrowser(observations).run()
+    if selected_pk_hash is None:
+        logger.info("No topic was selected (user quit without selection).")
+        raise ClusterObservationError("No topic was selected (user quit without selection).")
+    
+    # Stage 2: Select user intent (if options provided)
+    selected_intent = None
+    if not user_intent_options:
+        logger.info("No user_intent_options provided, intent selector will be skipped.")
+    else:
+        selected_intent = UserIntentSelector(user_intent_options).run()
+        
+        if selected_intent is None:
+            logger.info("No user intent was selected (user quit without selection).")
+        else:
+            logger.info(f"Selected user intent: {selected_intent}")
+    
+    return (str(selected_pk_hash), selected_intent)

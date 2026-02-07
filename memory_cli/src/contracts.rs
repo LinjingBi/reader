@@ -2,6 +2,7 @@ pub mod fresh_paper;
 pub mod get_best_run;
 pub mod get_cluster_observation;
 pub mod inject_clusters_observation;
+pub mod start_report_job;
 
 pub use fresh_paper::{
     ClusterConfig,
@@ -20,3 +21,4 @@ pub use inject_clusters_observation::{
     InjectClustersObservationResponse,
     LLMConfigInput,
 };
+pub use start_report_job::{StartReportJobResponse, ReportJobStatus};

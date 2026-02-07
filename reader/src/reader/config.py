@@ -1,7 +1,7 @@
 """Configuration loader for reader package"""
 
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 import yaml
 from pydantic import BaseModel, Field, computed_field
 
@@ -111,6 +111,12 @@ class ClusterSummarizationConfig(BaseModel):
         return template_path
 
 
+class ReportGenerationConfig(BaseModel):
+    """Report generation configuration"""
+    enable: bool = Field(default=False, description="Whether to enable report generation")
+    user_intent_options: Optional[List[str]] = Field(default=None, description="List of display-ready user intent option strings")
+
+
 class ReaderConfig(BaseModel):
     """Main reader configuration"""
     run: RunConfig
@@ -120,6 +126,7 @@ class ReaderConfig(BaseModel):
     memo: MemoConfig
     llm_gemini: LLMGeminiConfig
     cluster_summarization: Optional[ClusterSummarizationConfig] = Field(default=None, description="Cluster summarization configuration")
+    report_generation: Optional[ReportGenerationConfig] = Field(default=None, description="Report generation configuration")
 
 
 def load_config(path: str) -> ReaderConfig:

@@ -242,3 +242,46 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+"""
+--T-attach 0.9855 (chosen number from test_t_threshold.py)
+embed_config_id: algo_lib.embedding|0.1.0
+points (clusters): 56
+final pseudo-topics: 53
+active_months: None
+T_attach used: 0.9855
+min/median/mean/max: 0.9033 / 0.9705 / 0.9637 / 0.9886
+
+Candidate thresholds from best-to-topic similarity distribution:
+  p90: 0.9845
+  p95: 0.9855
+  p97: 0.9861
+  p99: 0.9874
+
+--T-attach 0.98
+embed_config_id: algo_lib.embedding|0.1.0
+points (clusters): 56
+final pseudo-topics: 42
+active_months: None
+T_attach used: 0.9800
+min/median/mean/max: 0.9033 / 0.9724 / 0.9639 / 0.9892
+
+Candidate thresholds from best-to-topic similarity distribution:
+  p90: 0.9831
+  p95: 0.9851
+  p97: 0.9857
+  p99: 0.9877
+
+--T-attach 0.97
+embed_config_id: algo_lib.embedding|0.1.0
+points (clusters): 56
+final pseudo-topics: 26
+active_months: None
+T_attach used: 0.9700
+min/median/mean/max: 0.9033 / 0.9746 / 0.9645 / 0.9915
+
+Candidate thresholds from best-to-topic similarity distribution:
+  p90: 0.9833
+  p95: 0.9854
+  p97: 0.9866
+  p99: 0.9890
+"""

@@ -47,15 +47,17 @@ sub(issue, bug level)
 [x] - [chat,memo] check before implementing step4. do i need both topic_event and topic_lineage?YES and even more...  
 [x] - [chat] report generation design doc.  
 [x] - [reader] add scriptes to simulate past 12 months data to find the "merge/create" threshold.  
-[ ] - [reader,tui] ask user to choose a prefered report style:
+[x] - [reader,tui] ask user to choose a prefered report style:
        Quick background (5–10 min)
        Research briefing (decision-oriented)
        Brainstorm directions (novelty hunting)
-       Implementation angle (what to build / how to test)  
-[ ] - [reader,memo] implement step4, write chosen topic to memo.  
-
-
-[ ] - [reader] handle llm enrichment retry cases when N number of cluster report is none?  
+       Implementation angle (what to build / how to test)    
+[x] - [memo] refactor topic related db tables for report generation  
+[x] - [memo,reader] add new memo cmd to record report generation job status in db and integrate with reader.  
+[ ] - [reader,memo] fetch the existing topics from db and compute the sim with chosen cluster, and gate to decide create/merge.  
+[ ] - [reader,memo] generate the report planner prompt for llm call 1, memo supply metadat if necessary.  
+[ ] - [reader,memo] generate the report writter prompt from llm call 2, memo supply metadat if necessary.  
+[ ] - [reader,memo] write the whole metadata from reader to memo db, and dump report to local fs.  
 
 
 random(spikes, explore)  

@@ -1,0 +1,6 @@
+{
+  "status": "running",
+  "new_job": false,
+  "message": "an existing job for cluster-id abc123def456 is already running"
+}
+

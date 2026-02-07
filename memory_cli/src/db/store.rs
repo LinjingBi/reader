@@ -2,6 +2,7 @@ use crate::contracts::{
     FreshPaperRequest, GetBestRunResponse, ClusterCard, PaperCard,
     InjectClustersObservationInput,
     GetClusterObservationResponse, ClusterObservationData,
+    ReportJobStatus,
 };
 use anyhow::{Context, Result};
 use chrono::Utc;
@@ -327,15 +328,22 @@ impl<'a> Store<'a> {
             let payload_json_str = serde_json::to_string(&observation.payload_json)
                 .context("failed to serialize payload_json")?;
 
+            // Serialize keywords_json to compact JSON string
+            let keywords_json_str = serde_json::to_string(&observation.keywords_json)
+                .context("failed to serialize keywords_json")?;
+
             // Upsert cluster_observation
             tx.execute(
-                "INSERT INTO cluster_observation(pk_hash, created_at, llm_config_id, payload_json)
-                 VALUES(?1, ?2, ?3, ?4)
+                "INSERT INTO cluster_observation(pk_hash, created_at, llm_config_id, payload_json, summary, title, keywords_json)
+                 VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7)
                  ON CONFLICT(pk_hash) DO UPDATE SET
                    created_at=excluded.created_at,
                    llm_config_id=excluded.llm_config_id,
-                   payload_json=excluded.payload_json",
-                params![pk_hash, now, observation.llm_config.llm_config_id, payload_json_str],
+                   payload_json=excluded.payload_json,
+                   summary=excluded.summary,
+                   title=excluded.title,
+                   keywords_json=excluded.keywords_json",
+                params![pk_hash, now, observation.llm_config.llm_config_id, payload_json_str, observation.summary, observation.title, keywords_json_str],
             )?;
         }
 
@@ -361,7 +369,7 @@ impl<'a> Store<'a> {
     pub fn get_cluster_observation(&self, source: &str, period_start: &str, period_end: &str) -> Result<GetClusterObservationResponse> {
         // Use optimized JOIN query to get cluster observations
         let mut stmt = self.conn.prepare(
-            "SELECT co.pk_hash, co.created_at, co.payload_json, c.period_start, c.period_end
+            "SELECT co.pk_hash, co.created_at, co.payload_json, co.summary, co.title, co.keywords_json, c.period_start, c.period_end, c.centroid_b64
              FROM cluster_observation co
              JOIN cluster c ON co.pk_hash = c.pk_hash
              JOIN cluster_run cr ON (
@@ -376,15 +384,20 @@ impl<'a> Store<'a> {
                AND c.period_start >= ?2
                AND c.period_end <= ?3
                AND cr.selected_best = 1
-               AND c.role = 'hf_batch'"
+               AND c.role = 'hf_batch'
+               AND co.consumed = 0"
         )?;
 
         let rows = stmt.query_map(params![source, period_start, period_end], |row| {
             let pk_hash: String = row.get(0)?;
             let created_at: String = row.get(1)?;
             let payload_json_str: String = row.get(2)?;
-            let cluster_period_start: String = row.get(3)?;
-            let cluster_period_end: String = row.get(4)?;
+            let summary: String = row.get(3)?;
+            let title: String = row.get(4)?;
+            let keywords_json_str: String = row.get(5)?;
+            let cluster_period_start: String = row.get(6)?;
+            let cluster_period_end: String = row.get(7)?;
+            let centroid_b64: String = row.get(8)?;
 
             // Parse RFC3339 timestamp and format as YYYY-MM-DD
             let observation_created_time = match chrono::DateTime::parse_from_rfc3339(&created_at) {
@@ -399,11 +412,19 @@ impl<'a> Store<'a> {
             let json_payload: serde_json::Value = serde_json::from_str(&payload_json_str)
                 .map_err(|_e| rusqlite::Error::InvalidColumnType(3, "payload_json".to_string(), rusqlite::types::Type::Text))?;
 
+            // Parse keywords_json string to serde_json::Value
+            let keywords_json: serde_json::Value = serde_json::from_str(&keywords_json_str)
+                .map_err(|_e| rusqlite::Error::InvalidColumnType(5, "keywords_json".to_string(), rusqlite::types::Type::Text))?;
+
             Ok((pk_hash, ClusterObservationData {
                 observation_created_time,
                 json_payload,
+                summary,
+                title,
+                keywords_json,
                 cluster_period_start,
                 cluster_period_end,
+                centroid_b64,
             }))
         })?;
 
@@ -414,5 +435,61 @@ impl<'a> Store<'a> {
         }
 
         Ok(result)
+    }
+
+    /// Check if a cluster exists by pk_hash.
+    pub fn check_cluster_exists(&self, pk_hash: &str) -> Result<bool> {
+        let count: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM cluster WHERE pk_hash = ?1",
+            params![pk_hash],
+            |row| row.get(0),
+        )?;
+        Ok(count > 0)
+    }
+
+    /// Get existing report job by cluster_pk_hash.
+    /// Returns (status, report_id, updated_at) if found, None otherwise.
+    pub fn get_report_job(&self, cluster_pk_hash: &str) -> Result<Option<(ReportJobStatus, Option<String>, String)>> {
+        match self.conn.query_row(
+            "SELECT status, report_id, updated_at FROM report_job WHERE cluster_pk_hash = ?1",
+            params![cluster_pk_hash],
+            |row| {
+                let status_str: String = row.get(0)?;
+                let status = ReportJobStatus::from_str(&status_str)
+                    .map_err(|e| rusqlite::Error::FromSqlConversionFailure(
+                        0,
+                        rusqlite::types::Type::Text,
+                        Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+                    ))?;
+                Ok((
+                    status,
+                    row.get::<_, Option<String>>(1)?,
+                    row.get::<_, String>(2)?,
+                ))
+            },
+        ) {
+            Ok(result) => Ok(Some(result)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(anyhow::anyhow!("Database error: {}", e)),
+        }
+    }
+
+    /// Create a new report job.
+    pub fn create_report_job(&self, cluster_pk_hash: &str, status: ReportJobStatus, now: &str) -> Result<()> {
+        self.conn.execute(
+            "INSERT INTO report_job(cluster_pk_hash, status, created_at, updated_at, report_id)
+             VALUES(?1, ?2, ?3, ?3, NULL)",
+            params![cluster_pk_hash, status.as_str(), now],
+        )?;
+        Ok(())
+    }
+
+    /// Update report job status to running (for expired error jobs).
+    pub fn update_report_job_to_running(&self, cluster_pk_hash: &str, now: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE report_job SET status=?1, report_id=NULL, updated_at=?2 WHERE cluster_pk_hash=?3",
+            params![ReportJobStatus::Running.as_str(), now, cluster_pk_hash],
+        )?;
+        Ok(())
     }
 }

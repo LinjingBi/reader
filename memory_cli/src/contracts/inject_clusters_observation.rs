@@ -11,6 +11,9 @@ pub type InjectClustersObservationInput = HashMap<String, ClusterObservation>;
 pub struct ClusterObservation {
     pub llm_config: LLMConfigInput,
     pub payload_json: serde_json::Value,
+    pub summary: String,
+    pub title: String,
+    pub keywords_json: serde_json::Value,
 }
 
 /// LLM config input matching the llm_config table structure.

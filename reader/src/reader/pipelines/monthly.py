@@ -9,7 +9,7 @@ from typing import Dict, Tuple, Optional
 from reader.tui.clusters_observation import display_clusters_observation
 logger = get_logger()
 
-# contain potential mcp servers
+# contain potential mcp servers/tool calls
 def run_monthly(cfg: ReaderConfig) -> None:
     """
     Run the monthly pipeline for the configured month.
@@ -41,13 +41,48 @@ def run_monthly(cfg: ReaderConfig) -> None:
     #     memo.inject_clusters_observation(inject_clusters_observation_payload, cfg)
     #     logger.info(f"Memo inject-clusters-observation successful: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
     
-    # read 
-    if cfg.memo.enabled:
+    # report generation
+    if cfg.memo.enabled and cfg.report_generation.enable:
         logger.info(f"Memo get-clusters-observation started: snapshot_id=hf_monthly|{period_start}|{period_end}")
         clusters_observation = memo.get_clusters_observation('hf_monthly', period_start, period_end, cfg)
         logger.info(f"Memo get-clusters-observation successful: snapshot_id=hf_monthly|{period_start}|{period_end}")
-        selected_pk_hash = display_clusters_observation(clusters_observation)
-        logger.info(f"Selected pk_hash: {selected_pk_hash}")
+        
+        # Get user intent options from config (optional)
+        user_intent_options = None
+        
+        user_intent_options = cfg.report_generation.user_intent_options
+        
+        selected_pk_hash, selected_intent = display_clusters_observation(clusters_observation, user_intent_options)
+        logger.info(f"Selected pk_hash: {selected_pk_hash}, Selected intent: {selected_intent}")
+
+        start_report_job_response = memo.start_report_job(selected_pk_hash, cfg)
+        
+
+        # kick off a new report generation job
+        if start_report_job_response.status == 'running' and start_report_job_response.new_job:
+            # Check if it's error_expired or running_new by message content
+            if 'errored expired' in start_report_job_response.message.lower():
+                # Case 5: Error expired, job is running now
+                logger.info(f"Memo start-report-job: Previous error expired, new job started. message={start_report_job_response.message}")
+            else:
+                # Case 3: New job is running
+                logger.info(f"Memo start-report-job: New job started. message={start_report_job_response.message}")
+        # wait for the existing job to finish
+        elif start_report_job_response.status == 'running' and not start_report_job_response.new_job:
+            # Case 4: Existing job already running
+            logger.info(f"Memo start-report-job: Existing job already running. message={start_report_job_response.message}")
+        # report generation failed
+        elif start_report_job_response.status == 'error':
+            # Case 2: Recent error, need to wait
+            logger.warning(f"Memo start-report-job: Recent error occurred. message={start_report_job_response.message}")
+        # move to fetch the report and print the report url
+        elif start_report_job_response.status == 'done':
+            # Case 1: Report already done
+            logger.info(f"Memo start-report-job: Report already generated. report_id={start_report_job_response.report_id}, message={start_report_job_response.message}")
+        
+        else:
+            # Unexpected status
+            logger.warning(f"Memo start-report-job: Unexpected response. status={start_report_job_response.status}, new_job={start_report_job_response.new_job}, message={start_report_job_response.message}")
 
         """
         1. compare new selected cluster observation with existing topics in memo db(cosine similarity)
@@ -63,4 +98,5 @@ def run_monthly(cfg: ReaderConfig) -> None:
         5. store the report url and update related tables in memo db
         """
         # return selected_pk_hash
+
     

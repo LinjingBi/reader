@@ -131,6 +131,14 @@ CREATE TABLE IF NOT EXISTS cluster_observation (
   -- LLM output (opaque JSON)
   payload_json      TEXT NOT NULL,
 
+  -- Extracted fields from payload_json
+  summary           TEXT NOT NULL,
+  title             TEXT NOT NULL,
+  keywords_json     TEXT NOT NULL,
+
+  -- Consumption tracking
+  consumed          INTEGER NOT NULL DEFAULT 0,  -- 0 = false, 1 = true
+
   FOREIGN KEY (pk_hash)
     REFERENCES cluster(pk_hash)
     ON DELETE CASCADE,
@@ -164,58 +172,31 @@ CREATE INDEX IF NOT EXISTS idx_cluster_member_rank
 -- -----------------------------
 
 CREATE TABLE IF NOT EXISTS topic (
-  topic_id           TEXT PRIMARY KEY,
+  topic_id           INTEGER PRIMARY KEY,   -- rowid-backed, auto assigns
   canonical_name     TEXT NOT NULL,
   canonical_summary  TEXT NOT NULL,
   labels_json        TEXT NOT NULL,  -- JSON list
   status             TEXT NOT NULL,  -- 'active' | 'merged' | 'deprecated'
   created_at         TEXT NOT NULL,
-  updated_at         TEXT NOT NULL
-);
-
--- Observations are per-period semantic snapshots produced by LLM during attachment
-CREATE TABLE IF NOT EXISTS topic_observation (
-  observation_id       TEXT PRIMARY KEY,
-  topic_id             TEXT NOT NULL,
-  source               TEXT NOT NULL,
-  period_start         TEXT NOT NULL,
-  period_end           TEXT NOT NULL,
-  embed_config_id      TEXT NOT NULL,
-  cluster_config_id    TEXT NOT NULL,
-  role                 TEXT NOT NULL,
-  cluster_index        INTEGER NOT NULL,
-  proposed_name        TEXT NOT NULL,
-  proposed_summary     TEXT NOT NULL,
-  proposed_labels_json TEXT NOT NULL,
-  produced_by          TEXT NOT NULL,  -- 'llm' | 'human',
-  created_at           TEXT NOT NULL,
-  llm_config_id        TEXT,           -- provenance of proposed_* fields (nullable),
-  FOREIGN KEY (topic_id)   REFERENCES topic(topic_id)   ON DELETE CASCADE,
-  FOREIGN KEY (source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index) 
-    REFERENCES cluster(source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index) ON DELETE CASCADE,
-  FOREIGN KEY (llm_config_id) REFERENCES llm_config(llm_config_id) ON DELETE SET NULL
+  updated_at         TEXT NOT NULL,
+  embed_config_id    TEXT,                  -- embedding space used for topic_centroid_b64
+  centroid_b64 TEXT,                  -- base64 float32 bytes (same dim as cluster centroid)
+  centroid_updated_at TEXT            -- ISO timestamp when centroid last updated
 );
 
 -- Link clusters (from runs) to topics; captures add/create decision + matching provenance
 CREATE TABLE IF NOT EXISTS topic_cluster_link (
-  topic_id          TEXT NOT NULL,
-  source            TEXT NOT NULL,
-  period_start      TEXT NOT NULL,
-  period_end        TEXT NOT NULL,
-  embed_config_id   TEXT NOT NULL,
-  cluster_config_id TEXT NOT NULL,
-  role              TEXT NOT NULL,
-  cluster_index     INTEGER NOT NULL,
-  decision          TEXT NOT NULL,  -- 'matched_existing' | 'created_new' | 'attached'
-  match_score       REAL,           -- cosine sim between topic vector and cluster/topic card (nullable)
+  topic_id          INTEGER NOT NULL,
+  cluster_pk_hash    TEXT NOT NULL UNIQUE,
+  decision          TEXT NOT NULL,  -- 'created' | 'merged'
+  match_score       REAL NOT NULL,  -- cosine sim between topic vector and cluster/topic card
   created_at        TEXT NOT NULL,
-  PRIMARY KEY (topic_id, source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index),
-  FOREIGN KEY (topic_id)   REFERENCES topic(topic_id)   ON DELETE CASCADE,
-  FOREIGN KEY (source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index) 
-    REFERENCES cluster(source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index) ON DELETE CASCADE
+  PRIMARY KEY (topic_id, cluster_pk_hash),
+  FOREIGN KEY (topic_id)       REFERENCES topic(topic_id)   ON DELETE CASCADE,
+  FOREIGN KEY (cluster_pk_hash) REFERENCES cluster(pk_hash) ON DELETE CASCADE
 );
 
--- for evlution pipeline
+-- TBD for evlution pipeline
 -- Topic events: canonical changes (rename/merge/split) with provenance
 CREATE TABLE IF NOT EXISTS topic_event (
   event_id            TEXT PRIMARY KEY,
@@ -233,11 +214,11 @@ CREATE TABLE IF NOT EXISTS topic_event (
   FOREIGN KEY (llm_config_id) REFERENCES llm_config(llm_config_id) ON DELETE SET NULL
 );
 
--- for evlution pipeline
+-- TBD for evlution pipeline
 -- Lineage edges to preserve history without rewriting old links
 CREATE TABLE IF NOT EXISTS topic_lineage (
-  topic_id          TEXT NOT NULL, -- current/survivor topic
-  ancestor_topic_id TEXT NOT NULL, -- predecessor
+  topic_id          INTEGER NOT NULL, -- current/survivor topic
+  ancestor_topic_id INTEGER NOT NULL, -- predecessor
   relation          TEXT NOT NULL, -- 'merged_from'|'split_from'|'renamed_from'
   effective_from    TEXT NOT NULL,
   PRIMARY KEY (topic_id, ancestor_topic_id, relation),
@@ -248,6 +229,15 @@ CREATE TABLE IF NOT EXISTS topic_lineage (
 -- -----------------------------
 -- Reports and depth annotations
 -- -----------------------------
+CREATE TABLE IF NOT EXISTS report_job (
+  cluster_pk_hash TEXT PRIMARY KEY,          -- 1 job per cluster (also your lock)
+  status          TEXT NOT NULL,             -- 'running'|'done'|'error'
+  created_at      TEXT NOT NULL,
+  updated_at      TEXT NOT NULL,
+  report_id       TEXT,                       -- set when done; NULL otherwise
+  FOREIGN KEY (cluster_pk_hash) REFERENCES cluster(pk_hash) ON DELETE CASCADE,
+  FOREIGN KEY (report_id) REFERENCES report(report_id) ON DELETE SET NULL
+);
 
 CREATE TABLE IF NOT EXISTS report (
   report_id        TEXT PRIMARY KEY,
@@ -260,7 +250,19 @@ CREATE TABLE IF NOT EXISTS report (
   cluster_index    INTEGER NOT NULL,
   report_md        TEXT NOT NULL,
   created_at       TEXT NOT NULL,
-  llm_config_id    TEXT,           -- provenance for report_md (nullable),
+  llm_config_id    TEXT,                    -- provenance for report_md (nullable),
+  title            TEXT,
+  summary          TEXT,                    -- 80-120 words target (enforce in app)
+  keywords_json    TEXT,                    -- JSON list of strings
+  intent_mode      TEXT,                    -- quick_background|research_briefing|brainstorm_directions|implementation_angle
+  user_intent_note TEXT,                    -- optional user free-text
+  declared_level   TEXT,                    -- intro|intermediate|deep-dive
+  covered_bullets_json TEXT,                -- JSON list (3-6)
+  next_targets_json TEXT,                   -- JSON list (3-8)
+  subthreads_json  TEXT,                    -- JSON list of {name, paper_ids:[...]}
+  cohesion_label   TEXT,                    -- cohesive|mixed
+  cohesion_confidence REAL,                 -- 0..1
+  evidence_gaps_json TEXT,                  -- JSON list (0-5)
   FOREIGN KEY (source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index) 
     REFERENCES cluster(source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index) ON DELETE CASCADE,
   FOREIGN KEY (llm_config_id) REFERENCES llm_config(llm_config_id) ON DELETE SET NULL
@@ -269,7 +271,7 @@ CREATE TABLE IF NOT EXISTS report (
 -- Reports can link to multiple topics (primary/secondary/related)
 CREATE TABLE IF NOT EXISTS report_topic_link (
   report_id      TEXT NOT NULL,
-  topic_id       TEXT NOT NULL,
+  topic_id       INTEGER NOT NULL,
   role           TEXT NOT NULL,   -- 'primary'|'secondary'|'related'
   match_score    REAL,            -- optional
   created_at     TEXT NOT NULL,
@@ -282,7 +284,7 @@ CREATE TABLE IF NOT EXISTS report_topic_link (
 -- Objective stats are computed from report_topic_link + report.
 CREATE TABLE IF NOT EXISTS topic_depth_annotation (
   depth_id        TEXT PRIMARY KEY,
-  topic_id        TEXT NOT NULL,
+  topic_id        INTEGER NOT NULL,
   as_of_date      TEXT NOT NULL,
   depth_level     TEXT NOT NULL, -- e.g., 'intro'|'intermediate'|'advanced',
   rationale       TEXT NOT NULL,
@@ -309,42 +311,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_cluster_run_best
   ON cluster_run(source, period_start, period_end, role) 
   WHERE selected_best=1;
 
--- -----------------------------
--- MIGRATION: topic centroid snapshot + report metadata (MVP+)
--- Only touches tables starting with topic / report
--- -----------------------------
-
--- Topic: store an optional centroid embedding for the canonical topic card
-ALTER TABLE topic ADD COLUMN embed_config_id TEXT;          -- embedding space used for topic_centroid_b64
-ALTER TABLE topic ADD COLUMN topic_centroid_b64 TEXT;       -- base64 float32 bytes (same dim as cluster centroid)
-ALTER TABLE topic ADD COLUMN topic_centroid_updated_at TEXT;-- ISO timestamp when centroid last updated
-
--- Report: compressed metadata so you don't need full report bodies for future history-aware prompts
-ALTER TABLE report ADD COLUMN title TEXT;
-ALTER TABLE report ADD COLUMN summary TEXT;                -- 80-120 words target (enforce in app)
-ALTER TABLE report ADD COLUMN keywords_json TEXT;          -- JSON list of strings
-
-ALTER TABLE report ADD COLUMN intent_mode TEXT;            -- quick_background|research_briefing|brainstorm_directions|implementation_angle
-ALTER TABLE report ADD COLUMN user_intent_note TEXT;       -- optional user free-text
-ALTER TABLE report ADD COLUMN declared_level TEXT;         -- intro|intermediate|deep-dive
-
-ALTER TABLE report ADD COLUMN covered_bullets_json TEXT;   -- JSON list (3-6)
-ALTER TABLE report ADD COLUMN next_targets_json TEXT;      -- JSON list (3-8)
-ALTER TABLE report ADD COLUMN subthreads_json TEXT;        -- JSON list of {name, paper_ids:[...]}
-
--- Optional: store LLM's interpretation of cohesion/mixedness (NOT the embedding cohesion itself)
-ALTER TABLE report ADD COLUMN cohesion_label TEXT;         -- cohesive|mixed
-ALTER TABLE report ADD COLUMN cohesion_confidence REAL;    -- 0..1
-ALTER TABLE report ADD COLUMN evidence_gaps_json TEXT;     -- JSON list (0-5)
-
 -- Faster "latest report per topic" + coverage counts
 CREATE INDEX IF NOT EXISTS idx_report_created_at ON report(created_at);
 CREATE INDEX IF NOT EXISTS idx_report_intent_mode ON report(intent_mode);
 CREATE INDEX IF NOT EXISTS idx_report_declared_level ON report(declared_level);
-
--- topic_observation continuity queries (per-topic timeline)
-CREATE INDEX IF NOT EXISTS idx_topic_observation_topic_period
-  ON topic_observation(topic_id, period_start, period_end);
 
 -- topic_cluster_link queries (find all clusters attached to a topic / find match_score distributions)
 CREATE INDEX IF NOT EXISTS idx_topic_cluster_link_topic
@@ -352,4 +322,3 @@ CREATE INDEX IF NOT EXISTS idx_topic_cluster_link_topic
 
 CREATE INDEX IF NOT EXISTS idx_topic_cluster_link_match_score
   ON topic_cluster_link(match_score);
-2. 

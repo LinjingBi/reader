@@ -235,7 +235,8 @@ def generate_fresh_paper_payload(
             raise ValueError(f"Cluster {c} missing centroid in cluster_centroids")
         centroid = cluster_centroids[c]
         # Convert numpy array to float32 bytes (little-endian)
-        centroid_bytes = centroid.astype(np.float32).tobytes()
+        # Use '<f4' to explicitly ensure little-endian byte order
+        centroid_bytes = centroid.astype('<f4').tobytes()
         # Encode to base64
         centroid_b64 = base64.b64encode(centroid_bytes).decode('utf-8')
         
@@ -659,10 +660,18 @@ def convert_cluster_reports_to_memo_payload(
         # Use ClusterReport.model_dump() as payload_json
         payload_json = cluster_report.model_dump()
         
+        # Extract fields from ClusterReport
+        title = cluster_report.title
+        summary = cluster_report.what_this_topic_is_about + "\n" + cluster_report.why_it_matters
+        keywords_json = cluster_report.keyword_list
+        
         # Create ClusterObservation
         observation = ClusterObservation(
             llm_config=llm_config,
-            payload_json=payload_json
+            payload_json=payload_json,
+            summary=summary,
+            title=title,
+            keywords_json=keywords_json
         )
         
         payload[pk_hash] = observation

@@ -2,6 +2,7 @@ mod fresh_paper;
 mod get_best_run;
 mod get_cluster_observation;
 mod inject_clusters_observation;
+mod start_report_job;
 mod validation;
 
 use crate::cli::{Args, Command};
@@ -22,6 +23,9 @@ pub fn dispatch(args: Args) -> Result<()> {
         }
         Command::InjectClustersObservation { input } => {
             inject_clusters_observation::handle(args.dry_run, &args.db, args.schema.as_deref(), &input)
+        }
+        Command::StartReportJob { cluster_pk_hash } => {
+            start_report_job::handle(args.dry_run, &args.db, args.schema.as_deref(), &cluster_pk_hash)
         }
     }
 }
