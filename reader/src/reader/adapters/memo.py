@@ -41,6 +41,11 @@ class MemoStartReportJobError(Exception):
     pass
 
 
+class MemoGetTopicResolverMetadataError(Exception):
+    """Exception raised when get-topic-resolver-metadata subcommand fails."""
+    pass
+
+
 # Pydantic response models matching Rust CLI contracts
 
 
@@ -68,12 +73,8 @@ class ClusterObservationData(BaseModel):
     """Observation data for a single cluster."""
     observation_created_time: datetime  # YYYY-MM-DD format, parsed by Pydantic
     json_payload: Any
-    summary: str  # Cluster summary (what_this_topic_is_about + why_it_matters)
-    title: str  # Cluster title
-    keywords_json: List[str]  # Keywords as JSON list
     cluster_period_start: datetime  # YYYY-MM-DD format, parsed by Pydantic
     cluster_period_end: datetime  # YYYY-MM-DD format, parsed by Pydantic
-    centroid_b64: str  # Cluster centroid as base64-encoded float32 bytes
 
 
 class GetClusterObservationResponse(RootModel[Dict[str, ClusterObservationData]]):
@@ -101,6 +102,25 @@ class GetBestRunResponse(BaseModel):
     embed_config_id: str
     cluster_config_id: str
     clusters: List[ClusterCard]
+
+
+class TopicCentroid(BaseModel):
+    """Topic centroid data matching the Rust TopicCentroid model."""
+    id: str  # Topic ID (from topic_id)
+    centroid_b64: str  # Topic centroid as base64-encoded float32 bytes
+    centroid_weight: float  # Topic centroid weight (must be positive)
+
+
+class ClusterMetadata(BaseModel):
+    """Cluster metadata for topic resolver."""
+    centroid: str  # Cluster centroid as base64-encoded float32 bytes
+    centroid_weight: float  # Cluster centroid weight (cluster size)
+
+
+class GetTopicResolverMetadataResponse(BaseModel):
+    """Response from get-topic-resolver-metadata command."""
+    topics: List[TopicCentroid]  # List of topics with their centroid data
+    cluster: ClusterMetadata  # Cluster metadata
 
 
 def fresh_paper(payload: FreshPaperPayload, config: ReaderConfig) -> None:
@@ -408,3 +428,62 @@ def start_report_job(
     except Exception as e:
         logger.error(f"Unexpected error in memo start-report-job: {e}", exc_info=True)
         raise MemoStartReportJobError(f"Unexpected error in memo start-report-job: {e}") from e
+
+
+def get_topic_resolver_metadata(
+    cluster_pk_hash: str,
+    config: ReaderConfig,
+) -> Optional[GetTopicResolverMetadataResponse]:
+    """
+    Call memo CLI get-topic-resolver-metadata command to retrieve topic resolver metadata.
+    
+    Args:
+        cluster_pk_hash: Cluster pk_hash (primary key hash from cluster table)
+        config: ReaderConfig instance
+        
+    Returns:
+        GetTopicResolverMetadataResponse instance, or None if memo is disabled
+        
+    Raises:
+        MemoGetTopicResolverMetadataError: If the subcommand execution fails
+    """
+    if not config.memo.enabled:
+        return None
+    
+    try:
+        # Build command
+        cmd = [
+            config.memo.bin,
+        ]
+        if config.memo.db_path:
+            cmd.append('--db')
+            cmd.append(config.memo.db_path)
+        if config.memo.db_schema_path:
+            cmd.append('--schema')
+            cmd.append(config.memo.db_schema_path)
+        cmd.extend(['get-topic-resolver-metadata', '--cluster-pk-hash', cluster_pk_hash])
+        
+        # Run memo CLI
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=config.memo.timeout_sec,
+            check=True,
+        )
+        
+        # Parse JSON output and create Pydantic model
+        return GetTopicResolverMetadataResponse.model_validate_json(result.stdout)
+        
+    except subprocess.TimeoutExpired as e:
+        logger.warning(f"memo get-topic-resolver-metadata timed out after {config.memo.timeout_sec}s")
+        raise MemoGetTopicResolverMetadataError(f"memo get-topic-resolver-metadata timed out after {config.memo.timeout_sec}s") from e
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Error calling memo get-topic-resolver-metadata: {e.stderr}")
+        raise MemoGetTopicResolverMetadataError(f"Error calling memo get-topic-resolver-metadata: {e.stderr}") from e
+    except pydantic.ValidationError as e:
+        logger.error(f"Error validating memo output: {e}")
+        raise MemoGetTopicResolverMetadataError(f"Error validating memo output: {e}") from e
+    except Exception as e:
+        logger.error(f"Unexpected error in memo get-topic-resolver-metadata: {e}", exc_info=True)
+        raise MemoGetTopicResolverMetadataError(f"Unexpected error in memo get-topic-resolver-metadata: {e}") from e

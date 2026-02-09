@@ -5,7 +5,7 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Duration, Utc};
 use std::io::{self, Write};
 
-fn validate_start_report_job(cluster_pk_hash: &str, db_path: &str, schema_path: Option<&str>) -> ValidationResult {
+fn validate_start_report_job(_cluster_pk_hash: &str, db_path: &str, schema_path: Option<&str>) -> ValidationResult {
     let mut validation = ValidationResult::new();
 
     eprintln!("Validation starts...");
@@ -20,26 +20,6 @@ fn validate_start_report_job(cluster_pk_hash: &str, db_path: &str, schema_path: 
             Ok(()) => validation.add_pass("Checking schema path"),
             Err(e) => validation.add_fail("Checking schema path", e.to_string()),
         }
-    }
-
-    // Validate cluster exists in database
-    match db::open(db_path) {
-        Ok(conn) => {
-            if let Some(schema_path) = schema_path {
-                if let Err(e) = db::migrate::apply_schema(&conn, schema_path) {
-                    validation.add_fail("Applying schema", e.to_string());
-                    validation.print_summary_to_stderr();
-                    return validation;
-                }
-            }
-            let store = db::store::Store::new(&conn);
-            match store.check_cluster_exists(cluster_pk_hash) {
-                Ok(true) => validation.add_pass("Checking cluster exists"),
-                Ok(false) => validation.add_fail("Checking cluster exists", format!("Cluster with pk_hash '{}' does not exist", cluster_pk_hash)),
-                Err(e) => validation.add_fail("Checking cluster exists", e.to_string()),
-            }
-        }
-        Err(e) => validation.add_fail("Opening database", e.to_string()),
     }
 
     validation.print_summary_to_stderr();

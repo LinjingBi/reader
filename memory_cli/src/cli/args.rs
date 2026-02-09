@@ -113,6 +113,20 @@ EXAMPLES:
         #[arg(long)]
         cluster_pk_hash: String,
     },
+
+    /// Get topic resolver metadata (topics and cluster data).
+    #[command(
+        long_about = "Get topic resolver metadata including all topics with their centroid data and cluster metadata.
+
+EXAMPLES:
+  memo get-topic-resolver-metadata --cluster-pk-hash abc123def456
+  memo --db memo.sqlite get-topic-resolver-metadata --cluster-pk-hash abc123def456"
+    )]
+    GetTopicResolverMetadata {
+        /// Cluster pk_hash (primary key hash from cluster table).
+        #[arg(long)]
+        cluster_pk_hash: String,
+    },
 }
 
 impl Args {

@@ -54,3 +54,5 @@ report_generation:
     - "Research Briefing (Decision-oriented)"
     - "Brainstorm Directions (Novelty hunting)"
     - "Implementation Angle (What to build/test)"
+  topic_resolver_threshold: 0.98
+  

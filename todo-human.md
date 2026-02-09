@@ -10,6 +10,8 @@ main(feature level)
 [ ] - [memo] enforce machine-only design in logging system: diagnostic logs -> stderr, cmd output -> stdout  
 [ ] - now we have tokenbucket per pipeline execution time. consider adding a second layer of tokenbucket for per llm provider: pipeline token bucket -> llm provider token bucket. and also consider caching them in db.  
 [ ] - [memo] auto db migration. because the sqlite is designed to be a local db/memory system and is tighted to the memo cli. woould be interested to think of a way to handle local db migration after cli upgrade. a classical way just use a bunch of migration scripts. but since this is a machine-only/agent facing tool, maybe the migration can be some sort of prompt files and let agent drives/suggests the local db change vs new db schema.  
+[ ] - [memo,agent-friendly] refactor the error handling to a descriptive way, f.e. add error type for each cmd and raise them with more details of cmd runtime.  
+[ ] - [memo,agent-friendly] add sample use case for each subcmd in their help message.  
 
 sub(issue, bug level)  
 [x] - [chat] finalize the reader_algos package skeleton with chat.  
@@ -54,7 +56,7 @@ sub(issue, bug level)
        Implementation angle (what to build / how to test)    
 [x] - [memo] refactor topic related db tables for report generation  
 [x] - [memo,reader] add new memo cmd to record report generation job status in db and integrate with reader.  
-[ ] - [reader,memo] fetch the existing topics from db and compute the sim with chosen cluster, and gate to decide create/merge.  
+[x] - [reader,memo] fetch the existing topics from db and compute the sim with chosen cluster, and gate to decide create/merge.  
 [ ] - [reader,memo] generate the report planner prompt for llm call 1, memo supply metadat if necessary.  
 [ ] - [reader,memo] generate the report writter prompt from llm call 2, memo supply metadat if necessary.  
 [ ] - [reader,memo] write the whole metadata from reader to memo db, and dump report to local fs.  

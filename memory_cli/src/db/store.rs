@@ -3,6 +3,7 @@ use crate::contracts::{
     InjectClustersObservationInput,
     GetClusterObservationResponse, ClusterObservationData,
     ReportJobStatus,
+    GetTopicResolverMetadataResponse, TopicCentroid, ClusterMetadata,
 };
 use anyhow::{Context, Result};
 use chrono::Utc;
@@ -369,7 +370,7 @@ impl<'a> Store<'a> {
     pub fn get_cluster_observation(&self, source: &str, period_start: &str, period_end: &str) -> Result<GetClusterObservationResponse> {
         // Use optimized JOIN query to get cluster observations
         let mut stmt = self.conn.prepare(
-            "SELECT co.pk_hash, co.created_at, co.payload_json, co.summary, co.title, co.keywords_json, c.period_start, c.period_end, c.centroid_b64
+            "SELECT co.pk_hash, co.created_at, co.payload_json, c.period_start, c.period_end
              FROM cluster_observation co
              JOIN cluster c ON co.pk_hash = c.pk_hash
              JOIN cluster_run cr ON (
@@ -392,12 +393,8 @@ impl<'a> Store<'a> {
             let pk_hash: String = row.get(0)?;
             let created_at: String = row.get(1)?;
             let payload_json_str: String = row.get(2)?;
-            let summary: String = row.get(3)?;
-            let title: String = row.get(4)?;
-            let keywords_json_str: String = row.get(5)?;
-            let cluster_period_start: String = row.get(6)?;
-            let cluster_period_end: String = row.get(7)?;
-            let centroid_b64: String = row.get(8)?;
+            let cluster_period_start: String = row.get(3)?;
+            let cluster_period_end: String = row.get(4)?;
 
             // Parse RFC3339 timestamp and format as YYYY-MM-DD
             let observation_created_time = match chrono::DateTime::parse_from_rfc3339(&created_at) {
@@ -410,21 +407,13 @@ impl<'a> Store<'a> {
 
             // Parse payload_json string to serde_json::Value
             let json_payload: serde_json::Value = serde_json::from_str(&payload_json_str)
-                .map_err(|_e| rusqlite::Error::InvalidColumnType(3, "payload_json".to_string(), rusqlite::types::Type::Text))?;
-
-            // Parse keywords_json string to serde_json::Value
-            let keywords_json: serde_json::Value = serde_json::from_str(&keywords_json_str)
-                .map_err(|_e| rusqlite::Error::InvalidColumnType(5, "keywords_json".to_string(), rusqlite::types::Type::Text))?;
+                .map_err(|_e| rusqlite::Error::InvalidColumnType(2, "payload_json".to_string(), rusqlite::types::Type::Text))?;
 
             Ok((pk_hash, ClusterObservationData {
                 observation_created_time,
                 json_payload,
-                summary,
-                title,
-                keywords_json,
                 cluster_period_start,
                 cluster_period_end,
-                centroid_b64,
             }))
         })?;
 
@@ -449,7 +438,19 @@ impl<'a> Store<'a> {
 
     /// Get existing report job by cluster_pk_hash.
     /// Returns (status, report_id, updated_at) if found, None otherwise.
+    /// Returns an error if the cluster does not exist.
     pub fn get_report_job(&self, cluster_pk_hash: &str) -> Result<Option<(ReportJobStatus, Option<String>, String)>> {
+        // First check if cluster exists
+        let cluster_exists: bool = self.conn.query_row(
+            "SELECT COUNT(*) > 0 FROM cluster WHERE pk_hash = ?1",
+            params![cluster_pk_hash],
+            |row| row.get(0),
+        )?;
+        
+        if !cluster_exists {
+            return Err(anyhow::anyhow!("Cluster with pk_hash '{}' does not exist", cluster_pk_hash));
+        }
+
         match self.conn.query_row(
             "SELECT status, report_id, updated_at FROM report_job WHERE cluster_pk_hash = ?1",
             params![cluster_pk_hash],
@@ -491,5 +492,52 @@ impl<'a> Store<'a> {
             params![ReportJobStatus::Running.as_str(), now, cluster_pk_hash],
         )?;
         Ok(())
+    }
+
+    /// Get topic resolver metadata (topics and cluster data).
+    /// Returns topics list and cluster metadata for the given cluster_pk_hash.
+    pub fn get_topic_resolver_metadata(&self, cluster_pk_hash: &str) -> Result<GetTopicResolverMetadataResponse> {
+        // Query cluster metadata
+        let cluster: ClusterMetadata = match self.conn.query_row(
+            "SELECT centroid_b64, size FROM cluster WHERE pk_hash = ?1",
+            params![cluster_pk_hash],
+            |row| {
+                let size: i64 = row.get(1)?;
+                Ok(ClusterMetadata {
+                    centroid: row.get(0)?,
+                    centroid_weight: size as f64,
+                })
+            },
+        ) {
+            Ok(result) => result,
+            Err(rusqlite::Error::QueryReturnedNoRows) => {
+                return Err(anyhow::anyhow!("Cluster with pk_hash '{}' not found", cluster_pk_hash));
+            }
+            Err(e) => {
+                return Err(anyhow::anyhow!("Database error while querying cluster: {}", e));
+            }
+        };
+
+        // Query all topics
+        let mut stmt = self.conn.prepare(
+            "SELECT topic_id, centroid_b64, centroid_weight FROM topic"
+        )?;
+
+        let topics: Result<Vec<_>, _> = stmt.query_map([], |row| {
+            let topic_id: i64 = row.get(0)?;
+            let centroid_b64: String = row.get(1)?;
+            let centroid_weight: f64 = row.get(2)?;
+
+            Ok(TopicCentroid {
+                id: topic_id.to_string(),
+                centroid_b64,
+                centroid_weight,
+            })
+        })?.collect();
+
+        Ok(GetTopicResolverMetadataResponse {
+            topics: topics?,
+            cluster,
+        })
     }
 }

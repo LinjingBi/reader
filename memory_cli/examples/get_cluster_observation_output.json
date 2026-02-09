@@ -2,6 +2,8 @@
   "abc123def456": {
     "observation_created_time": "2025-01-15",
     "json_payload": {
+      "what_this_topic_is_about": "Machine learning research",
+      "why_it_matters": "Advances in AI capabilities"
     },
     "cluster_period_start": "2025-01-01",
     "cluster_period_end": "2025-01-31"
@@ -9,6 +11,8 @@
   "789ghi012jkl": {
     "observation_created_time": "2025-01-16",
     "json_payload": {
+      "what_this_topic_is_about": "Natural language processing",
+      "why_it_matters": "Improves human-computer interaction"
     },
     "cluster_period_start": "2025-01-01",
     "cluster_period_end": "2025-01-31"

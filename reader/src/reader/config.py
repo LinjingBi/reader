@@ -115,6 +115,7 @@ class ReportGenerationConfig(BaseModel):
     """Report generation configuration"""
     enable: bool = Field(default=False, description="Whether to enable report generation")
     user_intent_options: Optional[List[str]] = Field(default=None, description="List of display-ready user intent option strings")
+    topic_resolver_threshold: float = Field(default=0.98, description="Similarity threshold (0-1) for topic resolution. If best similarity >= threshold, merge; otherwise create")
 
 
 class ReaderConfig(BaseModel):

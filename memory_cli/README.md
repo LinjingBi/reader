@@ -46,6 +46,16 @@ The command checks for existing jobs and handles different states:
   - If error occurred within 5 minutes: Returns remaining wait time
   - If error occurred more than 5 minutes ago: Resets job to `running` status
 
+### 6) Get topic resolver metadata
+```bash
+./target/release/memo-cli --db memo.sqlite get-topic-resolver-metadata --cluster-pk-hash abc123def456
+./target/release/memo-cli get-topic-resolver-metadata --cluster-pk-hash abc123def456
+```
+
+Returns a JSON object containing:
+- `topics`: List of all topics with their centroid data (id, centroid_b64, centroid_weight)
+- `cluster`: Cluster metadata with centroid and centroid_weight (cluster size) for the specified cluster_pk_hash
+
 ## Docs
 - `docs/design.md`
 - `docs/contracts.md`

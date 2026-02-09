@@ -1,0 +1,24 @@
+{
+  "topics": [
+    {
+      "id": "1",
+      "centroid_b64": "dsfsefew",
+      "centroid_weight": 1.5
+    },
+    {
+      "id": "2",
+      "centroid_b64": "dsfsefew",
+      "centroid_weight": 2.3
+    },
+    {
+      "id": "3",
+      "centroid_b64": "dsfsefew",
+      "centroid_weight": 0.8
+    }
+  ],
+  "cluster": {
+    "centroid": "dsfsefew",
+    "centroid_weight": 42.0
+  }
+}
+

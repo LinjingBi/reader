@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS cluster (
   pk_hash          TEXT NOT NULL UNIQUE, -- SHA256 hex hash of primary key fields
   size             INTEGER NOT NULL,
   -- Geometry artifacts for display/matching/debug
-  centroid_b64     TEXT NOT NULL,    -- base64 float32 bytes
+  centroid_b64     TEXT NOT NULL,    -- base64 float32 bytes. normalized
   cohesion         REAL,             -- avg cosine to centroid (nullable)
   created_at       TEXT NOT NULL,
   PRIMARY KEY (source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index),
@@ -180,7 +180,8 @@ CREATE TABLE IF NOT EXISTS topic (
   created_at         TEXT NOT NULL,
   updated_at         TEXT NOT NULL,
   embed_config_id    TEXT,                  -- embedding space used for topic_centroid_b64
-  centroid_b64 TEXT,                  -- base64 float32 bytes (same dim as cluster centroid)
+  centroid_b64 TEXT NOT NULL,                  -- base64 float32 bytes (same dim as cluster centroid). normalized
+  centroid_weight REAL NOT NULL,     -- centroid weight used in cluster centroid computation
   centroid_updated_at TEXT            -- ISO timestamp when centroid last updated
 );
 
