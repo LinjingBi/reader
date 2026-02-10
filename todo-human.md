@@ -57,7 +57,9 @@ sub(issue, bug level)
 [x] - [memo] refactor topic related db tables for report generation  
 [x] - [memo,reader] add new memo cmd to record report generation job status in db and integrate with reader.  
 [x] - [reader,memo] fetch the existing topics from db and compute the sim with chosen cluster, and gate to decide create/merge.  
-[ ] - [reader,memo] generate the report planner prompt for llm call 1, memo supply metadat if necessary.  
+[...] - [reader,memo] generate the report planner prompt for llm call 1, memo supply metadat if necessary.  
+[x] - [reader] benchmark pdf libs for paper introduction extraction.  
+
 [ ] - [reader,memo] generate the report writter prompt from llm call 2, memo supply metadat if necessary.  
 [ ] - [reader,memo] write the whole metadata from reader to memo db, and dump report to local fs.  
 

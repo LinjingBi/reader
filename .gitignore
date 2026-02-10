@@ -78,3 +78,6 @@ reader/papers_report.json
 reader/*best_clustering_*.json
 reader/*best_clustering_*.md
 reader/configs/reader.yaml
+
+# PDF benchmark data (keep JSON files, ignore PDFs)
+reader/scripts/pdflib_benchmark/data/*.pdf
