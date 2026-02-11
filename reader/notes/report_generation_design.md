@@ -161,7 +161,6 @@ For the primary topic (if already known), include last `N=2` report metadata:
 - `intent_mode`, `declared_level`, `created_at`
 
 > MVP note: do not include full `report_md` in Call 1.
-
 #### Outputs
 Planner returns JSON:
 - `plan_for_this_report`
@@ -179,6 +178,19 @@ Planner returns JSON:
 #### Notes on “subthreads”
 - Subthreads are a **report-structure decision**, so final subthreads should be produced by the **planner/writer** (strong model), not by a weaker summarizer.
 - If you do compute subthreads earlier, treat them as **non-binding suggestions**.
+
+#### NOTE on Evidence Limitation
+
+For **research_briefing / brainstorm_directions / implementation_angle**, the `evidence_expectation` is intentionally limited by the metadata we currently store (mostly **summary-level** fields plus `new_observation` and optional `history_reports`).
+
+This is **known to be insufficient** for high-specificity planning (e.g., methods, experiments, limitations, eval protocols, feasibility constraints). The prompt is therefore **designed to bias the planner toward**:
+
+* producing a conservative, evidence-grounded `plan` (avoid false concreteness), and
+* using `evidence_request` aggressively to request the missing artifacts needed to fulfill the intent.
+
+In other words: **insufficiency is a feature in MVP**—it forces the model to surface evidence gaps instead of hallucinating details.
+
+PS. Prompt specs are under prompts/report_planner/spec.py  
 
 ---
 

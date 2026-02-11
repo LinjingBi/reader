@@ -241,32 +241,17 @@ CREATE TABLE IF NOT EXISTS report_job (
 );
 
 CREATE TABLE IF NOT EXISTS report (
-  report_id        TEXT PRIMARY KEY,
-  period_start     TEXT NOT NULL,
-  period_end       TEXT NOT NULL,
-  source           TEXT NOT NULL,
-  embed_config_id  TEXT NOT NULL,
-  cluster_config_id TEXT NOT NULL,
-  role             TEXT NOT NULL,
-  cluster_index    INTEGER NOT NULL,
-  report_md        TEXT NOT NULL,
+  report_id        INTEGER PRIMARY KEY,   -- rowid-backed, auto assigns
   created_at       TEXT NOT NULL,
-  llm_config_id    TEXT,                    -- provenance for report_md (nullable),
-  title            TEXT,
-  summary          TEXT,                    -- 80-120 words target (enforce in app)
-  keywords_json    TEXT,                    -- JSON list of strings
-  intent_mode      TEXT,                    -- quick_background|research_briefing|brainstorm_directions|implementation_angle
-  user_intent_note TEXT,                    -- optional user free-text
-  declared_level   TEXT,                    -- intro|intermediate|deep-dive
-  covered_bullets_json TEXT,                -- JSON list (3-6)
-  next_targets_json TEXT,                   -- JSON list (3-8)
-  subthreads_json  TEXT,                    -- JSON list of {name, paper_ids:[...]}
-  cohesion_label   TEXT,                    -- cohesive|mixed
-  cohesion_confidence REAL,                 -- 0..1
-  evidence_gaps_json TEXT,                  -- JSON list (0-5)
-  FOREIGN KEY (source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index) 
-    REFERENCES cluster(source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index) ON DELETE CASCADE,
-  FOREIGN KEY (llm_config_id) REFERENCES llm_config(llm_config_id) ON DELETE SET NULL
+  report_url       TEXT NOT NULL,
+  intent_mode      TEXT NOT NULL,                    -- quick_background|research_briefing|brainstorm_directions|implementation_angle
+  declared_level   TEXT NOT NULL,                    -- intro|intermediate|deep-dive
+  title            TEXT NOT NULL,
+  summary          TEXT NOT NULL,                    -- 80-120 words target (enforce in app)
+  keywords_json    TEXT NOT NULL DEFAULT '[]',        -- JSON list of strings
+  depth_context_json TEXT NOT NULL DEFAULT '[]',      -- JSON object with optional fields: 'subthreads', 'covered_bullets', 'next_targets', 'skip_or_defer', 'evidence_gaps', 'cohesion_label', 'cohesion_confidence'
+  cluster_pk_hash  TEXT,                              -- nullable reference to cluster
+  FOREIGN KEY (cluster_pk_hash) REFERENCES cluster(pk_hash) ON DELETE SET NULL
 );
 
 -- Reports can link to multiple topics (primary/secondary/related)
@@ -281,6 +266,7 @@ CREATE TABLE IF NOT EXISTS report_topic_link (
   FOREIGN KEY (topic_id)  REFERENCES topic(topic_id)  ON DELETE CASCADE
 );
 
+-- TBD for evlution pipeline
 -- Depth annotations: editorial signal from LLM, grounded by objective stats
 -- Objective stats are computed from report_topic_link + report.
 CREATE TABLE IF NOT EXISTS topic_depth_annotation (
@@ -298,7 +284,6 @@ CREATE TABLE IF NOT EXISTS topic_depth_annotation (
 );
 
 -- Helpful indexes
-CREATE INDEX IF NOT EXISTS idx_report_period ON report(period_start, period_end);
 CREATE INDEX IF NOT EXISTS idx_report_topic_role ON report_topic_link(topic_id, role);
 CREATE INDEX IF NOT EXISTS idx_topic_status ON topic(status);
 

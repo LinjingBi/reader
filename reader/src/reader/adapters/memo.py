@@ -46,8 +46,16 @@ class MemoGetTopicResolverMetadataError(Exception):
     pass
 
 
+class MemoGetReportPlannerMetadataError(Exception):
+    """Exception raised when get-report-planner-metadata subcommand fails."""
+    pass
+
+
 # Pydantic response models matching Rust CLI contracts
 
+# ============================================================================
+# get-best-run command models
+# ============================================================================
 
 class PaperCard(BaseModel):
     """Paper card in cluster response."""
@@ -69,6 +77,20 @@ class ClusterCard(BaseModel):
     pk_hash: str
 
 
+class GetBestRunResponse(BaseModel):
+    """Response from get-best-run command."""
+    source: str
+    period_start: str # YYYY-MM-DD
+    period_end: str # YYYY-MM-DD
+    embed_config_id: str
+    cluster_config_id: str
+    clusters: List[ClusterCard]
+
+
+# ============================================================================
+# get-clusters-observation command models
+# ============================================================================
+
 class ClusterObservationData(BaseModel):
     """Observation data for a single cluster."""
     observation_created_time: datetime  # YYYY-MM-DD format, parsed by Pydantic
@@ -86,6 +108,10 @@ class GetClusterObservationResponse(RootModel[Dict[str, ClusterObservationData]]
     pass
 
 
+# ============================================================================
+# start-report-job command models
+# ============================================================================
+
 class StartReportJobResponse(BaseModel):
     """Response from start-report-job command."""
     status: str  # 'running' | 'done' | 'error'
@@ -94,15 +120,9 @@ class StartReportJobResponse(BaseModel):
     message: str
 
 
-class GetBestRunResponse(BaseModel):
-    """Response from get-best-run command."""
-    source: str
-    period_start: str # YYYY-MM-DD
-    period_end: str # YYYY-MM-DD
-    embed_config_id: str
-    cluster_config_id: str
-    clusters: List[ClusterCard]
-
+# ============================================================================
+# get-topic-resolver-metadata command models
+# ============================================================================
 
 class TopicCentroid(BaseModel):
     """Topic centroid data matching the Rust TopicCentroid model."""
@@ -121,6 +141,43 @@ class GetTopicResolverMetadataResponse(BaseModel):
     """Response from get-topic-resolver-metadata command."""
     topics: List[TopicCentroid]  # List of topics with their centroid data
     cluster: ClusterMetadata  # Cluster metadata
+
+
+# ============================================================================
+# get-report-planner-metadata command models
+# ============================================================================
+
+class NewObservation(BaseModel):
+    """New observation data from cluster observation."""
+    name: str  # Cluster observation title
+    summary: str  # Cluster observation summary
+    keywords: List[str]  # Keywords from cluster observation
+    key_paper_keywords: Dict[str, List[str]]  # Keywords from top ≤5 papers, keyed by paper_id
+
+
+class TopPaper(BaseModel):
+    """Top paper data for the cluster."""
+    paper_id: str
+    title: str
+    summary: str
+    keywords: List[str]
+    rank_in_cluster: int  # 0 = most representative
+    sim_to_centroid: Optional[float] = None
+
+
+class HistoryReport(BaseModel):
+    """History report data for a topic."""
+    title: str
+    summary: str
+    keywords_json: Any  # Report keywords as JSON
+    depth_context_json: Any  # Report depth context as JSON
+
+
+class GetReportPlannerMetadataResponse(BaseModel):
+    """Response from get-report-planner-metadata command."""
+    new_observation: NewObservation
+    top_papers_from_new_observation: Optional[List[TopPaper]] = None  # Optional Top-K papers (K≤5)
+    history_reports: Optional[List[HistoryReport]] = None  # Optional top ≤3 reports for the specified topic
 
 
 def fresh_paper(payload: FreshPaperPayload, config: ReaderConfig) -> None:
@@ -487,3 +544,71 @@ def get_topic_resolver_metadata(
     except Exception as e:
         logger.error(f"Unexpected error in memo get-topic-resolver-metadata: {e}", exc_info=True)
         raise MemoGetTopicResolverMetadataError(f"Unexpected error in memo get-topic-resolver-metadata: {e}") from e
+
+
+def get_report_planner_metadata(
+    cluster_pk_hash: str,
+    config: ReaderConfig,
+    topic_id: Optional[str] = None,
+    add_top_papers: bool = False,
+) -> Optional[GetReportPlannerMetadataResponse]:
+    """
+    Call memo CLI get-report-planner-metadata command to retrieve report planner metadata.
+    
+    Args:
+        cluster_pk_hash: Cluster pk_hash (primary key hash from cluster table)
+        config: ReaderConfig instance
+        topic_id: Optional topic_id (as string) to include top ≤3 reports for that topic
+        add_top_papers: Whether to include Top-K papers (K≤5) for the cluster
+        
+    Returns:
+        GetReportPlannerMetadataResponse instance, or None if memo is disabled
+        
+    Raises:
+        MemoGetReportPlannerMetadataError: If the subcommand execution fails
+    """
+    if not config.memo.enabled:
+        return None
+    
+    try:
+        # Build command
+        cmd = [
+            config.memo.bin,
+        ]
+        if config.memo.db_path:
+            cmd.append('--db')
+            cmd.append(config.memo.db_path)
+        if config.memo.db_schema_path:
+            cmd.append('--schema')
+            cmd.append(config.memo.db_schema_path)
+        cmd.extend(['get-report-planner-metadata', '--cluster-pk-hash', cluster_pk_hash])
+        
+        if topic_id is not None:
+            cmd.extend(['--add-topic-reports', str(topic_id)])
+        if add_top_papers:
+            cmd.append('--add-top-papers')
+        
+        # Run memo CLI
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=config.memo.timeout_sec,
+            check=True,
+        )
+        
+        # Parse JSON output and create Pydantic model
+        return GetReportPlannerMetadataResponse.model_validate_json(result.stdout)
+        
+    except subprocess.TimeoutExpired as e:
+        logger.warning(f"memo get-report-planner-metadata timed out after {config.memo.timeout_sec}s")
+        raise MemoGetReportPlannerMetadataError(f"memo get-report-planner-metadata timed out after {config.memo.timeout_sec}s") from e
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Error calling memo get-report-planner-metadata: {e.stderr}")
+        raise MemoGetReportPlannerMetadataError(f"Error calling memo get-report-planner-metadata: {e.stderr}") from e
+    except pydantic.ValidationError as e:
+        logger.error(f"Error validating memo output: {e}")
+        raise MemoGetReportPlannerMetadataError(f"Error validating memo output: {e}") from e
+    except Exception as e:
+        logger.error(f"Unexpected error in memo get-report-planner-metadata: {e}", exc_info=True)
+        raise MemoGetReportPlannerMetadataError(f"Unexpected error in memo get-report-planner-metadata: {e}") from e

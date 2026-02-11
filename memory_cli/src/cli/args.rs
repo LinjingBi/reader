@@ -127,6 +127,27 @@ EXAMPLES:
         #[arg(long)]
         cluster_pk_hash: String,
     },
+
+    /// Get report planner metadata (cluster observation, top papers, and topic reports).
+    #[command(
+        long_about = "Get report planner metadata including cluster observation data, optional top papers, and optional topic reports.
+
+EXAMPLES:
+  memo get-report-planner-metadata --cluster-pk-hash abc123def456
+  memo get-report-planner-metadata --cluster-pk-hash abc123def456 --add-top-papers
+  memo get-report-planner-metadata --cluster-pk-hash abc123def456 --add-topic-reports 42 --add-top-papers"
+    )]
+    GetReportPlannerMetadata {
+        /// Cluster pk_hash (primary key hash from cluster table).
+        #[arg(long)]
+        cluster_pk_hash: String,
+        /// Optional: Include top ≤3 reports for a topic.
+        #[arg(long)]
+        add_topic_reports: Option<i64>,
+        /// Optional: Include Top-K papers (K≤5) for the cluster.
+        #[arg(long)]
+        add_top_papers: bool,
+    },
 }
 
 impl Args {

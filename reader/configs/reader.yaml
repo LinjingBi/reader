@@ -49,10 +49,5 @@ cluster_summarization:
 
 report_generation:
   enable: false  # Set to true to enable report generation
-  user_intent_options:
-    - "Quick Background (5-10 min overview)"
-    - "Research Briefing (Decision-oriented)"
-    - "Brainstorm Directions (Novelty hunting)"
-    - "Implementation Angle (What to build/test)"
   topic_resolver_threshold: 0.98
   

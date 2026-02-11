@@ -1,6 +1,7 @@
 mod fresh_paper;
 mod get_best_run;
 mod get_cluster_observation;
+mod get_report_planner_metadata;
 mod get_topic_resolver_metadata;
 mod inject_clusters_observation;
 mod start_report_job;
@@ -30,6 +31,9 @@ pub fn dispatch(args: Args) -> Result<()> {
         }
         Command::GetTopicResolverMetadata { cluster_pk_hash } => {
             get_topic_resolver_metadata::handle(args.dry_run, &args.db, args.schema.as_deref(), &cluster_pk_hash)
+        }
+        Command::GetReportPlannerMetadata { cluster_pk_hash, add_topic_reports, add_top_papers } => {
+            get_report_planner_metadata::handle(args.dry_run, &args.db, args.schema.as_deref(), &cluster_pk_hash, add_topic_reports, add_top_papers)
         }
     }
 }

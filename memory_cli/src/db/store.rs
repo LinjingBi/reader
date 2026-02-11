@@ -4,6 +4,7 @@ use crate::contracts::{
     GetClusterObservationResponse, ClusterObservationData,
     ReportJobStatus,
     GetTopicResolverMetadataResponse, TopicCentroid, ClusterMetadata,
+    GetReportPlannerMetadataResponse, NewObservation, TopPaper, HistoryReport,
 };
 use anyhow::{Context, Result};
 use chrono::Utc;
@@ -48,7 +49,7 @@ impl<'a> Store<'a> {
 
         // Tx A: Ingest (configs, snapshot, papers)
         {
-            let tx_a = self.conn.unchecked_transaction()?;
+            let tx_a = self.conn.transaction()?;
             
             // Upsert configs
             self.upsert_embed_config(&tx_a, &req.embed_config.embed_config_id, &req.embed_config.json_payload.to_string(), &now)?;
@@ -69,7 +70,7 @@ impl<'a> Store<'a> {
 
         // Tx B: Clusters
         {
-            let tx_b = self.conn.unchecked_transaction()?;
+            let tx_b = self.conn.transaction()?;
 
             // Ensure only one selected_best per snapshot+role (enforced by partial unique index)
             tx_b.execute(
@@ -538,6 +539,189 @@ impl<'a> Store<'a> {
         Ok(GetTopicResolverMetadataResponse {
             topics: topics?,
             cluster,
+        })
+    }
+
+    /// Get report planner metadata (cluster observation, top papers, and topic reports).
+    pub fn get_report_planner_metadata(
+        &self,
+        cluster_pk_hash: &str,
+        topic_id: Option<i64>,
+        add_top_papers: bool,
+    ) -> Result<GetReportPlannerMetadataResponse> {
+        // Validate cluster_pk_hash exists
+        let cluster_exists: bool = match self.conn.query_row(
+            "SELECT COUNT(*) > 0 FROM cluster_observation WHERE pk_hash = ?1",
+            params![cluster_pk_hash],
+            |row| row.get(0),
+        ) {
+            Ok(exists) => exists,
+            Err(e) => {
+                return Err(anyhow::anyhow!("Database error while checking cluster existence: {}", e));
+            }
+        };
+
+        if !cluster_exists {
+            return Err(anyhow::anyhow!("Cluster observation with pk_hash '{}' not found", cluster_pk_hash));
+        }
+
+        // Validate topic_id exists if provided
+        if let Some(tid) = topic_id {
+            let topic_exists: bool = match self.conn.query_row(
+                "SELECT COUNT(*) > 0 FROM topic WHERE topic_id = ?1",
+                params![tid],
+                |row| row.get(0),
+            ) {
+                Ok(exists) => exists,
+                Err(e) => {
+                    return Err(anyhow::anyhow!("Database error while checking topic existence: {}", e));
+                }
+            };
+
+            if !topic_exists {
+                return Err(anyhow::anyhow!("Topic with topic_id '{}' not found", tid));
+            }
+        }
+
+        // Query cluster observation
+        let (name, summary, keywords_json_str): (String, String, String) = match self.conn.query_row(
+            "SELECT title, summary, keywords_json FROM cluster_observation WHERE pk_hash = ?1",
+            params![cluster_pk_hash],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        ) {
+            Ok(result) => result,
+            Err(rusqlite::Error::QueryReturnedNoRows) => {
+                return Err(anyhow::anyhow!("Cluster observation with pk_hash '{}' not found", cluster_pk_hash));
+            }
+            Err(e) => {
+                return Err(anyhow::anyhow!("Database error while querying cluster_observation: {}", e));
+            }
+        };
+
+        let keywords: Vec<String> = serde_json::from_str(&keywords_json_str).unwrap_or_default();
+
+        // Query top ≤5 papers for key_paper_keywords
+        let mut stmt_keywords = self.conn.prepare(
+            "SELECT p.paper_id, p.keywords_json
+             FROM cluster_member cm
+             JOIN paper p ON p.paper_id = cm.paper_id
+             JOIN cluster c ON (
+                 cm.source = c.source AND
+                 cm.period_start = c.period_start AND
+                 cm.period_end = c.period_end AND
+                 cm.embed_config_id = c.embed_config_id AND
+                 cm.cluster_config_id = c.cluster_config_id AND
+                 cm.role = c.role AND
+                 cm.cluster_index = c.cluster_index
+             )
+             WHERE c.pk_hash = ?1
+             ORDER BY cm.rank_in_cluster ASC
+             LIMIT 5"
+        )?;
+
+        let mut key_paper_keywords = std::collections::HashMap::new();
+        let rows_keywords = stmt_keywords.query_map(params![cluster_pk_hash], |row| {
+            let paper_id: String = row.get(0)?;
+            let kw_json: String = row.get(1)?;
+            Ok((paper_id, kw_json))
+        })?;
+
+        for row_result in rows_keywords {
+            let (paper_id, kw_json) = row_result?;
+            if let Ok(keywords_vec) = serde_json::from_str::<Vec<String>>(&kw_json) {
+                key_paper_keywords.insert(paper_id, keywords_vec);
+            }
+        }
+
+        let new_observation = NewObservation {
+            name,
+            summary,
+            keywords,
+            key_paper_keywords,
+        };
+
+        // Query top papers if requested
+        let top_papers = if add_top_papers {
+            let mut stmt_papers = self.conn.prepare(
+                "SELECT p.paper_id, p.title, p.summary, p.keywords_json, cm.rank_in_cluster, cm.sim_to_centroid
+                 FROM cluster_member cm
+                 JOIN paper p ON p.paper_id = cm.paper_id
+                 JOIN cluster c ON (
+                     cm.source = c.source AND
+                     cm.period_start = c.period_start AND
+                     cm.period_end = c.period_end AND
+                     cm.embed_config_id = c.embed_config_id AND
+                     cm.cluster_config_id = c.cluster_config_id AND
+                     cm.role = c.role AND
+                     cm.cluster_index = c.cluster_index
+                 )
+                 WHERE c.pk_hash = ?1
+                 ORDER BY cm.rank_in_cluster ASC
+                 LIMIT 5"
+            )?;
+
+            let papers: Result<Vec<TopPaper>, rusqlite::Error> = stmt_papers.query_map(params![cluster_pk_hash], |row| {
+                let paper_id: String = row.get(0)?;
+                let title: String = row.get(1)?;
+                let summary: String = row.get(2)?;
+                let kw_json: String = row.get(3)?;
+                let rank: i64 = row.get(4)?;
+                let sim: Option<f64> = row.get(5)?;
+
+                let keywords: Vec<String> = serde_json::from_str(&kw_json).unwrap_or_default();
+
+                Ok(TopPaper {
+                    paper_id,
+                    title,
+                    summary,
+                    keywords,
+                    rank_in_cluster: rank,
+                    sim_to_centroid: sim,
+                })
+            })?.collect();
+
+            Some(papers?)
+        } else {
+            None
+        };
+
+        // Query topic reports if requested
+        let history_reports = if let Some(tid) = topic_id {
+            let mut stmt_reports = self.conn.prepare(
+                "SELECT r.title, r.summary, r.keywords_json, r.depth_context_json
+                 FROM report_topic_link rtl
+                 JOIN report r ON CAST(rtl.report_id AS INTEGER) = r.report_id
+                 WHERE rtl.topic_id = ?1
+                 ORDER BY r.created_at DESC
+                 LIMIT 3"
+            )?;
+
+            let reports: Result<Vec<HistoryReport>, rusqlite::Error> = stmt_reports.query_map(params![tid], |row| {
+                let title: String = row.get(0)?;
+                let summary: String = row.get(1)?;
+                let kw_json_str: String = row.get(2)?;
+                let depth_json_str: String = row.get(3)?;
+
+                let keywords_json: serde_json::Value = serde_json::from_str(&kw_json_str).unwrap_or_else(|_| serde_json::json!([]));
+                let depth_context_json: serde_json::Value = serde_json::from_str(&depth_json_str).unwrap_or_else(|_| serde_json::json!([]));
+
+                Ok(HistoryReport {
+                    title,
+                    summary,
+                    keywords_json,
+                    depth_context_json,
+                })
+            })?.collect();
+
+            Some(reports?)
+        } else {
+            None
+        };
+
+        Ok(GetReportPlannerMetadataResponse {
+            new_observation,
+            top_papers_from_new_observation: top_papers,
+            history_reports,
         })
     }
 }

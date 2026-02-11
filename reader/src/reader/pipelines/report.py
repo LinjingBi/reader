@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import List, Literal, Dict, Any, Optional
 
 from pydantic import BaseModel, Field, computed_field, conlist
@@ -233,7 +234,7 @@ class ClusterReport(BaseModel):
     )
 
 # ----------------------------
-# cluster semantic models(for memo cluster injection)
+# cluster semantic models from llm summarization(for memo cluster injection)
 # ----------------------------
 
 
@@ -254,3 +255,57 @@ class ClusterObservation(BaseModel):
 
 # Type alias for inject-clusters-observation input (map of pk_hash -> ClusterObservation)
 InjectClustersObservationInput = Dict[str, ClusterObservation]
+
+
+
+# ----------------------------
+# llm report generation models
+# ----------------------------
+
+# ---------- Enums ----------
+class LLMReportPlannerDepthMode(str, Enum):
+    Onboard = "Onboard"
+    Continue = "Continue"
+    Deepen = "Deepen"
+    Restructure = "Restructure"
+
+
+class LLMReportPlannerDeclaredLevel(str, Enum):
+    intro = "intro"
+    intermediate = "intermediate"
+    deep_dive = "deep-dive"
+
+
+class LLMReportPlannerSufficiency(str, Enum):
+    sufficient = "sufficient"
+    borderline = "borderline"
+    insufficient = "insufficient"
+
+
+# ---------- Output Models ----------
+class LLMReportPlannerSubthread(BaseModel):
+    name: str = Field(description="A thematic bucket name grounded in evidence keywords/themes.")
+    paper_ids: List[str] = Field(default_factory=list, description="Paper ids included in this subthread, if available.")
+
+
+class LLMReportPlannerPlan(BaseModel):
+    depth_mode_final: LLMReportPlannerDepthMode
+    declared_level_final: LLMReportPlannerDeclaredLevel
+
+    subthreads_final: List[LLMReportPlannerSubthread] = Field(min_length=2, max_length=4)
+
+    next_targets: List[str] = Field(min_length=3, max_length=8)
+    outline: List[str] = Field(min_length=6, max_length=12)
+    skip_or_defer: List[str] = Field(default_factory=list, max_length=5)
+
+    sufficiency: LLMReportPlannerSufficiency
+
+
+class LLMReportPlannerEvidenceNeed(BaseModel):
+    name: str = Field(description="Short name of the missing evidence item.")
+    why: str = Field(description="Why this evidence is needed; link to the plan field(s) it blocks.")
+
+
+class LLMReportPlannerOutput(BaseModel):
+    plan: LLMReportPlannerPlan
+    evidence_request: Optional[List[LLMReportPlannerEvidenceNeed]] = None

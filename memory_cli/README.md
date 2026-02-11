@@ -56,6 +56,18 @@ Returns a JSON object containing:
 - `topics`: List of all topics with their centroid data (id, centroid_b64, centroid_weight)
 - `cluster`: Cluster metadata with centroid and centroid_weight (cluster size) for the specified cluster_pk_hash
 
+### 7) Get report planner metadata
+```bash
+./target/release/memo-cli get-report-planner-metadata --cluster-pk-hash abc123def456
+./target/release/memo-cli get-report-planner-metadata --cluster-pk-hash abc123def456 --add-top-papers
+./target/release/memo-cli get-report-planner-metadata --cluster-pk-hash abc123def456 --add-topic-reports 42 --add-top-papers
+```
+
+Returns a JSON object containing:
+- `new_observation`: Cluster observation data (name, summary, keywords, key_paper_keywords)
+- `top_papers_from_new_observation`: Optional Top-K papers (K≤5) with full details (paper_id, title, summary, keywords, rank_in_cluster, sim_to_centroid)
+- `history_reports`: Optional top ≤3 reports for the specified topic (title, summary, keywords_json, depth_context_json)
+
 ## Docs
 - `docs/design.md`
 - `docs/contracts.md`
