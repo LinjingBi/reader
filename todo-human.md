@@ -13,6 +13,7 @@ main(feature level)
 [ ] - [memo,agent-friendly] refactor the error handling to a descriptive way, f.e. add error type for each cmd and raise them with more details of cmd runtime.  
 [ ] - [memo,agent-friendly] add sample use case for each subcmd in their help message.  
 [ ] - [reader] add paper metadata extraction to hf metadata processing step(fetch+embed+clustering) and also adjust the evidence provieded in report planner's specs.    
+[...] - [lab] consider make lab an independent repo so we can have version control over all its ingredients via git commit hash.  
 
 sub(issue, bug level)  
 [x] - [chat] finalize the reader_algos package skeleton with chat.  
@@ -62,6 +63,10 @@ sub(issue, bug level)
 [x] - [reader] benchmark pdf libs for paper introduction extraction.  
 [x] - [reader] add prompt spec and builder to for llm report planner prompt generation under prompts/report_planner.  
 [x] - [reader,memo] add new memo cmd get-report-planner-metadata for call 1 planner prompt generation and integrate with reader.  
+[x] - [memo] add design docs for memo wrt how to store and query paper metadata for call1 and call2.  
+[x] - [lab] draft a lab env for better test environment.  
+[...] - [reader] refactor call1 and call2 prompt and output pydantic models to collect llm instructions for evidence/memo metadata collection.  
+
 [ ] - [reader] test call 1 llm report planner(heuristic rules for response?), choose a proper model, update llm config in reader.yaml to per model.    
 
 
@@ -69,4 +74,4 @@ sub(issue, bug level)
 [ ] - [reader,memo] write the whole metadata from reader to memo db, and dump report to local fs.  
 
 random(spikes, explore)  
-[ ] - [reader] use lite llm and lite metadata(name, title, keywords) for summarization and thinking llm and depth-aware metadata for report genereation.  
+[x] - [reader] use lite llm and lite metadata(name, title, keywords) for summarization and thinking llm and depth-aware metadata for report genereation.  
