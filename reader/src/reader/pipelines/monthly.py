@@ -7,7 +7,7 @@ from reader.logging.logging_setup import get_logger
 from reader.pipelines.metrics import JudgeOutput, ClusterReport
 from typing import Dict, Tuple, Optional
 from reader.tui.clusters_observation import display_clusters_observation
-from reader.prompts.report_planner.spec import UserIntent
+from reader.prompts.report_planner.build import UserIntent
 logger = get_logger()
 
 # contain potential mcp servers/tool calls/skills(?)

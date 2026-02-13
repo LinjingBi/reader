@@ -65,6 +65,8 @@ sub(issue, bug level)
 [x] - [reader,memo] add new memo cmd get-report-planner-metadata for call 1 planner prompt generation and integrate with reader.  
 [x] - [memo] add design docs for memo wrt how to store and query paper metadata for call1 and call2.  
 [x] - [lab] draft a lab env for better test environment.  
+[x] - [reader] refine call 1 prompt spec baseline version for better call1&call2 evidence composition.  
+[ ] - [chat] Q: it's easy for workflow to ensure the "providing evidence a, b, c", but it's hard for workflow to evaluate the quality of "evidence a, b, c" to derive a solid decision, and the purpose of call 1 prompt spec baseline is to iterate on the quality of the evidence to hopefully derive a solid plan with fewer iterations. and yes there are some if-else rules set in prompt spec, but they are also guidances/hypethesis(not constrains) for model to derive a solid plan.    
 [...] - [reader] refactor call1 and call2 prompt and output pydantic models to collect llm instructions for evidence/memo metadata collection.  
 
 [ ] - [reader] test call 1 llm report planner(heuristic rules for response?), choose a proper model, update llm config in reader.yaml to per model.    

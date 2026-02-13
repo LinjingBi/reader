@@ -288,6 +288,7 @@ class LLMReportPlannerSubthread(BaseModel):
     paper_ids: List[str] = Field(default_factory=list, description="Paper ids included in this subthread, if available.")
 
 
+# do not add description for each field, they are defined in the "spec.py"
 class LLMReportPlannerPlan(BaseModel):
     depth_mode_final: LLMReportPlannerDepthMode
     declared_level_final: LLMReportPlannerDeclaredLevel
@@ -300,12 +301,59 @@ class LLMReportPlannerPlan(BaseModel):
 
     sufficiency: LLMReportPlannerSufficiency
 
+PaperSelector = Literal[
+    "summary",
+    "introduction",
+    "related_work",
+    "method",
+    "experiment",
+    "results",
+    "discussion",
+    "limitations",
+    "conclusion",
+    "appendix",
+    "full_text",
+]
 
-class LLMReportPlannerEvidenceNeed(BaseModel):
-    name: str = Field(description="Short name of the missing evidence item.")
-    why: str = Field(description="Why this evidence is needed; link to the plan field(s) it blocks.")
+
+SupportField = Literal[
+    # Plan fields:
+    "depth_mode_final",
+    "declared_level_final",
+    "subthreads_final",
+    "outline",
+    "next_targets",
+    "skip_or_defer",
+    "sufficiency",
+    "evidence_gaps",
+    # # (Optional) if you later add writer-facing fields:
+    # "writer_section",
+    # "cross_paper_comparison",
+]
+
+
+class NextStepInput(BaseModel):
+    """
+    'What the model needs for next step' — a directive for the pipeline
+    to fetch/extract higher-resolution evidence for Call 2 (writer-ready).
+    """
+    support_field: SupportField = Field(..., description="Which plan field / writing purpose this input supports.")
+    paper_id: Optional[str] = Field(None, description="Paper to fetch from. Omit for topic/history-only needs.")
+    selectors: List[PaperSelector] = Field(..., min_length=1, description="Which part(s) to extract.")
+    why: str = Field(..., description="Why this evidence is needed (tie to support_field).")
+
+class EvidenceGap(BaseModel):
+    """
+    'What the model wishes it had' — a gap/caveat the writer must carry,
+    and a hint of what would resolve it.
+    """
+    why: str = Field(..., description="Why this gap matters (what it blocks or could cause hallucination).")
+    blocked_fields: List[str]
+    related_paper_ids: List[str]
+    priority: Literal[1, 2, 3] = Field(..., description="1=highest, 3=lowest urgency.")
 
 
 class LLMReportPlannerOutput(BaseModel):
     plan: LLMReportPlannerPlan
-    evidence_request: Optional[List[LLMReportPlannerEvidenceNeed]] = None
+    next_step_inputs: List[NextStepInput]
+    evidence_gaps: List[EvidenceGap]

@@ -40,8 +40,8 @@ from reader.pipelines.report import (
 )
 from reader.pipelines.metrics import judge_output, JudgeOutput
 from reader.logging.logging_setup import get_logger
-from reader.prompts.report_planner.spec import UserIntent, get_intent_spec
-from reader.prompts.report_planner.build import build_planner_prompt
+from reader.prompts.report_planner.build import UserIntent, get_intent_spec
+from reader.prompts.report_planner.build import build_baseline_planner_prompt
 
 logger = get_logger()
 
@@ -928,8 +928,8 @@ def _generate_planner_prompt(
     if cluster_metadata is None:
         raise ValueError("memo.get_report_planner_metadata returned None (memo is disabled). cluster_metadata is required.")
     
-    # Call build_planner_prompt with intent_spec and cluster_metadata
-    prompt = build_planner_prompt(intent_spec=intent_spec, cluster_metadata=cluster_metadata)
+    # Call build_baseline_planner_prompt with intent_spec and cluster_metadata
+    prompt = build_baseline_planner_prompt(intent_spec=intent_spec, cluster_metadata=cluster_metadata)
     
     return prompt
 
