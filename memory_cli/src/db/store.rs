@@ -688,7 +688,7 @@ impl<'a> Store<'a> {
         // Query topic reports if requested
         let history_reports = if let Some(tid) = topic_id {
             let mut stmt_reports = self.conn.prepare(
-                "SELECT r.title, r.summary, r.keywords_json, r.depth_context_json
+                "SELECT r.report_id, r.title, r.summary, r.keywords_json, r.depth_context_json
                  FROM report_topic_link rtl
                  JOIN report r ON CAST(rtl.report_id AS INTEGER) = r.report_id
                  WHERE rtl.topic_id = ?1
@@ -697,15 +697,17 @@ impl<'a> Store<'a> {
             )?;
 
             let reports: Result<Vec<HistoryReport>, rusqlite::Error> = stmt_reports.query_map(params![tid], |row| {
-                let title: String = row.get(0)?;
-                let summary: String = row.get(1)?;
-                let kw_json_str: String = row.get(2)?;
-                let depth_json_str: String = row.get(3)?;
+                let report_id: i64 = row.get(0)?;
+                let title: String = row.get(1)?;
+                let summary: String = row.get(2)?;
+                let kw_json_str: String = row.get(3)?;
+                let depth_json_str: String = row.get(4)?;
 
                 let keywords_json: serde_json::Value = serde_json::from_str(&kw_json_str).unwrap_or_else(|_| serde_json::json!([]));
                 let depth_context_json: serde_json::Value = serde_json::from_str(&depth_json_str).unwrap_or_else(|_| serde_json::json!([]));
 
                 Ok(HistoryReport {
+                    report_id,
                     title,
                     summary,
                     keywords_json,

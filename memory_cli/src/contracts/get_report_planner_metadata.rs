@@ -35,6 +35,8 @@ pub struct TopPaper {
 /// History report data for a topic.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HistoryReport {
+    /// Report ID.
+    pub report_id: i64,
     /// Report title.
     pub title: String,
     /// Report summary.

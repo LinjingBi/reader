@@ -73,6 +73,7 @@
   ],
   "history_reports": [
     {
+      "report_id": 1,
       "title": "Code Generation Landscape: Current State and Future Directions",
       "summary": "This report provides an overview of recent advances in code generation using large language models. We examine key techniques, evaluate performance on standard benchmarks, and discuss open challenges in the field.",
       "keywords_json": [
@@ -115,6 +116,7 @@
       }
     },
     {
+      "report_id": 2,
       "title": "Neural Program Synthesis: Techniques and Applications",
       "summary": "We explore neural program synthesis approaches, focusing on how neural networks can be trained to generate correct and efficient code. The report covers recent architectural innovations and training methodologies.",
       "keywords_json": [

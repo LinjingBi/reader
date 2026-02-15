@@ -14,6 +14,8 @@ main(feature level)
 [ ] - [memo,agent-friendly] add sample use case for each subcmd in their help message.  
 [ ] - [reader] add paper metadata extraction to hf metadata processing step(fetch+embed+clustering) and also adjust the evidence provieded in report planner's specs.    
 [...] - [lab] consider make lab an independent repo so we can have version control over all its ingredients via git commit hash.  
+[ ] - [reader] make "selectors" used in call1/call2 load/generate dynamically from memo, this should be a prod-level feature.   
+[ ] - [?] a vibe-coding like structure to derive pydantic model from prompt spec, so no need to validate these two using validate.py. "spec" holds the high-level design, "prompt"(semantic meanings) and "structure"(code model) should be derived from it.  
 
 sub(issue, bug level)  
 [x] - [chat] finalize the reader_algos package skeleton with chat.  
@@ -66,8 +68,9 @@ sub(issue, bug level)
 [x] - [memo] add design docs for memo wrt how to store and query paper metadata for call1 and call2.  
 [x] - [lab] draft a lab env for better test environment.  
 [x] - [reader] refine call 1 prompt spec baseline version for better call1&call2 evidence composition.  
-[ ] - [chat] Q: it's easy for workflow to ensure the "providing evidence a, b, c", but it's hard for workflow to evaluate the quality of "evidence a, b, c" to derive a solid decision, and the purpose of call 1 prompt spec baseline is to iterate on the quality of the evidence to hopefully derive a solid plan with fewer iterations. and yes there are some if-else rules set in prompt spec, but they are also guidances/hypethesis(not constrains) for model to derive a solid plan.    
-[...] - [reader] refactor call1 and call2 prompt and output pydantic models to collect llm instructions for evidence/memo metadata collection.  
+[x] - [chat] Q: it's easy for workflow to ensure the "providing evidence a, b, c", but it's hard for workflow to evaluate the quality of "evidence a, b, c" to derive a solid decision, and the purpose of call 1 prompt spec baseline is to iterate on the quality of the evidence to hopefully derive a solid plan with fewer iterations. and yes there are some if-else rules set in prompt spec, but they are also guidances/hypethesis(not constrains) for model to derive a solid plan.    
+[x] - [reader] refactor call1 prompt and output pydantic models to collect llm instructions for evidence/memo metadata collection.  
+[ ] - [lab] prepare env(especially paper chunk pipeline) for call1 test.  
 
 [ ] - [reader] test call 1 llm report planner(heuristic rules for response?), choose a proper model, update llm config in reader.yaml to per model.    
 

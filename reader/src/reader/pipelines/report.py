@@ -301,6 +301,7 @@ class LLMReportPlannerPlan(BaseModel):
 
     sufficiency: LLMReportPlannerSufficiency
 
+# TODO: generate from memo dynamically
 PaperSelector = Literal[
     "summary",
     "introduction",
@@ -313,6 +314,17 @@ PaperSelector = Literal[
     "conclusion",
     "appendix",
     "full_text",
+]
+
+HistoryReportSelector = Literal[
+    "summary",
+    "covered_bullets",
+    "next_targets",
+    "subthreads",
+    "outline",
+    "evidence_gaps",
+    "plan",
+    "full_json",
 ]
 
 
@@ -333,25 +345,72 @@ SupportField = Literal[
 
 
 class NextStepInput(BaseModel):
-    """
-    'What the model needs for next step' — a directive for the pipeline
-    to fetch/extract higher-resolution evidence for Call 2 (writer-ready).
-    """
+
     support_field: SupportField = Field(..., description="Which plan field / writing purpose this input supports.")
-    paper_id: Optional[str] = Field(None, description="Paper to fetch from. Omit for topic/history-only needs.")
-    selectors: List[PaperSelector] = Field(..., min_length=1, description="Which part(s) to extract.")
-    why: str = Field(..., description="Why this evidence is needed (tie to support_field).")
+    # Retrieval target (exactly one should be set)
+    paper_id: Optional[str] = Field(None, description="Paper to fetch from. Omit for history-only needs.")
+    history_report_id: Optional[str] = Field(
+        None,
+        description="History report identifier to fetch from (if you have ids). Omit for paper-only needs.",
+    )
+    # Retrieval selectors (use the one that matches the target)
+    paper_selectors: List[PaperSelector] = Field(default_factory=list, description="Which paper part(s) to extract.")
+    history_selectors: List[HistoryReportSelector] = Field(default_factory=list, description="Which history fields to extract.")
+
+    # intentionally a bit ambiguous — lets the model express uncertainty plainly. this can be used to calibrate the workflow understanding vs the model's understanding.
+    why: str = Field(
+        ...,
+        description=(
+            "A simple question that this input is trying to answer. "
+            "Write it as a direct question (e.g., 'What is the evaluation protocol and baseline set?')."
+        ),
+    )
+    @property
+    def target_kind(self) -> Literal["paper", "history"]:
+        if self.paper_id:
+            return "paper"
+        if self.history_report_id:
+            return "history"
+        raise ValueError("No target kind found for next step input")
+
+    @property
+    def has_valid_selectors(self) -> bool:
+        if self.target_kind == "paper":
+            return len(self.paper_selectors) > 0 and len(self.history_selectors) == 0
+        if self.target_kind == "history":
+            return len(self.history_selectors) > 0 and len(self.paper_selectors) == 0
+        return False
+
 
 class EvidenceGap(BaseModel):
-    """
-    'What the model wishes it had' — a gap/caveat the writer must carry,
-    and a hint of what would resolve it.
-    """
+    # intentionally a bit ambiguous — lets the model express uncertainty plainly. this can be used to calibrate the workflow understanding vs the model's understanding.
     why: str = Field(..., description="Why this gap matters (what it blocks or could cause hallucination).")
+
     blocked_fields: List[str]
-    related_paper_ids: List[str]
+    paper_id: Optional[str] = Field(None, description="Paper to fetch from. Omit for history-only needs.")
+    history_report_id: Optional[str] = Field(
+        None,
+        description="History report identifier to fetch from (if you have ids). Omit for paper-only needs.",
+    )
+    paper_selectors: List[PaperSelector] = Field(default_factory=list, description="Which paper part(s) to extract.")
+    history_selectors: List[HistoryReportSelector] = Field(default_factory=list, description="Which history fields to extract.")
     priority: Literal[1, 2, 3] = Field(..., description="1=highest, 3=lowest urgency.")
 
+    @property
+    def target_kind(self) -> Literal["paper", "history"]:
+        if self.paper_id:
+            return "paper"
+        if self.history_report_id:
+            return "history"
+        raise ValueError("No target kind found for evidence gap")
+
+    @property
+    def has_valid_selectors(self) -> bool:
+        if self.target_kind == "paper":
+            return len(self.selectors) > 0 and len(self.history_selectors) == 0
+        if self.target_kind == "history":
+            return len(self.history_selectors) > 0 and len(self.selectors) == 0
+        return False
 
 class LLMReportPlannerOutput(BaseModel):
     plan: LLMReportPlannerPlan

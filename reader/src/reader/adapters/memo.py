@@ -167,6 +167,7 @@ class TopPaper(BaseModel):
 
 class HistoryReport(BaseModel):
     """History report data for a topic."""
+    report_id: int  # Report ID
     title: str
     summary: str
     keywords_json: Any  # Report keywords as JSON
