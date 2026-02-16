@@ -1,0 +1,1304 @@
+{
+  "source": "hf_monthly",
+  "period_start": "2025-10-01",
+  "period_end": "2025-10-31",
+  "raw_json": "",
+  "embed_config": {
+    "json_payload": {
+      "model_name": "BAAI/bge-small-en-v1.5",
+      "mode": "B",
+      "top_n_keywords": 10
+    },
+    "embed_config_id": "algo_lib.embedding|0.1.0"
+  },
+  "cluster_config": {
+    "json_payload": {
+      "k": 4,
+      "seed": 42,
+      "algorithm": "kmeans"
+    },
+    "cluster_config_id": "algo_lib.clustering|0.1.0"
+  },
+  "papers": [
+    {
+      "title": "The Dragon Hatchling: The Missing Link between the Transformer and\n  Models of the Brain",
+      "summary": "The relationship between computing systems and the brain has served as\nmotivation for pioneering theoreticians since John von Neumann and Alan Turing.\nUniform, scale-free biological networks, such as the brain, have powerful\nproperties, including generalizing over time, which is the main barrier for\nMachine Learning on the path to Universal Reasoning Models.\n  We introduce `Dragon Hatchling' (BDH), a new Large Language Model\narchitecture based on a scale-free biologically inspired network of \\n\nlocally-interacting neuron particles. BDH couples strong theoretical\nfoundations and inherent interpretability without sacrificing Transformer-like\nperformance.\n  BDH is a practical, performant state-of-the-art attention-based state space\nsequence learning architecture. In addition to being a graph model, BDH admits\na GPU-friendly formulation. It exhibits Transformer-like scaling laws:\nempirically BDH rivals GPT2 performance on language and translation tasks, at\nthe same number of parameters (10M to 1B), for the same training data.\n  BDH can be represented as a brain model. The working memory of BDH during\ninference entirely relies on synaptic plasticity with Hebbian learning using\nspiking neurons. We confirm empirically that specific, individual synapses\nstrengthen connection whenever BDH hears or reasons about a specific concept\nwhile processing language inputs. The neuron interaction network of BDH is a\ngraph of high modularity with heavy-tailed degree distribution. The BDH model\nis biologically plausible, explaining one possible mechanism which human\nneurons could use to achieve speech.\n  BDH is designed for interpretability. Activation vectors of BDH are sparse\nand positive. We demonstrate monosemanticity in BDH on language tasks.\nInterpretability of state, which goes beyond interpretability of neurons and\nmodel parameters, is an inherent feature of the BDH architecture.",
+      "keywords": [
+        "Large Language Model",
+        "scale-free network",
+        "Hebbian learning",
+        "synaptic plasticity",
+        "spiking neurons",
+        "graph model",
+        "GPU-friendly",
+        "Transformer-like scaling laws",
+        "monosemanticity",
+        "interpretability"
+      ],
+      "url": "https://arxiv.org/abs/2509.26507",
+      "published_at": "2025-09-30",
+      "paper_id": "hf:2509.26507"
+    },
+    {
+      "title": "Less is More: Recursive Reasoning with Tiny Networks",
+      "summary": "Hierarchical Reasoning Model (HRM) is a novel approach using two small neural\nnetworks recursing at different frequencies. This biologically inspired method\nbeats Large Language models (LLMs) on hard puzzle tasks such as Sudoku, Maze,\nand ARC-AGI while trained with small models (27M parameters) on small data\n(around 1000 examples). HRM holds great promise for solving hard problems with\nsmall networks, but it is not yet well understood and may be suboptimal. We\npropose Tiny Recursive Model (TRM), a much simpler recursive reasoning approach\nthat achieves significantly higher generalization than HRM, while using a\nsingle tiny network with only 2 layers. With only 7M parameters, TRM obtains\n45% test-accuracy on ARC-AGI-1 and 8% on ARC-AGI-2, higher than most LLMs\n(e.g., Deepseek R1, o3-mini, Gemini 2.5 Pro) with less than 0.01% of the\nparameters.",
+      "keywords": [
+        "Hierarchical Reasoning Model",
+        "HRM",
+        "Tiny Recursive Model",
+        "TRM",
+        "recursive reasoning",
+        "neural networks",
+        "ARC-AGI",
+        "Deepseek R1",
+        "o3-mini",
+        "Gemini 2.5 Pro"
+      ],
+      "url": "https://arxiv.org/abs/2510.04871",
+      "published_at": "2025-10-06",
+      "paper_id": "hf:2510.04871"
+    },
+    {
+      "title": "Agent Learning via Early Experience",
+      "summary": "A long-term goal of language agents is to learn and improve through their own\nexperience, ultimately outperforming humans in complex, real-world tasks.\nHowever, training agents from experience data with reinforcement learning\nremains difficult in many environments, which either lack verifiable rewards\n(e.g., websites) or require inefficient long-horizon rollouts (e.g., multi-turn\ntool use). As a result, most current agents rely on supervised fine-tuning on\nexpert data, which is challenging to scale and generalizes poorly. This\nlimitation stems from the nature of expert demonstrations: they capture only a\nnarrow range of scenarios and expose the agent to limited environment\ndiversity. We address this limitation with a middle-ground paradigm we call\nearly experience: interaction data generated by the agent's own actions, where\nthe resulting future states serve as supervision without reward signals. Within\nthis paradigm we study two strategies of using such data: (1) Implicit world\nmodeling, which uses collected states to ground the policy in environment\ndynamics; and (2) Self-reflection, where the agent learns from its suboptimal\nactions to improve reasoning and decision-making. We evaluate across eight\ndiverse environments and multiple model families. Our approaches consistently\nimprove effectiveness and out-of-domain generalization, highlighting the value\nof early experience. Moreover, in environments with verifiable rewards, our\nresults provide promising signals that early experience offers a strong\nfoundation for subsequent reinforcement learning, positioning it as a practical\nbridge between imitation learning and fully experience-driven agents.",
+      "keywords": [
+        "reinforcement learning",
+        "early experience",
+        "implicit world modeling",
+        "self-reflection",
+        "out-of-domain generalization"
+      ],
+      "url": "https://arxiv.org/abs/2510.08558",
+      "published_at": "2025-10-09",
+      "paper_id": "hf:2510.08558"
+    },
+    {
+      "title": "Scaling Latent Reasoning via Looped Language Models",
+      "summary": "Modern LLMs are trained to \"think\" primarily via explicit text generation,\nsuch as chain-of-thought (CoT), which defers reasoning to post-training and\nunder-leverages pre-training data. We present and open-source Ouro, named after\nthe recursive Ouroboros, a family of pre-trained Looped Language Models\n(LoopLM) that instead build reasoning into the pre-training phase through (i)\niterative computation in latent space, (ii) an entropy-regularized objective\nfor learned depth allocation, and (iii) scaling to 7.7T tokens. Ouro 1.4B and\n2.6B models enjoy superior performance that match the results of up to 12B SOTA\nLLMs across a wide range of benchmarks. Through controlled experiments, we show\nthis advantage stems not from increased knowledge capacity, but from superior\nknowledge manipulation capabilities. We also show that LoopLM yields reasoning\ntraces more aligned with final outputs than explicit CoT. We hope our results\nshow the potential of LoopLM as a novel scaling direction in the reasoning era.\nOur model could be found in: http://ouro-llm.github.io.",
+      "keywords": [
+        "Looped Language Models",
+        "LoopLM",
+        "iterative computation",
+        "latent space",
+        "entropy-regularized objective",
+        "learned depth allocation",
+        "chain-of-thought",
+        "knowledge manipulation",
+        "reasoning traces"
+      ],
+      "url": "https://arxiv.org/abs/2510.25741",
+      "published_at": "2025-10-29",
+      "paper_id": "hf:2510.25741"
+    },
+    {
+      "title": "Concerto: Joint 2D-3D Self-Supervised Learning Emerges Spatial\n  Representations",
+      "summary": "Humans learn abstract concepts through multisensory synergy, and once formed,\nsuch representations can often be recalled from a single modality. Inspired by\nthis principle, we introduce Concerto, a minimalist simulation of human concept\nlearning for spatial cognition, combining 3D intra-modal self-distillation with\n2D-3D cross-modal joint embedding. Despite its simplicity, Concerto learns more\ncoherent and informative spatial features, as demonstrated by zero-shot\nvisualizations. It outperforms both standalone SOTA 2D and 3D self-supervised\nmodels by 14.2% and 4.8%, respectively, as well as their feature concatenation,\nin linear probing for 3D scene perception. With full fine-tuning, Concerto sets\nnew SOTA results across multiple scene understanding benchmarks (e.g., 80.7%\nmIoU on ScanNet). We further present a variant of Concerto tailored for\nvideo-lifted point cloud spatial understanding, and a translator that linearly\nprojects Concerto representations into CLIP's language space, enabling\nopen-world perception. These results highlight that Concerto emerges spatial\nrepresentations with superior fine-grained geometric and semantic consistency.",
+      "keywords": [
+        "3D intra-modal self-distillation",
+        "2D-3D cross-modal joint embedding",
+        "zero-shot visualizations",
+        "linear probing",
+        "3D scene perception",
+        "ScanNet",
+        "mIoU",
+        "video-lifted point cloud",
+        "CLIP's language space",
+        "open-world perception",
+        "fine-grained geometric and semantic consistency"
+      ],
+      "url": "https://arxiv.org/abs/2510.23607",
+      "published_at": "2025-10-27",
+      "paper_id": "hf:2510.23607"
+    },
+    {
+      "title": "QeRL: Beyond Efficiency -- Quantization-enhanced Reinforcement Learning\n  for LLMs",
+      "summary": "We propose QeRL, a Quantization-enhanced Reinforcement Learning framework for\nlarge language models (LLMs). While RL is essential for LLMs' reasoning\ncapabilities, it is resource-intensive, requiring substantial GPU memory and\nlong rollout durations. QeRL addresses these issues by combining NVFP4\nquantization with Low-Rank Adaptation (LoRA), accelerating rollout phase of RL\nwhile reducing memory overhead. Beyond efficiency, our findings show that\nquantization noise increases policy entropy, enhancing exploration, and\nenabling the discovery of better strategies during RL. To further optimize\nexploration, QeRL introduces an Adaptive Quantization Noise (AQN) mechanism,\nwhich dynamically adjusts noise during training. Experiments demonstrate that\nQeRL delivers over 1.5 times speedup in the rollout phase. Moreover, this is\nthe first framework to enable RL training of a 32B LLM on a single H100 80GB\nGPU, while delivering overall speedups for RL training. It also achieves faster\nreward growth and higher final accuracy than 16-bit LoRA and QLoRA, while\nmatching the performance of full-parameter fine-tuning on mathematical\nbenchmarks such as GSM8K (90.8%) and MATH 500 (77.4%) in the 7B model. These\nresults establish QeRL as an efficient and effective framework for RL training\nin LLMs.",
+      "keywords": [
+        "NVFP4 quantization",
+        "Low-Rank Adaptation (LoRA)",
+        "Adaptive Quantization Noise (AQN)",
+        "reinforcement learning",
+        "large language models (LLMs)",
+        "rollout phase",
+        "policy entropy",
+        "exploration",
+        "reward growth",
+        "GSM8K",
+        "MATH 500"
+      ],
+      "url": "https://arxiv.org/abs/2510.11696",
+      "published_at": "2025-10-13",
+      "paper_id": "hf:2510.11696"
+    },
+    {
+      "title": "MCPMark: A Benchmark for Stress-Testing Realistic and Comprehensive MCP\n  Use",
+      "summary": "MCP standardizes how LLMs interact with external systems, forming the\nfoundation for general agents. However, existing MCP benchmarks remain narrow\nin scope: they focus on read-heavy tasks or tasks with limited interaction\ndepth, and fail to capture the complexity and realism of real-world workflows.\nTo address this gap, we propose MCPMark, a benchmark designed to evaluate MCP\nuse in a more realistic and comprehensive manner. It consists of 127\nhigh-quality tasks collaboratively created by domain experts and AI agents.\nEach task begins with a curated initial state and includes a programmatic\nscript for automatic verification. These tasks demand richer and more diverse\ninteractions with the environment, involving a broad range of create, read,\nupdate, and delete (CRUD) operations. We conduct a comprehensive evaluation of\ncutting-edge LLMs using a minimal agent framework that operates in a\ntool-calling loop. Empirical results show that the best-performing model,\ngpt-5-medium, reaches only 52.56\\% pass@1 and 33.86\\% pass^4, while other\nwidely regarded strong models, including claude-sonnet-4 and o3, fall below\n30\\% pass@1 and 15\\% pass^4. On average, LLMs require 16.2 execution\nturns and 17.4 tool calls per task, significantly surpassing those in\nprevious MCP benchmarks and highlighting the stress-testing nature of MCPMark.",
+      "keywords": [
+        "MCP",
+        "LLMs",
+        "general agents",
+        "MCP benchmarks",
+        "MCPMark",
+        "high-quality tasks",
+        "domain experts",
+        "AI agents",
+        "initial state",
+        "programmatic script",
+        "automatic verification",
+        "CRUD operations",
+        "minimal agent framework",
+        "tool-calling loop",
+        "gpt-5-medium",
+        "claude-sonnet-4",
+        "o3",
+        "pass@1",
+        "pass^4",
+        "execution turns",
+        "tool calls"
+      ],
+      "url": "https://arxiv.org/abs/2509.24002",
+      "published_at": "2025-09-28",
+      "paper_id": "hf:2509.24002"
+    },
+    {
+      "title": "Diffusion Transformers with Representation Autoencoders",
+      "summary": "Latent generative modeling, where a pretrained autoencoder maps pixels into a\nlatent space for the diffusion process, has become the standard strategy for\nDiffusion Transformers (DiT); however, the autoencoder component has barely\nevolved. Most DiTs continue to rely on the original VAE encoder, which\nintroduces several limitations: outdated backbones that compromise\narchitectural simplicity, low-dimensional latent spaces that restrict\ninformation capacity, and weak representations that result from purely\nreconstruction-based training and ultimately limit generative quality. In this\nwork, we explore replacing the VAE with pretrained representation encoders\n(e.g., DINO, SigLIP, MAE) paired with trained decoders, forming what we term\nRepresentation Autoencoders (RAEs). These models provide both high-quality\nreconstructions and semantically rich latent spaces, while allowing for a\nscalable transformer-based architecture. Since these latent spaces are\ntypically high-dimensional, a key challenge is enabling diffusion transformers\nto operate effectively within them. We analyze the sources of this difficulty,\npropose theoretically motivated solutions, and validate them empirically. Our\napproach achieves faster convergence without auxiliary representation alignment\nlosses. Using a DiT variant equipped with a lightweight, wide DDT head, we\nachieve strong image generation results on ImageNet: 1.51 FID at 256x256 (no\nguidance) and 1.13 at both 256x256 and 512x512 (with guidance). RAE offers\nclear advantages and should be the new default for diffusion transformer\ntraining.",
+      "keywords": [
+        "Latent generative modeling",
+        "Diffusion Transformers (DiT)",
+        "VAE encoder",
+        "Representation Autoencoders (RAEs)",
+        "pretrained representation encoders",
+        "DINO",
+        "SigLIP",
+        "MAE",
+        "high-dimensional latent spaces",
+        "transformer-based architecture",
+        "diffusion transformers",
+        "image generation",
+        "ImageNet",
+        "FID"
+      ],
+      "url": "https://arxiv.org/abs/2510.11690",
+      "published_at": "2025-10-13",
+      "paper_id": "hf:2510.11690"
+    },
+    {
+      "title": "A Theoretical Study on Bridging Internal Probability and\n  Self-Consistency for LLM Reasoning",
+      "summary": "Test-time scaling seeks to improve the reasoning performance of large\nlanguage models (LLMs) by adding computational resources. A prevalent approach\nwithin the field is sampling-based test-time scaling methods, which enhance\nreasoning by generating multiple reasoning paths for a given input during\ninference. However, despite its practical success, the theoretical foundations\nremain underexplored. In this paper, we provide the first theoretical framework\nfor analyzing sampling-based test-time scaling methods, grounded in the\nperspective of confidence estimation. Based on the framework, we analyze two\ndominant paradigms: self-consistency and perplexity, and reveal key\nlimitations: self-consistency suffers from high estimation error while\nperplexity exhibits substantial modeling error and possible degradation of the\nestimation error convergence. To address these limitations, we introduce RPC, a\nhybrid method that leverages our theoretical insights through two key\ncomponents: Perplexity Consistency and Reasoning Pruning. Perplexity\nConsistency combines the strengths of self-consistency and perplexity, boosting\nthe convergence rate of estimation error from linear to exponential while\npreserving model error. Reasoning Pruning prevents degradation by eliminating\nlow-probability reasoning paths. Both theoretical analysis and empirical\nresults across seven benchmark datasets demonstrate that RPC has a strong\npotential for reducing reasoning error. Notably, RPC achieves reasoning\nperformance comparable to self-consistency while not only enhancing confidence\nreliability but also reducing sampling costs by 50%. The code and resources are\navailable at https://wnjxyk.github.io/RPC.",
+      "keywords": [
+        "sampling-based test-time scaling",
+        "large language models",
+        "self-consistency",
+        "perplexity",
+        "Perplexity Consistency",
+        "Reasoning Pruning",
+        "confidence estimation",
+        "reasoning error",
+        "benchmark datasets"
+      ],
+      "url": "https://arxiv.org/abs/2510.15444",
+      "published_at": "2025-10-17",
+      "paper_id": "hf:2510.15444"
+    },
+    {
+      "title": "Spatial Forcing: Implicit Spatial Representation Alignment for\n  Vision-language-action Model",
+      "summary": "Vision-language-action (VLA) models have recently shown strong potential in\nenabling robots to follow language instructions and execute precise actions.\nHowever, most VLAs are built upon vision-language models pretrained solely on\n2D data, which lack accurate spatial awareness and hinder their ability to\noperate in the 3D physical world. Existing solutions attempt to incorporate\nexplicit 3D sensor inputs such as depth maps or point clouds, but these\napproaches face challenges due to sensor noise, hardware heterogeneity, and\nincomplete depth coverage in existing datasets. Alternative methods that\nestimate 3D cues from 2D images also suffer from the limited performance of\ndepth estimators.We propose Spatial Forcing (SF), a simple yet effective\nalignment strategy that implicitly forces VLA models to develop spatial\ncomprehension capabilities without relying on explicit 3D inputs or depth\nestimators. SF aligns intermediate visual embeddings of VLAs with geometric\nrepresentations produced by pretrained 3D foundation models. By enforcing\nalignment at intermediate layers, SF guides VLAs to encode richer spatial\nrepresentations that enhance action precision.Extensive experiments in\nsimulation and real-world environments demonstrate that SF achieves\nstate-of-the-art results, surpassing both 2D- and 3D-based VLAs. SF further\naccelerates training by up to 3.8x and improves data efficiency across diverse\nrobotic tasks. Project page is at https://spatial-forcing.github.io/",
+      "keywords": [],
+      "url": "https://arxiv.org/abs/2510.12276",
+      "published_at": "2025-10-14",
+      "paper_id": "hf:2510.12276"
+    },
+    {
+      "title": "D2E: Scaling Vision-Action Pretraining on Desktop Data for Transfer to\n  Embodied AI",
+      "summary": "Large language models leverage internet-scale text data, yet embodied AI\nremains constrained by the prohibitive costs of physical trajectory collection.\nDesktop environments -- particularly gaming -- offer a compelling alternative:\nthey provide rich sensorimotor interactions at scale while maintaining the\nstructured observation-action coupling essential for embodied learning. We\npresent D2E (Desktop to Embodied AI), a framework that demonstrates desktop\ninteractions can serve as an effective pretraining substrate for robotics\nembodied AI tasks. Unlike prior work that remained domain-specific (e.g., VPT\nfor Minecraft) or kept data proprietary (e.g., SIMA), D2E establishes a\ncomplete pipeline from scalable desktop data collection to verified transfer in\nembodied domains. Our framework comprises three components: (1) the OWA Toolkit\nthat unifies diverse desktop interactions into a standardized format with 152x\ncompression, (2) the Generalist-IDM that achieves strong zero-shot\ngeneralization across unseen games through timestamp-based event prediction,\nenabling internet-scale pseudo-labeling, and (3) VAPT that transfers\ndesktop-pretrained representations to physical manipulation and navigation.\nUsing 1.3K+ hours of data (259 hours of human demonstrations, and 1K+ hours of\npseudo-labeled gameplay), we achieve a total of 96.6% success rate on LIBERO\nmanipulation and 83.3% on CANVAS navigation benchmarks. This validates that\nsensorimotor primitives in digital interactions exhibit sufficient invariance\nto transfer meaningfully to physical embodied tasks, establishing desktop\npretraining as a practical paradigm for robotics. We will make all our work\npublic, including the OWA toolkit, datasets of human-collected and\npseudo-labeled, and VAPT-trained models available at\nhttps://worv-ai.github.io/d2e/",
+      "keywords": [
+        "embodied AI",
+        "desktop environments",
+        "sensorimotor interactions",
+        "OWA Toolkit",
+        "Generalist-IDM",
+        "timestamp-based event prediction",
+        "zero-shot generalization",
+        "internet-scale pseudo-labeling",
+        "VAPT",
+        "LIBERO manipulation",
+        "CANVAS navigation",
+        "desktop pretraining"
+      ],
+      "url": "https://arxiv.org/abs/2510.05684",
+      "published_at": "2025-10-07",
+      "paper_id": "hf:2510.05684"
+    },
+    {
+      "title": "DeepSearch: Overcome the Bottleneck of Reinforcement Learning with\n  Verifiable Rewards via Monte Carlo Tree Search",
+      "summary": "Although RLVR has become an essential component for developing advanced\nreasoning skills in LLMs, contemporary studies have documented training\nplateaus that emerge following thousands of optimization steps, demonstrating\nnotable decreases in performance gains despite increased computational\ninvestment. This limitation stems from the sparse exploration patterns inherent\nin current RLVR practices, where models rely on limited rollouts that often\nmiss critical reasoning paths and fail to provide systematic coverage of the\nsolution space. We present DeepSearch, a framework that integrates Monte Carlo\nTree Search directly into RLVR training. In contrast to existing methods that\nrely on tree search only at inference, DeepSearch embeds structured search into\nthe training loop, enabling systematic exploration and fine-grained credit\nassignment across reasoning steps. Through training-time exploration,\nDeepSearch addresses the fundamental bottleneck of insufficient exploration,\nwhich leads to diminishing performance improvements over prolonged training\nsteps. Our contributions include: (1) a global frontier selection strategy that\nprioritizes promising nodes across the search tree, (2) selection with\nentropy-based guidance that identifies confident paths for supervision, and (3)\nadaptive replay buffer training with solution caching for efficiency.\nExperiments on mathematical reasoning benchmarks show that DeepSearch achieves\n62.95% average accuracy and establishes a new state-of-the-art for 1.5B\nreasoning models - using 5.7x fewer GPU hours than extended training\napproaches. These results highlight the importance of strategic exploration\nover brute-force scaling and demonstrate the promise of algorithmic innovation\nfor advancing RLVR methodologies. DeepSearch establishes a new direction for\nscaling reasoning capabilities through systematic search rather than prolonged\ncomputation.",
+      "keywords": [
+        "RLVR",
+        "Monte Carlo Tree Search",
+        "training loop",
+        "systematic exploration",
+        "credit assignment",
+        "global frontier selection",
+        "entropy-based guidance",
+        "adaptive replay buffer",
+        "solution caching",
+        "mathematical reasoning benchmarks"
+      ],
+      "url": "https://arxiv.org/abs/2509.25454",
+      "published_at": "2025-09-29",
+      "paper_id": "hf:2509.25454"
+    },
+    {
+      "title": "Vision-Zero: Scalable VLM Self-Improvement via Strategic Gamified\n  Self-Play",
+      "summary": "Although reinforcement learning (RL) can effectively enhance the reasoning\ncapabilities of vision-language models (VLMs), current methods remain heavily\ndependent on labor-intensive datasets that require extensive manual\nconstruction and verification, leading to extremely high training costs and\nconsequently constraining the practical deployment of VLMs. To address this\nchallenge, we propose Vision-Zero, a domain-agnostic framework enabling VLM\nself-improvement through competitive visual games generated from arbitrary\nimage pairs. Specifically, Vision-Zero encompasses three main attributes: (1)\nStrategic Self-Play Framework: Vision-Zero trains VLMs in \"Who Is the\nSpy\"-style games, where the models engage in strategic reasoning and actions\nacross multiple roles. Through interactive gameplay, models autonomously\ngenerate their training data without human annotation. (2) Gameplay from\nArbitrary Images: Unlike existing gamified frameworks, Vision-Zero can generate\ngames from arbitrary images, thereby enhancing the model's reasoning ability\nacross diverse domains and showing strong generalization to different tasks. We\ndemonstrate this versatility using three distinct types of image datasets:\nCLEVR-based synthetic scenes, charts, and real-world images. (3) Sustainable\nPerformance Gain: We introduce Iterative Self-Play Policy Optimization\n(Iterative-SPO), a novel training algorithm that alternates between Self-Play\nand reinforcement learning with verifiable rewards (RLVR), mitigating the\nperformance plateau often seen in self-play-only training and achieving\nsustained long-term improvements. Despite using label-free data, Vision-Zero\nachieves state-of-the-art performance on reasoning, chart question answering,\nand vision-centric understanding tasks, surpassing other annotation-based\nmethods. Models and code has been released at\nhttps://github.com/wangqinsi1/Vision-Zero.",
+      "keywords": [
+        "reinforcement learning",
+        "vision-language models",
+        "strategic self-play framework",
+        "self-play",
+        "reinforcement learning with verifiable rewards",
+        "Iterative Self-Play Policy Optimization"
+      ],
+      "url": "https://arxiv.org/abs/2509.25541",
+      "published_at": "2025-09-29",
+      "paper_id": "hf:2509.25541"
+    },
+    {
+      "title": "Agentic Context Engineering: Evolving Contexts for Self-Improving\n  Language Models",
+      "summary": "Large language model (LLM) applications such as agents and domain-specific\nreasoning increasingly rely on context adaptation -- modifying inputs with\ninstructions, strategies, or evidence, rather than weight updates. Prior\napproaches improve usability but often suffer from brevity bias, which drops\ndomain insights for concise summaries, and from context collapse, where\niterative rewriting erodes details over time. Building on the adaptive memory\nintroduced by Dynamic Cheatsheet, we introduce ACE (Agentic Context\nEngineering), a framework that treats contexts as evolving playbooks that\naccumulate, refine, and organize strategies through a modular process of\ngeneration, reflection, and curation. ACE prevents collapse with structured,\nincremental updates that preserve detailed knowledge and scale with\nlong-context models. Across agent and domain-specific benchmarks, ACE optimizes\ncontexts both offline (e.g., system prompts) and online (e.g., agent memory),\nconsistently outperforming strong baselines: +10.6% on agents and +8.6% on\nfinance, while significantly reducing adaptation latency and rollout cost.\nNotably, ACE could adapt effectively without labeled supervision and instead by\nleveraging natural execution feedback. On the AppWorld leaderboard, ACE matches\nthe top-ranked production-level agent on the overall average and surpasses it\non the harder test-challenge split, despite using a smaller open-source model.\nThese results show that comprehensive, evolving contexts enable scalable,\nefficient, and self-improving LLM systems with low overhead.",
+      "keywords": [
+        "Large language model",
+        "context adaptation",
+        "Dynamic Cheatsheet",
+        "ACE",
+        "Agentic Context Engineering",
+        "generation",
+        "reflection",
+        "curation",
+        "context collapse",
+        "adaptation latency",
+        "rollout cost",
+        "natural execution feedback",
+        "AppWorld leaderboard"
+      ],
+      "url": "https://arxiv.org/abs/2510.04618",
+      "published_at": "2025-10-06",
+      "paper_id": "hf:2510.04618"
+    },
+    {
+      "title": "Thinking with Camera: A Unified Multimodal Model for Camera-Centric\n  Understanding and Generation",
+      "summary": "Camera-centric understanding and generation are two cornerstones of spatial\nintelligence, yet they are typically studied in isolation. We present Puffin, a\nunified camera-centric multimodal model that extends spatial awareness along\nthe camera dimension. Puffin integrates language regression and diffusion-based\ngeneration to interpret and create scenes from arbitrary viewpoints. To bridge\nthe modality gap between cameras and vision-language, we introduce a novel\nparadigm that treats camera as language, enabling thinking with camera. This\nguides the model to align spatially grounded visual cues with photographic\nterminology while reasoning across geometric context. Puffin is trained on\nPuffin-4M, a large-scale dataset of 4 million vision-language-camera triplets.\nWe incorporate both global camera parameters and pixel-wise camera maps,\nyielding flexible and reliable spatial generation. Experiments demonstrate\nPuffin superior performance over specialized models for camera-centric\ngeneration and understanding. With instruction tuning, Puffin generalizes to\ndiverse cross-view tasks such as spatial imagination, world exploration, and\nphotography guidance. We will release the code, models, dataset pipeline, and\nbenchmark to advance multimodal spatial intelligence research.",
+      "keywords": [
+        "language regression",
+        "diffusion-based generation",
+        "camera-centric",
+        "multimodal model",
+        "spatial awareness",
+        "vision-language",
+        "camera as language",
+        "geometric context",
+        "Puffin-4M",
+        "global camera parameters",
+        "pixel-wise camera maps",
+        "spatial generation",
+        "instruction tuning",
+        "spatial imagination",
+        "world exploration",
+        "photography guidance"
+      ],
+      "url": "https://arxiv.org/abs/2510.08673",
+      "published_at": "2025-10-09",
+      "paper_id": "hf:2510.08673"
+    },
+    {
+      "title": "Efficient Long-context Language Model Training by Core Attention\n  Disaggregation",
+      "summary": "We present core attention disaggregation (CAD), a technique that improves\nlong-context large language model training by decoupling the core attention\ncomputation, softmax(QK^T)V, from the rest of the model and executing it on a\nseparate pool of devices. In existing systems, core attention is colocated with\nother layers; at long context lengths, its quadratic compute growth compared to\nthe near-linear growth of other components causes load imbalance and stragglers\nacross data and pipeline parallel groups. CAD is enabled by two observations.\nFirst, core attention is stateless: it has no trainable parameters and only\nminimal transient data, so balancing reduces to scheduling compute-bound tasks.\nSecond, it is composable: modern attention kernels retain high efficiency when\nprocessing fused batches of token-level shards with arbitrary lengths. CAD\npartitions core attention into token-level tasks and dispatches them to\ndedicated attention servers, which dynamically rebatch tasks to equalize\ncompute without sacrificing kernel efficiency. We implement CAD in a system\ncalled DistCA, which uses a ping-pong execution scheme to fully overlap\ncommunication with computation and in-place execution on attention servers to\nreduce memory use. On 512 H200 GPUs and context lengths up to 512k tokens,\nDistCA improves end-to-end training throughput by up to 1.35x, eliminates data\nand pipeline parallel stragglers, and achieves near-perfect compute and memory\nbalance.",
+      "keywords": [
+        "core attention disaggregation",
+        "core attention",
+        "softmax(QK^T)V",
+        "data parallel",
+        "pipeline parallel",
+        "token-level shards",
+        "attention servers",
+        "DistCA",
+        "ping-pong execution",
+        "in-place execution"
+      ],
+      "url": "https://arxiv.org/abs/2510.18121",
+      "published_at": "2025-10-20",
+      "paper_id": "hf:2510.18121"
+    },
+    {
+      "title": "ReCode: Unify Plan and Action for Universal Granularity Control",
+      "summary": "Real-world tasks require decisions at varying granularities, and humans excel\nat this by leveraging a unified cognitive representation where planning is\nfundamentally understood as a high-level form of action. However, current Large\nLanguage Model (LLM)-based agents lack this crucial capability to operate\nfluidly across decision granularities. This limitation stems from existing\nparadigms that enforce a rigid separation between high-level planning and\nlow-level action, which impairs dynamic adaptability and limits generalization.\nWe propose ReCode (Recursive Code Generation), a novel paradigm that addresses\nthis limitation by unifying planning and action within a single code\nrepresentation. In this representation, ReCode treats high-level plans as\nabstract placeholder functions, which the agent then recursively decomposes\ninto finer-grained sub-functions until reaching primitive actions. This\nrecursive approach dissolves the rigid boundary between plan and action,\nenabling the agent to dynamically control its decision granularity.\nFurthermore, the recursive structure inherently generates rich,\nmulti-granularity training data, enabling models to learn hierarchical\ndecision-making processes. Extensive experiments show ReCode significantly\nsurpasses advanced baselines in inference performance and demonstrates\nexceptional data efficiency in training, validating our core insight that\nunifying planning and action through recursive code generation is a powerful\nand effective approach to achieving universal granularity control. The code is\navailable at https://github.com/FoundationAgents/ReCode.",
+      "keywords": [
+        "Large Language Model",
+        "ReCode",
+        "Recursive Code Generation",
+        "high-level planning",
+        "low-level action",
+        "decision granularity",
+        "abstract placeholder functions",
+        "primitive actions",
+        "hierarchical decision-making processes",
+        "inference performance",
+        "data efficiency"
+      ],
+      "url": "https://arxiv.org/abs/2510.23564",
+      "published_at": "2025-10-27",
+      "paper_id": "hf:2510.23564"
+    },
+    {
+      "title": "Kimi Linear: An Expressive, Efficient Attention Architecture",
+      "summary": "We introduce Kimi Linear, a hybrid linear attention architecture that, for\nthe first time, outperforms full attention under fair comparisons across\nvarious scenarios -- including short-context, long-context, and reinforcement\nlearning (RL) scaling regimes. At its core lies Kimi Delta Attention (KDA), an\nexpressive linear attention module that extends Gated DeltaNet with a\nfiner-grained gating mechanism, enabling more effective use of limited\nfinite-state RNN memory. Our bespoke chunkwise algorithm achieves high hardware\nefficiency through a specialized variant of the Diagonal-Plus-Low-Rank (DPLR)\ntransition matrices, which substantially reduces computation compared to the\ngeneral DPLR formulation while remaining more consistent with the classical\ndelta rule.\n  We pretrain a Kimi Linear model with 3B activated parameters and 48B total\nparameters, based on a layerwise hybrid of KDA and Multi-Head Latent Attention\n(MLA). Our experiments show that with an identical training recipe, Kimi Linear\noutperforms full MLA with a sizeable margin across all evaluated tasks, while\nreducing KV cache usage by up to 75% and achieving up to 6 times decoding\nthroughput for a 1M context. These results demonstrate that Kimi Linear can be\na drop-in replacement for full attention architectures with superior\nperformance and efficiency, including tasks with longer input and output\nlengths.\n  To support further research, we open-source the KDA kernel and vLLM\nimplementations, and release the pre-trained and instruction-tuned model\ncheckpoints.",
+      "keywords": [
+        "linear attention",
+        "Kimi Delta Attention",
+        "Gated DeltaNet",
+        "finite-state RNN memory",
+        "chunkwise algorithm",
+        "Diagonal-Plus-Low-Rank",
+        "MLA",
+        "KV cache",
+        "decoding throughput",
+        "vLLM"
+      ],
+      "url": "https://arxiv.org/abs/2510.26692",
+      "published_at": "2025-10-30",
+      "paper_id": "hf:2510.26692"
+    },
+    {
+      "title": "Robot Learning: A Tutorial",
+      "summary": "Robot learning is at an inflection point, driven by rapid advancements in\nmachine learning and the growing availability of large-scale robotics data.\nThis shift from classical, model-based methods to data-driven, learning-based\nparadigms is unlocking unprecedented capabilities in autonomous systems. This\ntutorial navigates the landscape of modern robot learning, charting a course\nfrom the foundational principles of Reinforcement Learning and Behavioral\nCloning to generalist, language-conditioned models capable of operating across\ndiverse tasks and even robot embodiments. This work is intended as a guide for\nresearchers and practitioners, and our goal is to equip the reader with the\nconceptual understanding and practical tools necessary to contribute to\ndevelopments in robot learning, with ready-to-use examples implemented in\nlerobot.",
+      "keywords": [
+        "Reinforcement Learning",
+        "Behavioral Cloning",
+        "language-conditioned models"
+      ],
+      "url": "https://arxiv.org/abs/2510.12403",
+      "published_at": "2025-10-14",
+      "paper_id": "hf:2510.12403"
+    },
+    {
+      "title": "Paper2Video: Automatic Video Generation from Scientific Papers",
+      "summary": "Academic presentation videos have become an essential medium for research\ncommunication, yet producing them remains highly labor-intensive, often\nrequiring hours of slide design, recording, and editing for a short 2 to 10\nminutes video. Unlike natural video, presentation video generation involves\ndistinctive challenges: inputs from research papers, dense multi-modal\ninformation (text, figures, tables), and the need to coordinate multiple\naligned channels such as slides, subtitles, speech, and human talker. To\naddress these challenges, we introduce PaperTalker, the first benchmark of 101\nresearch papers paired with author-created presentation videos, slides, and\nspeaker metadata. We further design four tailored evaluation metrics--Meta\nSimilarity, PresentArena, PresentQuiz, and IP Memory--to measure how videos\nconvey the paper's information to the audience. Building on this foundation, we\npropose PaperTalker, the first multi-agent framework for academic presentation\nvideo generation. It integrates slide generation with effective layout\nrefinement by a novel effective tree search visual choice, cursor grounding,\nsubtitling, speech synthesis, and talking-head rendering, while parallelizing\nslide-wise generation for efficiency. Experiments on Paper2Video demonstrate\nthat the presentation videos produced by our approach are more faithful and\ninformative than existing baselines, establishing a practical step toward\nautomated and ready-to-use academic video generation. Our dataset, agent, and\ncode are available at https://github.com/showlab/Paper2Video.",
+      "keywords": [
+        "multi-agent framework",
+        "slide generation",
+        "layout refinement",
+        "tree search visual choice",
+        "cursor grounding",
+        "subtitling",
+        "speech synthesis",
+        "talking-head rendering",
+        "parallelization",
+        "slide-wise generation"
+      ],
+      "url": "https://arxiv.org/abs/2510.05096",
+      "published_at": "2025-10-06",
+      "paper_id": "hf:2510.05096"
+    },
+    {
+      "title": "The End of Manual Decoding: Towards Truly End-to-End Language Models",
+      "summary": "The \"end-to-end\" label for LLMs is a misnomer. In practice, they depend on a\nnon-differentiable decoding process that requires laborious, hand-tuning of\nhyperparameters like temperature and top-p. This paper introduces AutoDeco, a\nnovel architecture that enables truly \"end-to-end\" generation by learning to\ncontrol its own decoding strategy. We augment the standard transformer with\nlightweight heads that, at each step, dynamically predict context-specific\ntemperature and top-p values alongside the next-token logits. This approach\ntransforms decoding into a parametric, token-level process, allowing the model\nto self-regulate its sampling strategy within a single forward pass.\n  Through extensive experiments on eight benchmarks, we demonstrate that\nAutoDeco not only significantly outperforms default decoding strategies but\nalso achieves performance comparable to an oracle-tuned baseline derived from\n\"hacking the test set\"-a practical upper bound for any static method.\nCrucially, we uncover an emergent capability for instruction-based decoding\ncontrol: the model learns to interpret natural language commands (e.g.,\n\"generate with low randomness\") and adjusts its predicted temperature and top-p\non a token-by-token basis, opening a new paradigm for steerable and interactive\nLLM decoding.",
+      "keywords": [
+        "LLMs",
+        "end-to-end",
+        "decoding process",
+        "hyperparameters",
+        "temperature",
+        "top-p",
+        "AutoDeco",
+        "transformer",
+        "lightweight heads",
+        "next-token logits",
+        "parametric",
+        "token-level process",
+        "self-regulation",
+        "sampling strategy",
+        "instruction-based decoding control",
+        "natural language commands"
+      ],
+      "url": "https://arxiv.org/abs/2510.26697",
+      "published_at": "2025-10-30",
+      "paper_id": "hf:2510.26697"
+    },
+    {
+      "title": "Every Attention Matters: An Efficient Hybrid Architecture for\n  Long-Context Reasoning",
+      "summary": "In this technical report, we present the Ring-linear model series,\nspecifically including Ring-mini-linear-2.0 and Ring-flash-linear-2.0.\nRing-mini-linear-2.0 comprises 16B parameters and 957M activations, while\nRing-flash-linear-2.0 contains 104B parameters and 6.1B activations. Both\nmodels adopt a hybrid architecture that effectively integrates linear attention\nand softmax attention, significantly reducing I/O and computational overhead in\nlong-context inference scenarios. Compared to a 32 billion parameter dense\nmodel, this series reduces inference cost to 1/10, and compared to the original\nRing series, the cost is also reduced by over 50%. Furthermore, through\nsystematic exploration of the ratio between different attention mechanisms in\nthe hybrid architecture, we have identified the currently optimal model\nstructure. Additionally, by leveraging our self-developed high-performance FP8\noperator library-linghe, overall training efficiency has been improved by 50%.\nBenefiting from the high alignment between the training and inference engine\noperators, the models can undergo long-term, stable, and highly efficient\noptimization during the reinforcement learning phase, consistently maintaining\nSOTA performance across multiple challenging complex reasoning benchmarks.",
+      "keywords": [
+        "linear attention",
+        "softmax attention",
+        "hybrid architecture",
+        "FP8 operator library",
+        "reinforcement learning",
+        "SOTA performance"
+      ],
+      "url": "https://arxiv.org/abs/2510.19338",
+      "published_at": "2025-10-22",
+      "paper_id": "hf:2510.19338"
+    },
+    {
+      "title": "When Models Lie, We Learn: Multilingual Span-Level Hallucination\n  Detection with PsiloQA",
+      "summary": "Hallucination detection remains a fundamental challenge for the safe and\nreliable deployment of large language models (LLMs), especially in applications\nrequiring factual accuracy. Existing hallucination benchmarks often operate at\nthe sequence level and are limited to English, lacking the fine-grained,\nmultilingual supervision needed for a comprehensive evaluation. In this work,\nwe introduce PsiloQA, a large-scale, multilingual dataset annotated with\nspan-level hallucinations across 14 languages. PsiloQA is constructed through\nan automated three-stage pipeline: generating question-answer pairs from\nWikipedia using GPT-4o, eliciting potentially hallucinated answers from diverse\nLLMs in a no-context setting, and automatically annotating hallucinated spans\nusing GPT-4o by comparing against golden answers and retrieved context. We\nevaluate a wide range of hallucination detection methods -- including\nuncertainty quantification, LLM-based tagging, and fine-tuned encoder models --\nand show that encoder-based models achieve the strongest performance across\nlanguages. Furthermore, PsiloQA demonstrates effective cross-lingual\ngeneralization and supports robust knowledge transfer to other benchmarks, all\nwhile being significantly more cost-efficient than human-annotated datasets.\nOur dataset and results advance the development of scalable, fine-grained\nhallucination detection in multilingual settings.",
+      "keywords": [
+        "large language models",
+        "hallucination detection",
+        "PsiloQA",
+        "span-level hallucinations",
+        "multilingual",
+        "GPT-4o",
+        "uncertainty quantification",
+        "LLM-based tagging",
+        "encoder models",
+        "cross-lingual generalization",
+        "knowledge transfer"
+      ],
+      "url": "https://arxiv.org/abs/2510.04849",
+      "published_at": "2025-10-06",
+      "paper_id": "hf:2510.04849"
+    },
+    {
+      "title": "LightMem: Lightweight and Efficient Memory-Augmented Generation",
+      "summary": "Despite their remarkable capabilities, Large Language Models (LLMs) struggle\nto effectively leverage historical interaction information in dynamic and\ncomplex environments. Memory systems enable LLMs to move beyond stateless\ninteractions by introducing persistent information storage, retrieval, and\nutilization mechanisms. However, existing memory systems often introduce\nsubstantial time and computational overhead. To this end, we introduce a new\nmemory system called LightMem, which strikes a balance between the performance\nand efficiency of memory systems. Inspired by the Atkinson-Shiffrin model of\nhuman memory, LightMem organizes memory into three complementary stages. First,\ncognition-inspired sensory memory rapidly filters irrelevant information\nthrough lightweight compression and groups information according to their\ntopics. Next, topic-aware short-term memory consolidates these topic-based\ngroups, organizing and summarizing content for more structured access. Finally,\nlong-term memory with sleep-time update employs an offline procedure that\ndecouples consolidation from online inference. Experiments on LongMemEval with\nGPT and Qwen backbones show that LightMem outperforms strong baselines in\naccuracy (up to 10.9% gains) while reducing token usage by up to 117x, API\ncalls by up to 159x, and runtime by over 12x. The code is available at\nhttps://github.com/zjunlp/LightMem.",
+      "keywords": [
+        "Large Language Models",
+        "LLMs",
+        "memory systems",
+        "LightMem",
+        "Atkinson-Shiffrin model",
+        "sensory memory",
+        "topic-aware short-term memory",
+        "long-term memory",
+        "sleep-time update",
+        "LongMemEval",
+        "GPT",
+        "Qwen",
+        "token usage",
+        "API calls",
+        "runtime"
+      ],
+      "url": "https://arxiv.org/abs/2510.18866",
+      "published_at": "2025-10-21",
+      "paper_id": "hf:2510.18866"
+    },
+    {
+      "title": "PaddleOCR-VL: Boosting Multilingual Document Parsing via a 0.9B Ultra-Compact Vision-Language Model",
+      "summary": "In this report, we propose PaddleOCR-VL, a SOTA and resource-efficient model tailored for document parsing. Its core component is PaddleOCR-VL-0.9B, a compact yet powerful vision-language model (VLM) that integrates a NaViT-style dynamic resolution visual encoder with the ERNIE-4.5-0.3B language model to enable accurate element recognition. This innovative model efficiently supports 109 languages and excels in recognizing complex elements (e.g., text, tables, formulas, and charts), while maintaining minimal resource consumption. Through comprehensive evaluations on widely used public benchmarks and in-house benchmarks, PaddleOCR-VL achieves SOTA performance in both page-level document parsing and element-level recognition. It significantly outperforms existing solutions, exhibits strong competitiveness against top-tier VLMs, and delivers fast inference speeds. These strengths make it highly suitable for practical deployment in real-world scenarios. Code is available at https://github.com/PaddlePaddle/PaddleOCR .",
+      "keywords": [
+        "vision-language model",
+        "VLM",
+        "NaViT-style dynamic resolution visual encoder",
+        "ERNIE",
+        "element recognition",
+        "page-level document parsing",
+        "element-level recognition"
+      ],
+      "url": "https://arxiv.org/abs/2510.14528",
+      "published_at": "2025-10-16",
+      "paper_id": "hf:2510.14528"
+    },
+    {
+      "title": "Advancing End-to-End Pixel Space Generative Modeling via Self-supervised\n  Pre-training",
+      "summary": "Pixel-space generative models are often more difficult to train and generally\nunderperform compared to their latent-space counterparts, leaving a persistent\nperformance and efficiency gap. In this paper, we introduce a novel two-stage\ntraining framework that closes this gap for pixel-space diffusion and\nconsistency models. In the first stage, we pre-train encoders to capture\nmeaningful semantics from clean images while aligning them with points along\nthe same deterministic sampling trajectory, which evolves points from the prior\nto the data distribution. In the second stage, we integrate the encoder with a\nrandomly initialized decoder and fine-tune the complete model end-to-end for\nboth diffusion and consistency models. Our training framework demonstrates\nstrong empirical performance on ImageNet dataset. Specifically, our diffusion\nmodel reaches an FID of 2.04 on ImageNet-256 and 2.35 on ImageNet-512 with 75\nnumber of function evaluations (NFE), surpassing prior pixel-space methods by a\nlarge margin in both generation quality and efficiency while rivaling leading\nVAE-based models at comparable training cost. Furthermore, on ImageNet-256, our\nconsistency model achieves an impressive FID of 8.82 in a single sampling step,\nsignificantly surpassing its latent-space counterpart. To the best of our\nknowledge, this marks the first successful training of a consistency model\ndirectly on high-resolution images without relying on pre-trained VAEs or\ndiffusion models.",
+      "keywords": [],
+      "url": "https://arxiv.org/abs/2510.12586",
+      "published_at": "2025-10-14",
+      "paper_id": "hf:2510.12586"
+    },
+    {
+      "title": "MM-HELIX: Boosting Multimodal Long-Chain Reflective Reasoning with\n  Holistic Platform and Adaptive Hybrid Policy Optimization",
+      "summary": "While current Multimodal Large Language Models (MLLMs) have demonstrated\nproficiency in reasoning tasks such as mathematics and logic, their capacity\nfor long-chain reflective reasoning, a prerequisite for solving complex\nreal-world problems, remains largely underexplored. In this work, we first\nconduct an extensive empirical investigation to evaluate this capability.\nLeveraging a carefully designed data synthesis engine, we construct MM-HELIX, a\nmultimodal benchmark consisting 1,260 samples of 42 challenging synthetic tasks\nthat require iterative thinking and backtracking. Empirical results on this\nbenchmark reveal that existing MLLMs exhibit significant performance deficits\nin long-chain reflective reasoning. To address this limitation, we generate\npost-training data and further explore learning paradigms for exploiting such\ndata. We first develop the Step-Elicited Response Generation pipeline to create\nMM-HELIX-100K, a large-scale dataset of 100k high-quality, reflective reasoning\ntraces for instruction-tuning stage. Given that standard Reinforcement Learning\nfails on complex tasks due to sparse reward signals and catastrophic forgetting\nafter Supervised Fine-Tuning, we propose Adaptive Hybrid Policy Optimization\n(AHPO), a novel training strategy that dynamically unifies offline supervision\nand online optimization into a single stage. This strategy enables the model to\nlearn from expert data when rewards are sparse and conduct independent\nexploration once proficient. When applied to the Qwen2.5-VL-7B baseline, our\nmethod achieves a +18.6\\% accuracy improvement on MM-HELIX benchmark and\ndemonstrates strong generalization with a +5.7\\% average performance gain on\ngeneral mathematic and logic tasks. Our work demonstrate that reflective\nreasoning in MLLMs can be effectively learned and generalized, paving the way\nfor developing more capable MLLMs.",
+      "keywords": [
+        "Multimodal Large Language Models",
+        "long-chain reflective reasoning",
+        "MM-HELIX",
+        "Step-Elicited Response Generation",
+        "Adaptive Hybrid Policy Optimization",
+        "offline supervision",
+        "online optimization",
+        "Qwen2.5-VL-7B"
+      ],
+      "url": "https://arxiv.org/abs/2510.08540",
+      "published_at": "2025-10-09",
+      "paper_id": "hf:2510.08540"
+    },
+    {
+      "title": "Emu3.5: Native Multimodal Models are World Learners",
+      "summary": "We introduce Emu3.5, a large-scale multimodal world model that natively\npredicts the next state across vision and language. Emu3.5 is pre-trained\nend-to-end with a unified next-token prediction objective on a corpus of\nvision-language interleaved data containing over 10 trillion tokens, primarily\nderived from sequential frames and transcripts of internet videos. The model\nnaturally accepts interleaved vision-language inputs and generates interleaved\nvision-language outputs. Emu3.5 is further post-trained with large-scale\nreinforcement learning to enhance multimodal reasoning and generation. To\nimprove inference efficiency, we propose Discrete Diffusion Adaptation (DiDA),\nwhich converts token-by-token decoding into bidirectional parallel prediction,\naccelerating per-image inference by about 20x without sacrificing performance.\nEmu3.5 exhibits strong native multimodal capabilities, including long-horizon\nvision-language generation, any-to-image (X2I) generation, and complex\ntext-rich image generation. It also exhibits generalizable world-modeling\nabilities, enabling spatiotemporally consistent world exploration and\nopen-world embodied manipulation across diverse scenarios and tasks. For\ncomparison, Emu3.5 achieves performance comparable to Gemini 2.5 Flash Image\n(Nano Banana) on image generation and editing tasks and demonstrates superior\nresults on a suite of interleaved generation tasks. We open-source Emu3.5 at\nhttps://github.com/baaivision/Emu3.5 to support community research.",
+      "keywords": [
+        "multimodal world model",
+        "next-token prediction",
+        "vision-language interleaved data",
+        "Discrete Diffusion Adaptation",
+        "bidirectional parallel prediction",
+        "long-horizon vision-language generation",
+        "any-to-image generation",
+        "complex text-rich image generation",
+        "spatiotemporally consistent world exploration",
+        "open-world embodied manipulation"
+      ],
+      "url": "https://arxiv.org/abs/2510.26583",
+      "published_at": "2025-10-30",
+      "paper_id": "hf:2510.26583"
+    },
+    {
+      "title": "LongCodeZip: Compress Long Context for Code Language Models",
+      "summary": "Code generation under long contexts is becoming increasingly critical as\nLarge Language Models (LLMs) are required to reason over extensive information\nin the codebase. While recent advances enable code LLMs to process long inputs,\nhigh API costs and generation latency remain substantial bottlenecks. Existing\ncontext pruning techniques, such as LLMLingua, achieve promising results for\ngeneral text but overlook code-specific structures and dependencies, leading to\nsuboptimal performance in programming tasks. In this paper, we propose\nLongCodeZip, a novel plug-and-play code compression framework designed\nspecifically for code LLMs. LongCodeZip employs a dual-stage strategy: (1)\ncoarse-grained compression, which identifies and ranks function-level chunks\nusing conditional perplexity with respect to the instruction, retaining only\nthe most relevant functions; and (2) fine-grained compression, which segments\nretained functions into blocks based on perplexity and selects an optimal\nsubset under an adaptive token budget to maximize relevance. Evaluations across\nmultiple tasks, including code completion, summarization, and question\nanswering, show that LongCodeZip consistently outperforms baseline methods,\nachieving up to a 5.6x compression ratio without degrading task performance. By\neffectively reducing context size while preserving essential information,\nLongCodeZip enables LLMs to better scale to real-world, large-scale code\nscenarios, advancing the efficiency and capability of code intelligence\napplications.",
+      "keywords": [
+        "Large Language Models",
+        "code LLMs",
+        "context pruning",
+        "LLMLingua",
+        "conditional perplexity",
+        "function-level chunks",
+        "fine-grained compression",
+        "token budget",
+        "code completion",
+        "code summarization",
+        "question answering",
+        "code intelligence applications"
+      ],
+      "url": "https://arxiv.org/abs/2510.00446",
+      "published_at": "2025-10-01",
+      "paper_id": "hf:2510.00446"
+    },
+    {
+      "title": "DeepAnalyze: Agentic Large Language Models for Autonomous Data Science",
+      "summary": "Autonomous data science, from raw data sources to analyst-grade deep research\nreports, has been a long-standing challenge, and is now becoming feasible with\nthe emergence of powerful large language models (LLMs). Recent workflow-based\ndata agents have shown promising results on specific data tasks but remain\nfundamentally limited in achieving fully autonomous data science due to their\nreliance on predefined workflows. In this paper, we introduce DeepAnalyze-8B,\nthe first agentic LLM designed for autonomous data science, capable of\nautomatically completing the end-toend pipeline from data sources to\nanalyst-grade deep research reports. To tackle high-complexity data science\ntasks, we propose a curriculum-based agentic training paradigm that emulates\nthe learning trajectory of human data scientists, enabling LLMs to\nprogressively acquire and integrate multiple capabilities in real-world\nenvironments. We also introduce a data-grounded trajectory synthesis framework\nthat constructs high-quality training data. Through agentic training,\nDeepAnalyze learns to perform a broad spectrum of data tasks, ranging from data\nquestion answering and specialized analytical tasks to open-ended data\nresearch. Experiments demonstrate that, with only 8B parameters, DeepAnalyze\noutperforms previous workflow-based agents built on most advanced proprietary\nLLMs. The model, code, and training data of DeepAnalyze are open-sourced,\npaving the way toward autonomous data science.",
+      "keywords": [
+        "large language models",
+        "LLMs",
+        "workflow-based data agents",
+        "agentic LLM",
+        "curriculum-based agentic training",
+        "data-grounded trajectory synthesis",
+        "data question answering",
+        "specialized analytical tasks",
+        "open-ended data research"
+      ],
+      "url": "https://arxiv.org/abs/2510.16872",
+      "published_at": "2025-10-19",
+      "paper_id": "hf:2510.16872"
+    },
+    {
+      "title": "In-the-Flow Agentic System Optimization for Effective Planning and Tool\n  Use",
+      "summary": "Outcome-driven reinforcement learning has advanced reasoning in large\nlanguage models (LLMs), but prevailing tool-augmented approaches train a\nsingle, monolithic policy that interleaves thoughts and tool calls under full\ncontext; this scales poorly with long horizons and diverse tools and\ngeneralizes weakly to new scenarios. Agentic systems offer a promising\nalternative by decomposing work across specialized modules, yet most remain\ntraining-free or rely on offline training decoupled from the live dynamics of\nmulti-turn interaction. We introduce AgentFlow, a trainable, in-the-flow\nagentic framework that coordinates four modules (planner, executor, verifier,\ngenerator) through an evolving memory and directly optimizes its planner inside\nthe multi-turn loop. To train on-policy in live environments, we propose\nFlow-based Group Refined Policy Optimization (Flow-GRPO), which tackles\nlong-horizon, sparse-reward credit assignment by converting multi-turn\noptimization into a sequence of tractable single-turn policy updates. It\nbroadcasts a single, verifiable trajectory-level outcome to every turn to align\nlocal planner decisions with global success and stabilizes learning with\ngroup-normalized advantages. Across ten benchmarks, AgentFlow with a 7B-scale\nbackbone outperforms top-performing baselines with average accuracy gains of\n14.9% on search, 14.0% on agentic, 14.5% on mathematical, and 4.1% on\nscientific tasks, even surpassing larger proprietary models like GPT-4o.\nFurther analyses confirm the benefits of in-the-flow optimization, showing\nimproved planning, enhanced tool-calling reliability, and positive scaling with\nmodel size and reasoning turns.",
+      "keywords": [
+        "reinforcement learning",
+        "large language models",
+        "tool-augmented approaches",
+        "monolithic policy",
+        "agentic systems",
+        "specialized modules",
+        "trainable framework",
+        "planner",
+        "executor",
+        "verifier",
+        "generator",
+        "evolving memory",
+        "on-policy training",
+        "multi-turn interaction",
+        "Flow-based Group Refined Policy Optimization",
+        "Flow-GRPO",
+        "long-horizon",
+        "sparse-reward credit assignment",
+        "single-turn policy updates",
+        "trajectory-level outcome",
+        "group-normalized advantages",
+        "search tasks",
+        "agentic tasks",
+        "mathematical tasks",
+        "scientific tasks",
+        "GPT-4o"
+      ],
+      "url": "https://arxiv.org/abs/2510.05592",
+      "published_at": "2025-10-07",
+      "paper_id": "hf:2510.05592"
+    },
+    {
+      "title": "Agentic Entropy-Balanced Policy Optimization",
+      "summary": "Recently, Agentic Reinforcement Learning (Agentic RL) has made significant\nprogress in incentivizing the multi-turn, long-horizon tool-use capabilities of\nweb agents. While mainstream agentic RL algorithms autonomously explore\nhigh-uncertainty tool-call steps under the guidance of entropy, excessive\nreliance on entropy signals can impose further constraints, leading to the\ntraining collapse. In this paper, we delve into the challenges caused by\nentropy and propose the Agentic Entropy-Balanced Policy Optimization (AEPO), an\nagentic RL algorithm designed to balance entropy in both the rollout and policy\nupdate phases. AEPO comprises two core components: (1) a dynamic\nentropy-balanced rollout mechanism that adaptively allocate global and branch\nsampling budget through entropy pre-monitoring, while imposing a branch penalty\non consecutive high-entropy tool-call steps to prevent over-branching issues;\nand (2) Entropy-Balanced Policy Optimization that inserts a stop-gradient\noperation into the high-entropy clipping term to preserve and properly rescale\ngradients on high-entropy tokens, while incorporating entropy-aware advantage\nestimation to prioritize learning on high-uncertainty tokens. Results across 14\nchallenging datasets show that AEPO consistently outperforms 7 mainstream RL\nalgorithms. With just 1K RL samples, Qwen3-14B with AEPO achieves impressive\nresults: 47.6% on GAIA, 11.2% on Humanity's Last Exam, and 43.0% on WebWalker\nfor Pass@1; 65.0% on GAIA, 26.0% on Humanity's Last Exam, and 70.0% on\nWebWalker for Pass@5. Further analysis reveals that AEPO improves rollout\nsampling diversity while maintaining stable policy entropy, facilitating\nscalable web agent training.",
+      "keywords": [
+        "Agentic Reinforcement Learning",
+        "AEPO",
+        "entropy",
+        "rollout",
+        "policy update",
+        "dynamic entropy-balanced rollout",
+        "branch penalty",
+        "stop-gradient operation",
+        "high-entropy clipping",
+        "entropy-aware advantage estimation",
+        "rollout sampling diversity",
+        "policy entropy"
+      ],
+      "url": "https://arxiv.org/abs/2510.14545",
+      "published_at": "2025-10-16",
+      "paper_id": "hf:2510.14545"
+    },
+    {
+      "title": "Scaling Language-Centric Omnimodal Representation Learning",
+      "summary": "Recent multimodal embedding approaches leveraging multimodal large language\nmodels (MLLMs) fine-tuned with contrastive learning (CL) have shown promising\nresults, yet the underlying reasons behind their superiority remain\nunderexplored. This work argues that a crucial advantage of MLLM-based\napproaches stems from implicit cross-modal alignment achieved during generative\npretraining, where the language decoder learns to exploit multimodal signals\nwithin a shared representation space for generating unimodal outputs. Through\nanalysis of anisotropy and kernel similarity structure, we empirically confirm\nthat latent alignment emerges within MLLM representations, allowing CL to serve\nas a lightweight refinement stage. Leveraging this insight, we propose a\nLanguage-Centric Omnimodal Embedding framework, termed LCO-Emb. Extensive\nexperiments across diverse backbones and benchmarks demonstrate its\neffectiveness, achieving state-of-the-art performance across modalities.\nFurthermore, we identify a Generation-Representation Scaling Law (GRSL),\nshowing that the representational capabilities gained through contrastive\nrefinement scales positively with the MLLM's generative capabilities. This\nsuggests that improving generative abilities evolves as an effective paradigm\nfor enhancing representation quality. We provide a theoretical explanation of\nGRSL, which formally links the MLLM's generative quality to the upper bound on\nits representation performance, and validate it on a challenging, low-resource\nvisual-document retrieval task, showing that continual generative pretraining\nbefore CL can further enhance the potential of a model's embedding\ncapabilities. Codes, models, and resources are available at\nhttps://github.com/LCO-Embedding/LCO-Embedding.",
+      "keywords": [],
+      "url": "https://arxiv.org/abs/2510.11693",
+      "published_at": "2025-10-13",
+      "paper_id": "hf:2510.11693"
+    },
+    {
+      "title": "Tongyi DeepResearch Technical Report",
+      "summary": "We present Tongyi DeepResearch, an agentic large language model, which is\nspecifically designed for long-horizon, deep information-seeking research\ntasks. To incentivize autonomous deep research agency, Tongyi DeepResearch is\ndeveloped through an end-to-end training framework that combines agentic\nmid-training and agentic post-training, enabling scalable reasoning and\ninformation seeking across complex tasks. We design a highly scalable data\nsynthesis pipeline that is fully automatic, without relying on costly human\nannotation, and empowers all training stages. By constructing customized\nenvironments for each stage, our system enables stable and consistent\ninteractions throughout. Tongyi DeepResearch, featuring 30.5 billion total\nparameters, with only 3.3 billion activated per token, achieves\nstate-of-the-art performance across a range of agentic deep research\nbenchmarks, including Humanity's Last Exam, BrowseComp, BrowseComp-ZH,\nWebWalkerQA, xbench-DeepSearch, FRAMES and xbench-DeepSearch-2510. We\nopen-source the model, framework, and complete solutions to empower the\ncommunity.",
+      "keywords": [
+        "agentic large language model",
+        "end-to-end training framework",
+        "agentic mid-training",
+        "agentic post-training",
+        "scalable reasoning",
+        "information seeking",
+        "data synthesis pipeline",
+        "customized environments",
+        "Humanity's Last Exam",
+        "BrowseComp",
+        "BrowseComp-ZH",
+        "WebWalkerQA",
+        "xbench-DeepSearch",
+        "FRAMES",
+        "xbench-DeepSearch-2510"
+      ],
+      "url": "https://arxiv.org/abs/2510.24701",
+      "published_at": "2025-10-28",
+      "paper_id": "hf:2510.24701"
+    },
+    {
+      "title": "DeepAgent: A General Reasoning Agent with Scalable Toolsets",
+      "summary": "Large reasoning models have demonstrated strong problem-solving abilities,\nyet real-world tasks often require external tools and long-horizon\ninteractions. Existing agent frameworks typically follow predefined workflows,\nwhich limit autonomous and global task completion. In this paper, we introduce\nDeepAgent, an end-to-end deep reasoning agent that performs autonomous\nthinking, tool discovery, and action execution within a single, coherent\nreasoning process. To address the challenges of long-horizon interactions,\nparticularly the context length explosion from multiple tool calls and the\naccumulation of interaction history, we introduce an autonomous memory folding\nmechanism that compresses past interactions into structured episodic, working,\nand tool memories, reducing error accumulation while preserving critical\ninformation. To teach general-purpose tool use efficiently and stably, we\ndevelop an end-to-end reinforcement learning strategy, namely ToolPO, that\nleverages LLM-simulated APIs and applies tool-call advantage attribution to\nassign fine-grained credit to the tool invocation tokens. Extensive experiments\non eight benchmarks, including general tool-use tasks (ToolBench, API-Bank,\nTMDB, Spotify, ToolHop) and downstream applications (ALFWorld, WebShop, GAIA,\nHLE), demonstrate that DeepAgent consistently outperforms baselines across both\nlabeled-tool and open-set tool retrieval scenarios. This work takes a step\ntoward more general and capable agents for real-world applications. The code\nand demo are available at https://github.com/RUC-NLPIR/DeepAgent.",
+      "keywords": [
+        "DeepAgent",
+        "autonomous thinking",
+        "tool discovery",
+        "action execution",
+        "autonomous memory folding",
+        "episodic memory",
+        "working memory",
+        "tool memory",
+        "reinforcement learning",
+        "ToolPO",
+        "LLM-simulated APIs",
+        "tool-call advantage attribution",
+        "ToolBench",
+        "API-Bank",
+        "TMDB",
+        "Spotify",
+        "ToolHop",
+        "ALFWorld",
+        "WebShop",
+        "GAIA",
+        "HLE"
+      ],
+      "url": "https://arxiv.org/abs/2510.21618",
+      "published_at": "2025-10-24",
+      "paper_id": "hf:2510.21618"
+    },
+    {
+      "title": "InteractComp: Evaluating Search Agents With Ambiguous Queries",
+      "summary": "Language agents have demonstrated remarkable potential in web search and\ninformation retrieval. However, these search agents assume user queries are\ncomplete and unambiguous, an assumption that diverges from reality where users\nbegin with incomplete queries requiring clarification through interaction. Yet\nmost agents lack interactive mechanisms during the search process, and existing\nbenchmarks cannot assess this capability. To address this gap, we introduce\nInteractComp, a benchmark designed to evaluate whether search agents can\nrecognize query ambiguity and actively interact to resolve it during search.\nFollowing the principle of easy to verify, interact to disambiguate, we\nconstruct 210 expert-curated questions across 9 domains through a\ntarget-distractor methodology that creates genuine ambiguity resolvable only\nthrough interaction. Evaluation of 17 models reveals striking failure: the best\nmodel achieves only 13.73% accuracy despite 71.50% with complete context,\nexposing systematic overconfidence rather than reasoning deficits. Forced\ninteraction produces dramatic gains, demonstrating latent capability current\nstrategies fail to engage. Longitudinal analysis shows interaction capabilities\nstagnated over 15 months while search performance improved seven-fold,\nrevealing a critical blind spot. This stagnation, coupled with the immediate\nfeedback inherent to search tasks, makes InteractComp a valuable resource for\nboth evaluating and training interaction capabilities in search agents. The\ncode is available at https://github.com/FoundationAgents/InteractComp.",
+      "keywords": [
+        "search agents",
+        "query ambiguity",
+        "interaction mechanisms",
+        "benchmark",
+        "expert-curated questions",
+        "target-distractor methodology",
+        "accuracy",
+        "overconfidence",
+        "reasoning deficits",
+        "longitudinal analysis"
+      ],
+      "url": "https://arxiv.org/abs/2510.24668",
+      "published_at": "2025-10-28",
+      "paper_id": "hf:2510.24668"
+    },
+    {
+      "title": "Cache-to-Cache: Direct Semantic Communication Between Large Language\n  Models",
+      "summary": "Multi-LLM systems harness the complementary strengths of diverse Large\nLanguage Models, achieving performance and efficiency gains unattainable by a\nsingle model. In existing designs, LLMs communicate through text, forcing\ninternal representations to be transformed into output token sequences. This\nprocess both loses rich semantic information and incurs token-by-token\ngeneration latency. Motivated by these limitations, we ask: Can LLMs\ncommunicate beyond text? Oracle experiments show that enriching the KV-Cache\nsemantics can improve response quality without increasing cache size,\nsupporting KV-Cache as an effective medium for inter-model communication. Thus,\nwe propose Cache-to-Cache (C2C), a new paradigm for direct semantic\ncommunication between LLMs. C2C uses a neural network to project and fuse the\nsource model's KV-cache with that of the target model to enable direct semantic\ntransfer. A learnable gating mechanism selects the target layers that benefit\nfrom cache communication. Compared with text communication, C2C utilizes the\ndeep, specialized semantics from both models, while avoiding explicit\nintermediate text generation. Experiments show that C2C achieves 8.5-10.5%\nhigher average accuracy than individual models. It further outperforms the text\ncommunication paradigm by approximately 3.0-5.0%, while delivering an average\n2.0x speedup in latency. Our code is available at\nhttps://github.com/thu-nics/C2C.",
+      "keywords": [
+        "Large Language Models",
+        "KV-Cache",
+        "Cache-to-Cache",
+        "neural network",
+        "semantic communication",
+        "gating mechanism",
+        "accuracy",
+        "latency"
+      ],
+      "url": "https://arxiv.org/abs/2510.03215",
+      "published_at": "2025-10-03",
+      "paper_id": "hf:2510.03215"
+    },
+    {
+      "title": "JanusCoder: Towards a Foundational Visual-Programmatic Interface for\n  Code Intelligence",
+      "summary": "The scope of neural code intelligence is rapidly expanding beyond text-based\nsource code to encompass the rich visual outputs that programs generate. This\nvisual dimension is critical for advanced applications like flexible content\ngeneration and precise, program-driven editing of visualizations. However,\nprogress has been impeded by the scarcity of high-quality multimodal code data,\na bottleneck stemming from challenges in synthesis and quality assessment. To\naddress these challenges, we make contributions from both a data and modeling\nperspective. We first introduce a complete synthesis toolkit that leverages\nreciprocal synergies between data modalities to efficiently produce a\nlarge-scale, high-quality corpus spanning from standard charts to complex\ninteractive web UIs and code-driven animations. Leveraging this toolkit, we\nconstruct JanusCode-800K, the largest multimodal code corpus to date. This\npowers the training of our models, JanusCoder and JanusCoderV, which establish\na visual-programmatic interface for generating code from textual instructions,\nvisual inputs, or a combination of both. Our unified model is a departure from\nexisting approaches that build specialized models for isolated tasks. Extensive\nexperiments on both text-centric and vision-centric coding tasks demonstrate\nthe superior performance of the JanusCoder series, with our 7B to 14B scale\nmodels approaching or even exceeding the performance of commercial models.\nFurthermore, extensive analysis provides key insights into harmonizing\nprogrammatic logic with its visual expression. Our code and checkpoints will\nare available at https://github.com/InternLM/JanusCoder.",
+      "keywords": [
+        "neural code intelligence",
+        "visual outputs",
+        "content generation",
+        "program-driven editing",
+        "multimodal code data",
+        "synthesis toolkit",
+        "JanusCode-800K",
+        "JanusCoder",
+        "JanusCoderV",
+        "visual-programmatic interface",
+        "text-centric",
+        "vision-centric coding tasks",
+        "harmonizing programmatic logic",
+        "visual expression"
+      ],
+      "url": "https://arxiv.org/abs/2510.23538",
+      "published_at": "2025-10-27",
+      "paper_id": "hf:2510.23538"
+    },
+    {
+      "title": "DITING: A Multi-Agent Evaluation Framework for Benchmarking Web Novel\n  Translation",
+      "summary": "Large language models (LLMs) have substantially advanced machine translation\n(MT), yet their effectiveness in translating web novels remains unclear.\nExisting benchmarks rely on surface-level metrics that fail to capture the\ndistinctive traits of this genre. To address these gaps, we introduce DITING,\nthe first comprehensive evaluation framework for web novel translation,\nassessing narrative and cultural fidelity across six dimensions: idiom\ntranslation, lexical ambiguity, terminology localization, tense consistency,\nzero-pronoun resolution, and cultural safety, supported by over 18K\nexpert-annotated Chinese-English sentence pairs. We further propose AgentEval,\na reasoning-driven multi-agent evaluation framework that simulates expert\ndeliberation to assess translation quality beyond lexical overlap, achieving\nthe highest correlation with human judgments among seven tested automatic\nmetrics. To enable metric comparison, we develop MetricAlign, a meta-evaluation\ndataset of 300 sentence pairs annotated with error labels and scalar quality\nscores. Comprehensive evaluation of fourteen open, closed, and commercial\nmodels reveals that Chinese-trained LLMs surpass larger foreign counterparts,\nand that DeepSeek-V3 delivers the most faithful and stylistically coherent\ntranslations. Our work establishes a new paradigm for exploring LLM-based web\nnovel translation and provides public resources to advance future research.",
+      "keywords": [
+        "large language models",
+        "machine translation",
+        "web novels",
+        "DITING",
+        "narrative fidelity",
+        "cultural fidelity",
+        "idiom translation",
+        "lexical ambiguity",
+        "terminology localization",
+        "tense consistency",
+        "zero-pronoun resolution",
+        "cultural safety",
+        "AgentEval",
+        "reasoning-driven",
+        "multi-agent evaluation",
+        "MetricAlign",
+        "meta-evaluation",
+        "DeepSeek-V3",
+        "stylistic coherence"
+      ],
+      "url": "https://arxiv.org/abs/2510.09116",
+      "published_at": "2025-10-10",
+      "paper_id": "hf:2510.09116"
+    },
+    {
+      "title": "Self-Forcing++: Towards Minute-Scale High-Quality Video Generation",
+      "summary": "Diffusion models have revolutionized image and video generation, achieving\nunprecedented visual quality. However, their reliance on transformer\narchitectures incurs prohibitively high computational costs, particularly when\nextending generation to long videos. Recent work has explored autoregressive\nformulations for long video generation, typically by distilling from\nshort-horizon bidirectional teachers. Nevertheless, given that teacher models\ncannot synthesize long videos, the extrapolation of student models beyond their\ntraining horizon often leads to pronounced quality degradation, arising from\nthe compounding of errors within the continuous latent space. In this paper, we\npropose a simple yet effective approach to mitigate quality degradation in\nlong-horizon video generation without requiring supervision from long-video\nteachers or retraining on long video datasets. Our approach centers on\nexploiting the rich knowledge of teacher models to provide guidance for the\nstudent model through sampled segments drawn from self-generated long videos.\nOur method maintains temporal consistency while scaling video length by up to\n20x beyond teacher's capability, avoiding common issues such as over-exposure\nand error-accumulation without recomputing overlapping frames like previous\nmethods. When scaling up the computation, our method shows the capability of\ngenerating videos up to 4 minutes and 15 seconds, equivalent to 99.9% of the\nmaximum span supported by our base model's position embedding and more than 50x\nlonger than that of our baseline model. Experiments on standard benchmarks and\nour proposed improved benchmark demonstrate that our approach substantially\noutperforms baseline methods in both fidelity and consistency. Our long-horizon\nvideos demo can be found at https://self-forcing-plus-plus.github.io/",
+      "keywords": [
+        "diffusion models",
+        "transformer architectures",
+        "autoregressive formulations",
+        "bidirectional teachers",
+        "latent space",
+        "quality degradation",
+        "temporal consistency",
+        "position embedding"
+      ],
+      "url": "https://arxiv.org/abs/2510.02283",
+      "published_at": "2025-10-02",
+      "paper_id": "hf:2510.02283"
+    },
+    {
+      "title": "OmniVinci: Enhancing Architecture and Data for Omni-Modal Understanding\n  LLM",
+      "summary": "Advancing machine intelligence requires developing the ability to perceive\nacross multiple modalities, much as humans sense the world. We introduce\nOmniVinci, an initiative to build a strong, open-source, omni-modal LLM. We\ncarefully study the design choices across model architecture and data curation.\nFor model architecture, we present three key innovations: (i) OmniAlignNet for\nstrengthening alignment between vision and audio embeddings in a shared\nomni-modal latent space; (ii) Temporal Embedding Grouping for capturing\nrelative temporal alignment between vision and audio signals; and (iii)\nConstrained Rotary Time Embedding for encoding absolute temporal information in\nomni-modal embeddings. We introduce a curation and synthesis pipeline that\ngenerates 24M single-modal and omni-modal conversations. We find that\nmodalities reinforce one another in both perception and reasoning. Our model,\nOmniVinci, outperforms Qwen2.5-Omni with +19.05 on DailyOmni (cross-modal\nunderstanding), +1.7 on MMAR (audio), and +3.9 on Video-MME (vision), while\nusing just 0.2T training tokens - a 6 times reduction compared to\nQwen2.5-Omni's 1.2T. We finally demonstrate omni-modal advantages in downstream\napplications spanning robotics, medical AI, and smart factory.",
+      "keywords": [
+        "OmniAlignNet",
+        "Temporal Embedding Grouping",
+        "Constrained Rotary Time Embedding",
+        "omni-modal latent space",
+        "DailyOmni",
+        "MMAR",
+        "Video-MME",
+        "omni-modal conversations",
+        "omni-modal advantages"
+      ],
+      "url": "https://arxiv.org/abs/2510.15870",
+      "published_at": "2025-10-17",
+      "paper_id": "hf:2510.15870"
+    },
+    {
+      "title": "GEM: A Gym for Agentic LLMs",
+      "summary": "The training paradigm for large language models (LLMs) is moving from static\ndatasets to experience-based learning, where agents acquire skills via\ninteracting with complex environments. To facilitate this transition we\nintroduce GEM (General Experience Maker), an open-source environment simulator\ndesigned for the age of LLMs. Analogous to OpenAI-Gym for traditional\nreinforcement learning (RL), GEM provides a standardized framework for the\nenvironment-agent interface, including asynchronous vectorized execution for\nhigh throughput, and flexible wrappers for easy extensibility. GEM also\nfeatures a diverse suite of environments, robust integrated tools, and\nsingle-file example scripts demonstrating using GEM with five popular RL\ntraining frameworks. Along with this, we also provide a set of baselines across\n24 environments using REINFORCE with Return Batch Normalization (ReBN), which\n-- unlike GRPO -- is compatible with the full RL setting of dense per-turn\nrewards and offers better credit assignment. We further conduct apple-to-apple\nbenchmarking of PPO, GRPO and REINFORCE in both single- and multi-turn settings\nusing GEM to shed light on the algorithmic designs. Lastly, GEM also functions\nas a convenient evaluation toolkit besides a training environment. We hope this\nframework can help accelerate future agentic LLM research.",
+      "keywords": [
+        "large language models",
+        "experience-based learning",
+        "GEM",
+        "environment simulator",
+        "OpenAI-Gym",
+        "asynchronous vectorized execution",
+        "flexible wrappers",
+        "REINFORCE",
+        "Return Batch Normalization",
+        "ReBN",
+        "GRPO",
+        "PPO",
+        "benchmarking",
+        "agentic LLM research"
+      ],
+      "url": "https://arxiv.org/abs/2510.01051",
+      "published_at": "2025-10-01",
+      "paper_id": "hf:2510.01051"
+    },
+    {
+      "title": "DeepSeek-OCR: Contexts Optical Compression",
+      "summary": "We present DeepSeek-OCR as an initial investigation into the feasibility of\ncompressing long contexts via optical 2D mapping. DeepSeek-OCR consists of two\ncomponents: DeepEncoder and DeepSeek3B-MoE-A570M as the decoder. Specifically,\nDeepEncoder serves as the core engine, designed to maintain low activations\nunder high-resolution input while achieving high compression ratios to ensure\nan optimal and manageable number of vision tokens. Experiments show that when\nthe number of text tokens is within 10 times that of vision tokens (i.e., a\ncompression ratio < 10x), the model can achieve decoding (OCR) precision of\n97%. Even at a compression ratio of 20x, the OCR accuracy still remains at\nabout 60%. This shows considerable promise for research areas such as\nhistorical long-context compression and memory forgetting mechanisms in LLMs.\nBeyond this, DeepSeek-OCR also demonstrates high practical value. On\nOmniDocBench, it surpasses GOT-OCR2.0 (256 tokens/page) using only 100 vision\ntokens, and outperforms MinerU2.0 (6000+ tokens per page on average) while\nutilizing fewer than 800 vision tokens. In production, DeepSeek-OCR can\ngenerate training data for LLMs/VLMs at a scale of 200k+ pages per day (a\nsingle A100-40G). Codes and model weights are publicly accessible at\nhttp://github.com/deepseek-ai/DeepSeek-OCR.",
+      "keywords": [
+        "DeepSeek-OCR",
+        "DeepEncoder",
+        "DeepSeek3B-MoE-A570M",
+        "optical 2D mapping",
+        "vision tokens",
+        "OCR precision",
+        "compression ratio",
+        "OmniDocBench",
+        "GOT-OCR2.0",
+        "MinerU2.0",
+        "LLMs",
+        "VLMs"
+      ],
+      "url": "https://arxiv.org/abs/2510.18234",
+      "published_at": "2025-10-21",
+      "paper_id": "hf:2510.18234"
+    },
+    {
+      "title": "Video-Thinker: Sparking \"Thinking with Videos\" via Reinforcement\n  Learning",
+      "summary": "Recent advances in image reasoning methods, particularly \"Thinking with\nImages\", have demonstrated remarkable success in Multimodal Large Language\nModels (MLLMs); however, this dynamic reasoning paradigm has not yet been\nextended to video reasoning tasks. In this paper, we propose Video-Thinker,\nwhich empowers MLLMs to think with videos by autonomously leveraging their\nintrinsic \"grounding\" and \"captioning\" capabilities to generate reasoning clues\nthroughout the inference process. To spark this capability, we construct\nVideo-Thinker-10K, a curated dataset featuring autonomous tool usage within\nchain-of-thought reasoning sequences. Our training strategy begins with\nSupervised Fine-Tuning (SFT) to learn the reasoning format, followed by Group\nRelative Policy Optimization (GRPO) to strengthen this reasoning capability.\nThrough this approach, Video-Thinker enables MLLMs to autonomously navigate\ngrounding and captioning tasks for video reasoning, eliminating the need for\nconstructing and calling external tools. Extensive experiments demonstrate that\nVideo-Thinker achieves significant performance gains on both in-domain tasks\nand challenging out-of-domain video reasoning benchmarks, including\nVideo-Holmes, CG-Bench-Reasoning, and VRBench. Our Video-Thinker-7B\nsubstantially outperforms existing baselines such as Video-R1 and establishes\nstate-of-the-art performance among 7B-sized MLLMs.",
+      "keywords": [
+        "Thinking with Images",
+        "Multimodal Large Language Models",
+        "Video-Thinker",
+        "Video-Thinker-10K",
+        "Supervised Fine-Tuning",
+        "Group Relative Policy Optimization",
+        "Video-Holmes",
+        "CG-Bench-Reasoning",
+        "VRBench",
+        "Video-R1"
+      ],
+      "url": "https://arxiv.org/abs/2510.23473",
+      "published_at": "2025-10-27",
+      "paper_id": "hf:2510.23473"
+    },
+    {
+      "title": "WithAnyone: Towards Controllable and ID Consistent Image Generation",
+      "summary": "Identity-consistent generation has become an important focus in text-to-image\nresearch, with recent models achieving notable success in producing images\naligned with a reference identity. Yet, the scarcity of large-scale paired\ndatasets containing multiple images of the same individual forces most\napproaches to adopt reconstruction-based training. This reliance often leads to\na failure mode we term copy-paste, where the model directly replicates the\nreference face rather than preserving identity across natural variations in\npose, expression, or lighting. Such over-similarity undermines controllability\nand limits the expressive power of generation. To address these limitations, we\n(1) construct a large-scale paired dataset MultiID-2M, tailored for\nmulti-person scenarios, providing diverse references for each identity; (2)\nintroduce a benchmark that quantifies both copy-paste artifacts and the\ntrade-off between identity fidelity and variation; and (3) propose a novel\ntraining paradigm with a contrastive identity loss that leverages paired data\nto balance fidelity with diversity. These contributions culminate in\nWithAnyone, a diffusion-based model that effectively mitigates copy-paste while\npreserving high identity similarity. Extensive qualitative and quantitative\nexperiments demonstrate that WithAnyone significantly reduces copy-paste\nartifacts, improves controllability over pose and expression, and maintains\nstrong perceptual quality. User studies further validate that our method\nachieves high identity fidelity while enabling expressive controllable\ngeneration.",
+      "keywords": [
+        "identity-consistent generation",
+        "text-to-image",
+        "reconstruction-based training",
+        "copy-paste",
+        "MultiID-2M",
+        "contrastive identity loss",
+        "diffusion-based model",
+        "identity fidelity",
+        "variation",
+        "perceptual quality"
+      ],
+      "url": "https://arxiv.org/abs/2510.14975",
+      "published_at": "2025-10-16",
+      "paper_id": "hf:2510.14975"
+    },
+    {
+      "title": "KORMo: Korean Open Reasoning Model for Everyone",
+      "summary": "This work presents the first large-scale investigation into constructing a\nfully open bilingual large language model (LLM) for a non-English language,\nspecifically Korean, trained predominantly on synthetic data. We introduce\nKORMo-10B, a 10.8B-parameter model trained from scratch on a Korean-English\ncorpus in which 68.74% of the Korean portion is synthetic. Through systematic\nexperimentation, we demonstrate that synthetic data, when carefully curated\nwith balanced linguistic coverage and diverse instruction styles, does not\ncause instability or degradation during large-scale pretraining. Furthermore,\nthe model achieves performance comparable to that of contemporary open-weight\nmultilingual baselines across a wide range of reasoning, knowledge, and\ninstruction-following benchmarks. Our experiments reveal two key findings: (1)\nsynthetic data can reliably sustain long-horizon pretraining without model\ncollapse, and (2) bilingual instruction tuning enables near-native reasoning\nand discourse coherence in Korean. By fully releasing all components including\ndata, code, training recipes, and logs, this work establishes a transparent\nframework for developing synthetic data-driven fully open models (FOMs) in\nlow-resource settings and sets a reproducible precedent for future multilingual\nLLM research.",
+      "keywords": [
+        "large language model",
+        "LLM",
+        "KORMo-10B",
+        "synthetic data",
+        "Korean-English corpus",
+        "pretraining",
+        "model collapse",
+        "bilingual instruction tuning",
+        "fully open models",
+        "FOMs",
+        "low-resource settings"
+      ],
+      "url": "https://arxiv.org/abs/2510.09426",
+      "published_at": "2025-10-10",
+      "paper_id": "hf:2510.09426"
+    },
+    {
+      "title": "BAPO: Stabilizing Off-Policy Reinforcement Learning for LLMs via\n  Balanced Policy Optimization with Adaptive Clipping",
+      "summary": "Reinforcement learning (RL) has recently become the core paradigm for\naligning and strengthening large language models (LLMs). Yet, applying RL in\noff-policy settings--where stale data from past policies are used for\ntraining--improves sample efficiency, but remains challenging: policy entropy\ndeclines sharply, optimization often becomes unstable and may even collapse.\nThrough theoretical and empirical analysis, we identify two key insights: (i)\nan imbalance in optimization, where negative-advantage samples dominate the\npolicy gradient, suppressing useful behaviors and risking gradient explosions;\nand (ii) the derived Entropy-Clip Rule, which reveals that the fixed clipping\nmechanism in PPO-like objectives systematically blocks entropy-increasing\nupdates, thereby driving the policy toward over-exploitation at the expense of\nexploration. Building on these insights, we propose BAlanced Policy\nOptimization with Adaptive Clipping (BAPO), a simple yet effective method that\ndynamically adjusts clipping bounds to adaptively re-balance positive and\nnegative contributions, preserve entropy, and stabilize RL optimization. Across\ndiverse off-policy scenarios--including sample replay and partial rollout--BAPO\nachieves fast, stable, and data-efficient training. On AIME 2024 and AIME 2025\nbenchmarks, our 7B BAPO model surpasses open-source counterparts such as\nSkyWork-OR1-7B, while our 32B BAPO model not only achieves state-of-the-art\nresults among models of the same scale but also outperforms leading proprietary\nsystems like o3-mini and Gemini-2.5-Flash-Thinking.",
+      "keywords": [
+        "reinforcement learning",
+        "large language models",
+        "off-policy settings",
+        "policy entropy",
+        "policy gradient",
+        "Entropy-Clip Rule",
+        "PPO-like objectives",
+        "gradient explosions",
+        "sample replay",
+        "partial rollout",
+        "AIME 2024",
+        "AIME 2025",
+        "SkyWork-OR1-7B",
+        "o3-mini",
+        "Gemini-2.5-Flash-Thinking"
+      ],
+      "url": "https://arxiv.org/abs/2510.18927",
+      "published_at": "2025-10-21",
+      "paper_id": "hf:2510.18927"
+    },
+    {
+      "title": "ExGRPO: Learning to Reason from Experience",
+      "summary": "Reinforcement learning from verifiable rewards (RLVR) is an emerging paradigm\nfor improving the reasoning ability of large language models. However, standard\non-policy training discards rollout experiences after a single update, leading\nto computational inefficiency and instability. While prior work on RL has\nhighlighted the benefits of reusing past experience, the role of experience\ncharacteristics in shaping learning dynamics of large reasoning models remains\nunderexplored. In this paper, we are the first to investigate what makes a\nreasoning experience valuable and identify rollout correctness and entropy as\neffective indicators of experience value. Based on these insights, we propose\nExGRPO (Experiential Group Relative Policy Optimization), a framework that\norganizes and prioritizes valuable experiences, and employs a mixed-policy\nobjective to balance exploration with experience exploitation. Experiments on\nfive backbone models (1.5B-8B parameters) show that ExGRPO consistently\nimproves reasoning performance on mathematical/general benchmarks, with an\naverage gain of +3.5/7.6 points over on-policy RLVR. Moreover, ExGRPO\nstabilizes training on both stronger and weaker models where on-policy methods\nfail. These results highlight principled experience management as a key\ningredient for efficient and scalable RLVR.",
+      "keywords": [
+        "reinforcement learning from verifiable rewards",
+        "RLVR",
+        "on-policy training",
+        "rollout experiences",
+        "experience characteristics",
+        "rollout correctness",
+        "entropy",
+        "ExGRPO",
+        "Experiential Group Relative Policy Optimization",
+        "mixed-policy objective",
+        "exploration",
+        "experience exploitation",
+        "reasoning performance",
+        "mathematical benchmarks",
+        "general benchmarks"
+      ],
+      "url": "https://arxiv.org/abs/2510.02245",
+      "published_at": "2025-10-02",
+      "paper_id": "hf:2510.02245"
+    },
+    {
+      "title": "More Thought, Less Accuracy? On the Dual Nature of Reasoning in\n  Vision-Language Models",
+      "summary": "Reasoning has emerged as a pivotal capability in Large Language Models\n(LLMs). Through Reinforcement Learning (RL), typically Group Relative Policy\nOptimization (GRPO), these models are able to solve complex tasks such as\nmathematics and code generation. Building on these advances, recent research\nhas sought to extend reasoning to Vision-Language Models (VLMs), yielding\npromising results across diverse visual tasks. Despite this progress, our study\nuncovers the dual nature of multimodal reasoning: while it substantially\nenhances logical inference and facilitates performance on challenging problems,\nit may gradually impair perceptual grounding, leading to recognition failures\non otherwise basic visual questions. Through further analysis, we attribute\nthis phenomenon to visual forgetting, wherein prolonged reasoning causes the\nmodel to increasingly disregard visual input. To address this, we propose\nVision-Anchored Policy Optimization (VAPO), a simple yet effective method that\nexplicitly steers the reasoning process toward visually grounded trajectories.\nOur result model, VAPO-Thinker-7B, significantly strengthens the model's\nreliance on visual information and achieves new state-of-the-art results on a\nwide range of established benchmarks. Project page:\nhttps://xytian1008.github.io/VAPO/",
+      "keywords": [
+        "Reinforcement Learning",
+        "Group Relative Policy Optimization",
+        "Vision-Language Models",
+        "multimodal reasoning",
+        "logical inference",
+        "perceptual grounding",
+        "visual forgetting",
+        "Vision-Anchored Policy Optimization"
+      ],
+      "url": "https://arxiv.org/abs/2509.25848",
+      "published_at": "2025-09-30",
+      "paper_id": "hf:2509.25848"
+    },
+    {
+      "title": "World-in-World: World Models in a Closed-Loop World",
+      "summary": "Generative world models (WMs) can now simulate worlds with striking visual\nrealism, which naturally raises the question of whether they can endow embodied\nagents with predictive perception for decision making. Progress on this\nquestion has been limited by fragmented evaluation: most existing benchmarks\nadopt open-loop protocols that emphasize visual quality in isolation, leaving\nthe core issue of embodied utility unresolved, i.e., do WMs actually help\nagents succeed at embodied tasks? To address this gap, we introduce\nWorld-in-World, the first open platform that benchmarks WMs in a closed-loop\nworld that mirrors real agent-environment interactions. World-in-World provides\na unified online planning strategy and a standardized action API, enabling\nheterogeneous WMs for decision making. We curate four closed-loop environments\nthat rigorously evaluate diverse WMs, prioritize task success as the primary\nmetric, and move beyond the common focus on visual quality; we also present the\nfirst data scaling law for world models in embodied settings. Our study\nuncovers three surprises: (1) visual quality alone does not guarantee task\nsuccess, controllability matters more; (2) scaling post-training with\naction-observation data is more effective than upgrading the pretrained video\ngenerators; and (3) allocating more inference-time compute allows WMs to\nsubstantially improve closed-loop performance.",
+      "keywords": [
+        "generative world models",
+        "WM",
+        "visual realism",
+        "predictive perception",
+        "decision making",
+        "open-loop protocols",
+        "closed-loop world",
+        "agent-environment interactions",
+        "unified online planning strategy",
+        "action API",
+        "task success",
+        "visual quality",
+        "controllability",
+        "data scaling law",
+        "action-observation data",
+        "pretrained video generators",
+        "inference-time compute"
+      ],
+      "url": "https://arxiv.org/abs/2510.18135",
+      "published_at": "2025-10-20",
+      "paper_id": "hf:2510.18135"
+    }
+  ],
+  "clusters": [
+    {
+      "cluster_index": 0,
+      "size": 3,
+      "cohesion": 0.9337462385495504,
+      "centroid_b64": "D4iCvSj1hLyqWs88jDvOvLUY2rshvSI9oW+Ru1LE0zye4Zw8ZKMGO8D0CD3SU5S9JO4gu+bAhT1fHkA9w5D4u8g5h7218yc9u+FNPOme2rws/HU8//BqvfQGMz03AyC9wgHIvKUTGT19JkC9gTkcvYslczw+4IW+AY0MPSD0m7sqAec8B3K0vAZ2+bydtQA9GCbFvM6JPjx27qq81MfTPJ38JryxBTE8Rt6dO4BgFL3MecY8HxnUvENjYbxxaxe9ITYZvanS7rz58Ok7ZDqOvVu/wbsI/8M8YzsHPR5BkzztFlM9hPKcPavErjzAhRa8QHXIPBwVPz2/cQC+xsxiPXJb1TwERSI9JthfvZX87rzxvVQ8RgvfO/ikTrzxbao8+M45PZHRwzuKqAU98mYLvBTMgLuYlBC9nooqPZgecL2K+RE7CHhcPMVICLwCdU68OOMwvXs/uzzHnxC7GTqPvFnXKLs8JCA95RSSvaq7iDxrAPk7TXa9O4wdP73531A8x0vAPH2LEryOe0u9zb7wPosdLzw6yIi7kHAlPEvRjDwkVUY9iX0hvTdkuLslvsu8ufEevQmAOz0kHbe8Dbk3vOUcjbvBNZo6iA8aPOLfPjziQo89hfeqPBgHQT1ieu+8QC+GPLRB4DyvydM8rCHcvFFZNbvpYIS9fc6xO6nG5j000e48qCR9vM2kSj3tFsw7VzoivWqC9jwGxeo8Sj4XPbSN4jzuftS8T6WRvHPPBD1ECwk8JnypPNUaEj0DGiK96DllvYLWqT0y0QE7QrDYvC/OEL26d4e8YxwlPQ+VNz2wTe46TS2Uu7YXGLwdvE88nFOSPCiNPju6VbC9+z9gvGEwSr0us1e8M6HgvN0Plj1dN3w8ld+FvYsMBb27JNS7OBgCvOqBUbse//k519BkPJ1ohbw0luA70Fm2vBBOvDzsWMC9o8sPvJBLeLwk6zk9uD+hO52QjL0AhRo8MVqSu7phAry1B3q7fPZIvOLWoLwaVYc8kI0wvGWmljwqeqU8b62pvCcoUztUCrI8frnpOzPc/DwOnv68Tqh9vSiLmLwVziy8ZtSzPOIDwbzwMlO9T43SvBth1bx6NZ075E1dPAjJhzzuubo8F9RxvXK7tLyImYU8muaLvP36C72Msai7zw5MvGUwkjwFWZK8yJHQPFBUNbwk4BU8G86kuZs0nL6x8qI7jQ4Ou8ExKjuKilg7IpY7vft/cDwExR69FMOrPSNnbLx7OXI9ucJsvLnK97yyDN27ZDyHvGuuBz3+18U86/v6PBQFj72QaoA8pFt7PB/m9TvCpoQ8NNWTvW3ggTwj9KE8DmMbPprbq7z7BRk9R+QquyMJk7wpSwY9RYA5vS6BCL1V7V89XCw1O14Jhj3wDAa8U7uJPF6hAznMGYC9BHs2vGrl2TscF5+97YxlvcK22LzJoCO9qmHQPGPNjrz24wk5sZwKPftPaTu4uc4814QcvVJowL0l2348jdjEvPaS2bsdZ9i8dtdCPHooKjzGy2e8KGQYu9xdML1WozQ9P1QGPENN9jxrPTe99jfIPL1kDD3iEQK8/gG/PT1nJj3VpPY8ndV3PZw4Dzs0Vjg840M0PBD3Ar023Ta8M0uhPT+pfzw7ZcM8tczyPNOqNj0J/7m8mpWBPQAdPr1khSs9FY0SPYRDy7urea88SzokvaVkkbx98+s8JjT3PLHslr4pFXI8N4VoPc3WoT3ITVi8MgtUvLaUND0py5e9XGcIPEu5tLtdQBW9gs2QPbdgZT2E5YE9+WNOvMiXZTxzUbw9gBLTO3QoFD3sma29IFckvIyJCT2ZRDI+5+MCvS5PnDzao3u8mW4MvdJvk73mtsY8viVUvH0YZ70PKoQ7Ckp6PYqbyTrlRpG6SilsPeitCL3emnu8lwnyPG5MKTzttO080zW/PLbInj3QKKe7/aG+O1kz8zyCNDg8csaYvEy6hb3QvHA83z3rvMYeIr2wYxO842igvCf51DwTpAI8v5+WPMnCKL0dPQO9XAs8vc8sMT2+nfm8KtBDPWPow7zozSe9",
+      "members": [
+        {
+          "paper_id": "hf:2510.05684",
+          "rank_in_cluster": 0,
+          "sim_to_centroid": 0.94441819190979
+        },
+        {
+          "paper_id": "hf:2510.12276",
+          "rank_in_cluster": 1,
+          "sim_to_centroid": 0.934782087802887
+        },
+        {
+          "paper_id": "hf:2510.12403",
+          "rank_in_cluster": 2,
+          "sim_to_centroid": 0.9220384359359741
+        }
+      ]
+    },
+    {
+      "cluster_index": 1,
+      "size": 16,
+      "cohesion": 0.8882947750389576,
+      "centroid_b64": "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",
+      "members": [
+        {
+          "paper_id": "hf:2510.09426",
+          "rank_in_cluster": 0,
+          "sim_to_centroid": 0.9149209260940552
+        },
+        {
+          "paper_id": "hf:2510.18121",
+          "rank_in_cluster": 1,
+          "sim_to_centroid": 0.913203239440918
+        },
+        {
+          "paper_id": "hf:2510.26697",
+          "rank_in_cluster": 2,
+          "sim_to_centroid": 0.9120621681213379
+        },
+        {
+          "paper_id": "hf:2510.03215",
+          "rank_in_cluster": 3,
+          "sim_to_centroid": 0.9095782041549683
+        },
+        {
+          "paper_id": "hf:2510.15444",
+          "rank_in_cluster": 4,
+          "sim_to_centroid": 0.9071134328842163
+        },
+        {
+          "paper_id": "hf:2510.25741",
+          "rank_in_cluster": 5,
+          "sim_to_centroid": 0.905207633972168
+        },
+        {
+          "paper_id": "hf:2510.18866",
+          "rank_in_cluster": 6,
+          "sim_to_centroid": 0.9011378288269043
+        },
+        {
+          "paper_id": "hf:2510.00446",
+          "rank_in_cluster": 7,
+          "sim_to_centroid": 0.9002735018730164
+        },
+        {
+          "paper_id": "hf:2510.26692",
+          "rank_in_cluster": 8,
+          "sim_to_centroid": 0.8817476630210876
+        },
+        {
+          "paper_id": "hf:2510.15870",
+          "rank_in_cluster": 9,
+          "sim_to_centroid": 0.8809369802474976
+        },
+        {
+          "paper_id": "hf:2509.26507",
+          "rank_in_cluster": 10,
+          "sim_to_centroid": 0.8744841814041138
+        },
+        {
+          "paper_id": "hf:2510.14528",
+          "rank_in_cluster": 11,
+          "sim_to_centroid": 0.8736858367919922
+        },
+        {
+          "paper_id": "hf:2510.09116",
+          "rank_in_cluster": 12,
+          "sim_to_centroid": 0.8649832010269165
+        },
+        {
+          "paper_id": "hf:2510.18234",
+          "rank_in_cluster": 13,
+          "sim_to_centroid": 0.8634340167045593
+        },
+        {
+          "paper_id": "hf:2510.04849",
+          "rank_in_cluster": 14,
+          "sim_to_centroid": 0.8612855672836304
+        },
+        {
+          "paper_id": "hf:2510.04871",
+          "rank_in_cluster": 15,
+          "sim_to_centroid": 0.8486620187759399
+        }
+      ]
+    },
+    {
+      "cluster_index": 2,
+      "size": 10,
+      "cohesion": 0.9039445757865906,
+      "centroid_b64": "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",
+      "members": [
+        {
+          "paper_id": "hf:2510.26583",
+          "rank_in_cluster": 0,
+          "sim_to_centroid": 0.927176296710968
+        },
+        {
+          "paper_id": "hf:2510.12586",
+          "rank_in_cluster": 1,
+          "sim_to_centroid": 0.9259935617446899
+        },
+        {
+          "paper_id": "hf:2510.11690",
+          "rank_in_cluster": 2,
+          "sim_to_centroid": 0.9149922728538513
+        },
+        {
+          "paper_id": "hf:2510.02283",
+          "rank_in_cluster": 3,
+          "sim_to_centroid": 0.9138108491897583
+        },
+        {
+          "paper_id": "hf:2510.08673",
+          "rank_in_cluster": 4,
+          "sim_to_centroid": 0.9110640287399292
+        },
+        {
+          "paper_id": "hf:2510.11693",
+          "rank_in_cluster": 5,
+          "sim_to_centroid": 0.9042418003082275
+        },
+        {
+          "paper_id": "hf:2510.14975",
+          "rank_in_cluster": 6,
+          "sim_to_centroid": 0.8955965042114258
+        },
+        {
+          "paper_id": "hf:2510.23607",
+          "rank_in_cluster": 7,
+          "sim_to_centroid": 0.8917771577835083
+        },
+        {
+          "paper_id": "hf:2510.23538",
+          "rank_in_cluster": 8,
+          "sim_to_centroid": 0.886288046836853
+        },
+        {
+          "paper_id": "hf:2510.05096",
+          "rank_in_cluster": 9,
+          "sim_to_centroid": 0.8685052394866943
+        }
+      ]
+    },
+    {
+      "cluster_index": 3,
+      "size": 21,
+      "cohesion": 0.8994391674087161,
+      "centroid_b64": "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",
+      "members": [
+        {
+          "paper_id": "hf:2509.25454",
+          "rank_in_cluster": 0,
+          "sim_to_centroid": 0.9265453815460205
+        },
+        {
+          "paper_id": "hf:2510.05592",
+          "rank_in_cluster": 1,
+          "sim_to_centroid": 0.9248268008232117
+        },
+        {
+          "paper_id": "hf:2510.01051",
+          "rank_in_cluster": 2,
+          "sim_to_centroid": 0.9214187860488892
+        },
+        {
+          "paper_id": "hf:2510.08540",
+          "rank_in_cluster": 3,
+          "sim_to_centroid": 0.9148482084274292
+        },
+        {
+          "paper_id": "hf:2510.18927",
+          "rank_in_cluster": 4,
+          "sim_to_centroid": 0.9141535758972168
+        },
+        {
+          "paper_id": "hf:2510.21618",
+          "rank_in_cluster": 5,
+          "sim_to_centroid": 0.9121167659759521
+        },
+        {
+          "paper_id": "hf:2510.04618",
+          "rank_in_cluster": 6,
+          "sim_to_centroid": 0.9098605513572693
+        },
+        {
+          "paper_id": "hf:2510.08558",
+          "rank_in_cluster": 7,
+          "sim_to_centroid": 0.9059714078903198
+        },
+        {
+          "paper_id": "hf:2509.25848",
+          "rank_in_cluster": 8,
+          "sim_to_centroid": 0.9039201736450195
+        },
+        {
+          "paper_id": "hf:2510.02245",
+          "rank_in_cluster": 9,
+          "sim_to_centroid": 0.9027897119522095
+        },
+        {
+          "paper_id": "hf:2510.19338",
+          "rank_in_cluster": 10,
+          "sim_to_centroid": 0.8962366580963135
+        },
+        {
+          "paper_id": "hf:2510.24701",
+          "rank_in_cluster": 11,
+          "sim_to_centroid": 0.8944915533065796
+        },
+        {
+          "paper_id": "hf:2510.11696",
+          "rank_in_cluster": 12,
+          "sim_to_centroid": 0.894049882888794
+        },
+        {
+          "paper_id": "hf:2509.25541",
+          "rank_in_cluster": 13,
+          "sim_to_centroid": 0.8933722972869873
+        },
+        {
+          "paper_id": "hf:2510.16872",
+          "rank_in_cluster": 14,
+          "sim_to_centroid": 0.893183708190918
+        },
+        {
+          "paper_id": "hf:2510.23564",
+          "rank_in_cluster": 15,
+          "sim_to_centroid": 0.8903625011444092
+        },
+        {
+          "paper_id": "hf:2510.18135",
+          "rank_in_cluster": 16,
+          "sim_to_centroid": 0.883359432220459
+        },
+        {
+          "paper_id": "hf:2510.23473",
+          "rank_in_cluster": 17,
+          "sim_to_centroid": 0.8820289373397827
+        },
+        {
+          "paper_id": "hf:2510.14545",
+          "rank_in_cluster": 18,
+          "sim_to_centroid": 0.8799243569374084
+        },
+        {
+          "paper_id": "hf:2509.24002",
+          "rank_in_cluster": 19,
+          "sim_to_centroid": 0.8752663135528564
+        },
+        {
+          "paper_id": "hf:2510.24668",
+          "rank_in_cluster": 20,
+          "sim_to_centroid": 0.8694955110549927
+        }
+      ]
+    }
+  ]
+}

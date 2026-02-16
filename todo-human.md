@@ -70,7 +70,9 @@ sub(issue, bug level)
 [x] - [reader] refine call 1 prompt spec baseline version for better call1&call2 evidence composition.  
 [x] - [chat] Q: it's easy for workflow to ensure the "providing evidence a, b, c", but it's hard for workflow to evaluate the quality of "evidence a, b, c" to derive a solid decision, and the purpose of call 1 prompt spec baseline is to iterate on the quality of the evidence to hopefully derive a solid plan with fewer iterations. and yes there are some if-else rules set in prompt spec, but they are also guidances/hypethesis(not constrains) for model to derive a solid plan.    
 [x] - [reader] refactor call1 prompt and output pydantic models to collect llm instructions for evidence/memo metadata collection.  
-[ ] - [lab] prepare env(especially paper chunk pipeline) for call1 test.  
+[x] - [paper-chunk] prepare env(especially paper chunk pipeline) for call1 test.note setup using paper_chunk.    
+[x] - [reader] create separated folder for hf data pipeline. note. pipelines/hf_data  
+[ ] - [paper-chunk] run phase 1 script to get phase 1 heristic rules and also phase 2 candidates.  
 
 [ ] - [reader] test call 1 llm report planner(heuristic rules for response?), choose a proper model, update llm config in reader.yaml to per model.    
 

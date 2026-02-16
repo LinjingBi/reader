@@ -1,0 +1,45 @@
+version: 1
+compiled_regex_version: 1
+selectors:
+  summary:
+    desc: "Abstract / summary of the paper."
+    aliases: ["abstract", "summary"]
+
+  introduction:
+    desc: "Motivation, problem setting, contributions."
+    aliases: ["introduction"]
+
+  related_work:
+    desc: "Prior work, background, preliminaries."
+    aliases: ["related work", "background", "preliminaries", "prior work"]
+
+  method:
+    desc: "Proposed method / approach / model / algorithm."
+    aliases: ["method", "methods", "methodology", "approach", "model", "algorithm", "framework", "architecture"]
+
+  experiment:
+    desc: "Evaluation setup, datasets, metrics, implementation details."
+    aliases: ["experiments", "evaluation", "experimental setup", "implementation details", "benchmarks", "ablation study"]
+
+  results:
+    desc: "Quantitative/qualitative results."
+    aliases: ["results"]
+
+  discussion:
+    desc: "Interpretation, analysis, broader implications."
+    aliases: ["discussion", "analysis"]
+
+  limitations:
+    desc: "Limitations, failure cases, caveats."
+    aliases: ["limitations", "failure cases", "caveats"]
+
+  conclusion:
+    desc: "Conclusions, future work."
+    aliases: ["conclusion", "conclusions", "future work"]
+
+combined_heading_policy:
+  enabled: true
+  join_tokens: ["and", "&", "/"]
+
+references_policy:
+  stop_headings: ["references", "bibliography"]

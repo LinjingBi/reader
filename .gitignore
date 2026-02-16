@@ -81,3 +81,6 @@ reader/configs/reader.yaml
 
 # PDF benchmark data (keep JSON files, ignore PDFs)
 reader/scripts/pdflib_benchmark/data/*.pdf
+
+# Personal notes
+human-notes.md

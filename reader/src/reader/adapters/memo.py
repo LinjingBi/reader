@@ -9,7 +9,8 @@ import pydantic
 from pydantic import BaseModel, RootModel
 
 from reader.config import ReaderConfig
-from reader.pipelines.report import FreshPaperPayload, InjectClustersObservationInput
+from reader.pipelines.hf_data.report import FreshPaperPayload
+from reader.pipelines.report import InjectClustersObservationInput
 from reader.logging.logging_setup import get_logger
 
 logger = get_logger()

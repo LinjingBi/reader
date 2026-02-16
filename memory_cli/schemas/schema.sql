@@ -120,6 +120,29 @@ CREATE TABLE IF NOT EXISTS cluster (
     REFERENCES cluster_run(source, period_start, period_end, embed_config_id, cluster_config_id, role) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS cluster_member (
+  source           TEXT NOT NULL,
+  period_start     TEXT NOT NULL,
+  period_end       TEXT NOT NULL,
+  embed_config_id  TEXT NOT NULL,
+  cluster_config_id TEXT NOT NULL,
+  role             TEXT NOT NULL,
+  cluster_index    INTEGER NOT NULL,
+  paper_id         TEXT NOT NULL,
+  rank_in_cluster  INTEGER NOT NULL, -- 0=most representative
+  sim_to_centroid  REAL,             -- nullable if you want only ordering
+  PRIMARY KEY (source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index, paper_id),
+  FOREIGN KEY (source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index) 
+    REFERENCES cluster(source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index) ON DELETE CASCADE,
+  FOREIGN KEY (paper_id) REFERENCES paper(paper_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_cluster_member_rank
+  ON cluster_member(source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index, rank_in_cluster);
+
+-- -----------------------------
+-- Cluster observations (LLM enrichment results)
+-- -----------------------------  
 CREATE TABLE IF NOT EXISTS cluster_observation (
   -- same pk_hash as in cluster table
   pk_hash TEXT PRIMARY KEY,
@@ -146,27 +169,6 @@ CREATE TABLE IF NOT EXISTS cluster_observation (
   FOREIGN KEY (llm_config_id)
     REFERENCES llm_config(llm_config_id)
 );
-
-CREATE TABLE IF NOT EXISTS cluster_member (
-  source           TEXT NOT NULL,
-  period_start     TEXT NOT NULL,
-  period_end       TEXT NOT NULL,
-  embed_config_id  TEXT NOT NULL,
-  cluster_config_id TEXT NOT NULL,
-  role             TEXT NOT NULL,
-  cluster_index    INTEGER NOT NULL,
-  paper_id         TEXT NOT NULL,
-  rank_in_cluster  INTEGER NOT NULL, -- 0=most representative
-  sim_to_centroid  REAL,             -- nullable if you want only ordering
-  PRIMARY KEY (source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index, paper_id),
-  FOREIGN KEY (source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index) 
-    REFERENCES cluster(source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index) ON DELETE CASCADE,
-  FOREIGN KEY (paper_id) REFERENCES paper(paper_id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_cluster_member_rank
-  ON cluster_member(source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index, rank_in_cluster);
-
 -- -----------------------------
 -- Topics (language-first canonical objects)
 -- -----------------------------

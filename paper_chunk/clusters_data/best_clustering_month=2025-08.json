@@ -39,7 +39,7 @@
         "scalable solutions",
         "deployment scenarios"
       ],
-      "url": "https://huggingface.co/papers/2508.10104",
+      "url": "https://arxiv.org/abs/2508.10104",
       "published_at": "2025-08-13",
       "paper_id": "hf:2508.10104"
     },
@@ -58,7 +58,7 @@
         "semantic consistency",
         "visual fidelity"
       ],
-      "url": "https://huggingface.co/papers/2508.02324",
+      "url": "https://arxiv.org/abs/2508.02324",
       "published_at": "2025-08-04",
       "paper_id": "hf:2508.02324"
     },
@@ -73,7 +73,7 @@
         "reaction condition prediction",
         "thermodynamic stabilities"
       ],
-      "url": "https://huggingface.co/papers/2508.15763",
+      "url": "https://arxiv.org/abs/2508.15763",
       "published_at": "2025-08-21",
       "paper_id": "hf:2508.15763"
     },
@@ -90,7 +90,7 @@
         "reasoning paths",
         "generalizable reasoning"
       ],
-      "url": "https://huggingface.co/papers/2508.01191",
+      "url": "https://arxiv.org/abs/2508.01191",
       "published_at": "2025-08-02",
       "paper_id": "hf:2508.01191"
     },
@@ -111,7 +111,7 @@
         "GUI interaction",
         "embodied agency"
       ],
-      "url": "https://huggingface.co/papers/2508.18265",
+      "url": "https://arxiv.org/abs/2508.18265",
       "published_at": "2025-08-25",
       "paper_id": "hf:2508.18265"
     },
@@ -129,7 +129,7 @@
         "SWE-bench Verified",
         "agentic benchmarks"
       ],
-      "url": "https://huggingface.co/papers/2508.06471",
+      "url": "https://arxiv.org/abs/2508.06471",
       "published_at": "2025-08-08",
       "paper_id": "hf:2508.06471"
     },
@@ -145,7 +145,7 @@
         "Dynamic Fine-Tuning",
         "offline RL"
       ],
-      "url": "https://huggingface.co/papers/2508.05629",
+      "url": "https://arxiv.org/abs/2508.05629",
       "published_at": "2025-08-07",
       "paper_id": "hf:2508.05629"
     },
@@ -165,7 +165,7 @@
         "robust planning",
         "decision-making capabilities"
       ],
-      "url": "https://huggingface.co/papers/2508.04026",
+      "url": "https://arxiv.org/abs/2508.04026",
       "published_at": "2025-08-06",
       "paper_id": "hf:2508.04026"
     },
@@ -188,7 +188,7 @@
         "open-ended skill acquisition",
         "deep research scenarios"
       ],
-      "url": "https://huggingface.co/papers/2508.16153",
+      "url": "https://arxiv.org/abs/2508.16153",
       "published_at": "2025-08-22",
       "paper_id": "hf:2508.16153"
     },
@@ -204,7 +204,7 @@
         "high-fidelity image synthesis",
         "image editing"
       ],
-      "url": "https://huggingface.co/papers/2508.10711",
+      "url": "https://arxiv.org/abs/2508.10711",
       "published_at": "2025-08-14",
       "paper_id": "hf:2508.10711"
     },
@@ -226,7 +226,7 @@
         "average-reward learning",
         "dynamic data scheduling"
       ],
-      "url": "https://huggingface.co/papers/2508.10433",
+      "url": "https://arxiv.org/abs/2508.10433",
       "published_at": "2025-08-14",
       "paper_id": "hf:2508.10433"
     },
@@ -244,7 +244,7 @@
         "conversational vibe",
         "dialogue models"
       ],
-      "url": "https://huggingface.co/papers/2508.19205",
+      "url": "https://arxiv.org/abs/2508.19205",
       "published_at": "2025-08-26",
       "paper_id": "hf:2508.19205"
     },
@@ -259,7 +259,7 @@
         "BrowseComp-VL",
         "VQA benchmarks"
       ],
-      "url": "https://huggingface.co/papers/2508.05748",
+      "url": "https://arxiv.org/abs/2508.05748",
       "published_at": "2025-08-07",
       "paper_id": "hf:2508.05748"
     },
@@ -276,7 +276,7 @@
         "code evaluation benchmarks",
         "speed-quality Pareto frontier"
       ],
-      "url": "https://huggingface.co/papers/2508.02193",
+      "url": "https://arxiv.org/abs/2508.02193",
       "published_at": "2025-08-04",
       "paper_id": "hf:2508.02193"
     },
@@ -293,7 +293,7 @@
         "math-reasoning benchmarks",
         "general-domain reasoning benchmarks"
       ],
-      "url": "https://huggingface.co/papers/2508.05004",
+      "url": "https://arxiv.org/abs/2508.05004",
       "published_at": "2025-08-07",
       "paper_id": "hf:2508.05004"
     },
@@ -320,7 +320,7 @@
         "code agent",
         "verifiable agentic tasks"
       ],
-      "url": "https://huggingface.co/papers/2508.13167",
+      "url": "https://arxiv.org/abs/2508.13167",
       "published_at": "2025-08-06",
       "paper_id": "hf:2508.13167"
     },
@@ -339,7 +339,7 @@
         "retrieval-augmented generation",
         "math tool-use tasks"
       ],
-      "url": "https://huggingface.co/papers/2508.03680",
+      "url": "https://arxiv.org/abs/2508.03680",
       "published_at": "2025-08-05",
       "paper_id": "hf:2508.03680"
     },
@@ -358,7 +358,7 @@
         "AIME24",
         "AIME25"
       ],
-      "url": "https://huggingface.co/papers/2508.14029",
+      "url": "https://arxiv.org/abs/2508.14029",
       "published_at": "2025-08-19",
       "paper_id": "hf:2508.14029"
     },
@@ -380,7 +380,7 @@
         "scientific reasoning",
         "agentic tool-use"
       ],
-      "url": "https://huggingface.co/papers/2508.20722",
+      "url": "https://arxiv.org/abs/2508.20722",
       "published_at": "2025-08-28",
       "paper_id": "hf:2508.20722"
     },
@@ -399,7 +399,7 @@
         "multi-view ranking reward",
         "BRIGHT leaderboard"
       ],
-      "url": "https://huggingface.co/papers/2508.07050",
+      "url": "https://arxiv.org/abs/2508.07050",
       "published_at": "2025-08-09",
       "paper_id": "hf:2508.07050"
     },
@@ -418,7 +418,7 @@
         "Seed-Geometry",
         "automated mathematical reasoning"
       ],
-      "url": "https://huggingface.co/papers/2507.23726",
+      "url": "https://arxiv.org/abs/2507.23726",
       "published_at": "2025-07-31",
       "paper_id": "hf:2507.23726"
     },
@@ -444,7 +444,7 @@
         "video tasks",
         "complex chart analysis"
       ],
-      "url": "https://huggingface.co/papers/2508.11737",
+      "url": "https://arxiv.org/abs/2508.11737",
       "published_at": "2025-08-15",
       "paper_id": "hf:2508.11737"
     },
@@ -462,7 +462,7 @@
         "multi-agent frameworks",
         "end-to-end commercial systems"
       ],
-      "url": "https://huggingface.co/papers/2508.07999",
+      "url": "https://arxiv.org/abs/2508.07999",
       "published_at": "2025-08-11",
       "paper_id": "hf:2508.07999"
     },
@@ -482,7 +482,7 @@
         "safety",
         "ethical considerations"
       ],
-      "url": "https://huggingface.co/papers/2508.07407",
+      "url": "https://arxiv.org/abs/2508.07407",
       "published_at": "2025-08-10",
       "paper_id": "hf:2508.07407"
     },
@@ -503,7 +503,7 @@
         "rule-based rewards",
         "hallucination"
       ],
-      "url": "https://huggingface.co/papers/2508.10874",
+      "url": "https://arxiv.org/abs/2508.10874",
       "published_at": "2025-08-14",
       "paper_id": "hf:2508.10874"
     },
@@ -521,7 +521,7 @@
         "WebDancer",
         "WebSailor"
       ],
-      "url": "https://huggingface.co/papers/2508.00414",
+      "url": "https://arxiv.org/abs/2508.00414",
       "published_at": "2025-08-01",
       "paper_id": "hf:2508.00414"
     },
@@ -537,7 +537,7 @@
         "GPT-OSS series",
         "AIME 2025"
       ],
-      "url": "https://huggingface.co/papers/2508.15260",
+      "url": "https://arxiv.org/abs/2508.15260",
       "published_at": "2025-08-21",
       "paper_id": "hf:2508.15260"
     },
@@ -557,7 +557,7 @@
         "semantic consistency",
         "MLLM"
       ],
-      "url": "https://huggingface.co/papers/2508.20751",
+      "url": "https://arxiv.org/abs/2508.20751",
       "published_at": "2025-08-28",
       "paper_id": "hf:2508.20751"
     },
@@ -572,7 +572,7 @@
         "repetition hallucinations",
         "semantic biases"
       ],
-      "url": "https://huggingface.co/papers/2508.15882",
+      "url": "https://arxiv.org/abs/2508.15882",
       "published_at": "2025-08-21",
       "paper_id": "hf:2508.15882"
     },
@@ -593,7 +593,7 @@
         "Efficient Agents",
         "OWL"
       ],
-      "url": "https://huggingface.co/papers/2508.02694",
+      "url": "https://arxiv.org/abs/2508.02694",
       "published_at": "2025-07-24",
       "paper_id": "hf:2508.02694"
     },
@@ -611,7 +611,7 @@
         "mathematical reasoning accuracy",
         "inference-time reranker"
       ],
-      "url": "https://huggingface.co/papers/2508.14460",
+      "url": "https://arxiv.org/abs/2508.14460",
       "published_at": "2025-08-20",
       "paper_id": "hf:2508.14460"
     },
@@ -630,7 +630,7 @@
         "self-containment",
         "reward hacking"
       ],
-      "url": "https://huggingface.co/papers/2508.19652",
+      "url": "https://arxiv.org/abs/2508.19652",
       "published_at": "2025-08-27",
       "paper_id": "hf:2508.19652"
     },
@@ -649,7 +649,7 @@
         "Group Relative Policy Optimization",
         "Adaptive Temperature Sampling"
       ],
-      "url": "https://huggingface.co/papers/2508.11630",
+      "url": "https://arxiv.org/abs/2508.11630",
       "published_at": "2025-08-15",
       "paper_id": "hf:2508.11630"
     },
@@ -674,7 +674,7 @@
         "trajectory-level sampling",
         "token-level sampling"
       ],
-      "url": "https://huggingface.co/papers/2508.17445",
+      "url": "https://arxiv.org/abs/2508.17445",
       "published_at": "2025-08-24",
       "paper_id": "hf:2508.17445"
     },
@@ -692,7 +692,7 @@
         "long-context narrative comprehension",
         "stateful reasoning"
       ],
-      "url": "https://huggingface.co/papers/2508.10419",
+      "url": "https://arxiv.org/abs/2508.10419",
       "published_at": "2025-08-14",
       "paper_id": "hf:2508.10419"
     },
@@ -711,7 +711,7 @@
         "physical consistency",
         "instruction-action alignment"
       ],
-      "url": "https://huggingface.co/papers/2508.05635",
+      "url": "https://arxiv.org/abs/2508.05635",
       "published_at": "2025-08-07",
       "paper_id": "hf:2508.05635"
     },
@@ -732,7 +732,7 @@
         "fake web pages",
         "temporal validity"
       ],
-      "url": "https://huggingface.co/papers/2508.11987",
+      "url": "https://arxiv.org/abs/2508.11987",
       "published_at": "2025-08-16",
       "paper_id": "hf:2508.11987"
     },
@@ -748,7 +748,7 @@
         "DeepResearch",
         "reasoning accuracy"
       ],
-      "url": "https://huggingface.co/papers/2508.09848",
+      "url": "https://arxiv.org/abs/2508.09848",
       "published_at": "2025-08-13",
       "paper_id": "hf:2508.09848"
     },
@@ -763,7 +763,7 @@
         "shape-to-code reconstruction",
         "3D shape understanding"
       ],
-      "url": "https://huggingface.co/papers/2508.14879",
+      "url": "https://arxiv.org/abs/2508.14879",
       "published_at": "2025-08-20",
       "paper_id": "hf:2508.14879"
     },
@@ -777,7 +777,7 @@
         "Rich Storyboard Benchmark",
         "Scene Diversity metric"
       ],
-      "url": "https://huggingface.co/papers/2508.09983",
+      "url": "https://arxiv.org/abs/2508.09983",
       "published_at": "2025-08-13",
       "paper_id": "hf:2508.09983"
     },
@@ -791,7 +791,7 @@
         "simulated environments",
         "evaluation metrics"
       ],
-      "url": "https://huggingface.co/papers/2508.05405",
+      "url": "https://arxiv.org/abs/2508.05405",
       "published_at": "2025-08-07",
       "paper_id": "hf:2508.05405"
     },
@@ -813,7 +813,7 @@
         "trajectory-level planning",
         "task completion"
       ],
-      "url": "https://huggingface.co/papers/2508.20453",
+      "url": "https://arxiv.org/abs/2508.20453",
       "published_at": "2025-08-28",
       "paper_id": "hf:2508.20453"
     },
@@ -832,7 +832,7 @@
         "novel-view video synthesis",
         "generative 4D world models"
       ],
-      "url": "https://huggingface.co/papers/2508.13154",
+      "url": "https://arxiv.org/abs/2508.13154",
       "published_at": "2025-08-18",
       "paper_id": "hf:2508.13154"
     },
@@ -857,7 +857,7 @@
         "parameter unfreezing",
         "high-fidelity multimodal integration"
       ],
-      "url": "https://huggingface.co/papers/2508.03320",
+      "url": "https://arxiv.org/abs/2508.03320",
       "published_at": "2025-08-05",
       "paper_id": "hf:2508.03320"
     },
@@ -874,7 +874,7 @@
         "mask token insertion",
         "effective token ratio"
       ],
-      "url": "https://huggingface.co/papers/2508.00819",
+      "url": "https://arxiv.org/abs/2508.00819",
       "published_at": "2025-08-01",
       "paper_id": "hf:2508.00819"
     },
@@ -895,7 +895,7 @@
         "model size",
         "model family"
       ],
-      "url": "https://huggingface.co/papers/2508.10975",
+      "url": "https://arxiv.org/abs/2508.10975",
       "published_at": "2025-08-14",
       "paper_id": "hf:2508.10975"
     },
@@ -917,7 +917,7 @@
         "pose accuracy",
         "computational efficiency"
       ],
-      "url": "https://huggingface.co/papers/2508.14041",
+      "url": "https://arxiv.org/abs/2508.14041",
       "published_at": "2025-08-19",
       "paper_id": "hf:2508.14041"
     },
@@ -937,7 +937,7 @@
         "behavioral clusters",
         "skill-aware diagnosis"
       ],
-      "url": "https://huggingface.co/papers/2508.13491",
+      "url": "https://arxiv.org/abs/2508.13491",
       "published_at": "2025-08-19",
       "paper_id": "hf:2508.13491"
     },
@@ -953,7 +953,7 @@
         "BGE-M3",
         "downstream applications"
       ],
-      "url": "https://huggingface.co/papers/2508.01959",
+      "url": "https://arxiv.org/abs/2508.01959",
       "published_at": "2025-08-03",
       "paper_id": "hf:2508.01959"
     },
@@ -978,7 +978,7 @@
         "general knowledge extraction",
         "cross-modal reasoning"
       ],
-      "url": "https://huggingface.co/papers/2508.09736",
+      "url": "https://arxiv.org/abs/2508.09736",
       "published_at": "2025-08-13",
       "paper_id": "hf:2508.09736"
     }
@@ -988,6 +988,7 @@
       "cluster_index": 0,
       "size": 9,
       "cohesion": 0.9101390507486131,
+      "centroid_b64": "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",
       "members": [
         {
           "paper_id": "hf:2508.05004",
@@ -1040,6 +1041,7 @@
       "cluster_index": 1,
       "size": 10,
       "cohesion": 0.8943517863750458,
+      "centroid_b64": "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",
       "members": [
         {
           "paper_id": "hf:2508.11737",
@@ -1097,6 +1099,7 @@
       "cluster_index": 2,
       "size": 3,
       "cohesion": 0.9344939589500427,
+      "centroid_b64": "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",
       "members": [
         {
           "paper_id": "hf:2508.18265",
@@ -1119,6 +1122,7 @@
       "cluster_index": 3,
       "size": 8,
       "cohesion": 0.8957575261592865,
+      "centroid_b64": "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",
       "members": [
         {
           "paper_id": "hf:2508.02193",
@@ -1166,6 +1170,7 @@
       "cluster_index": 4,
       "size": 20,
       "cohesion": 0.8908812373876571,
+      "centroid_b64": "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",
       "members": [
         {
           "paper_id": "hf:2508.20453",

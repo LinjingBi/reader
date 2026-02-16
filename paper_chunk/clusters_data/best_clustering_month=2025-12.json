@@ -1,0 +1,1386 @@
+{
+  "source": "hf_monthly",
+  "period_start": "2025-12-01",
+  "period_end": "2025-12-31",
+  "raw_json": "",
+  "embed_config": {
+    "json_payload": {
+      "model_name": "BAAI/bge-small-en-v1.5",
+      "mode": "C",
+      "top_n_keywords": 10
+    },
+    "embed_config_id": "algo_lib.embedding|0.1.0"
+  },
+  "cluster_config": {
+    "json_payload": {
+      "k": 4,
+      "seed": 42,
+      "algorithm": "kmeans"
+    },
+    "cluster_config_id": "algo_lib.clustering|0.1.0"
+  },
+  "papers": [
+    {
+      "title": "From Code Foundation Models to Agents and Applications: A Practical Guide to Code Intelligence",
+      "summary": "Large language models (LLMs) have fundamentally transformed automated software development by enabling direct translation of natural language descriptions into functional code, driving commercial adoption through tools like Github Copilot (Microsoft), Cursor (Anysphere), Trae (ByteDance), and Claude Code (Anthropic). While the field has evolved dramatically from rule-based systems to Transformer-based architectures, achieving performance improvements from single-digit to over 95\\% success rates on benchmarks like HumanEval. In this work, we provide a comprehensive synthesis and practical guide (a series of analytic and probing experiments) about code LLMs, systematically examining the complete model life cycle from data curation to post-training through advanced prompting paradigms, code pre-training, supervised fine-tuning, reinforcement learning, and autonomous coding agents. We analyze the code capability of the general LLMs (GPT-4, Claude, LLaMA) and code-specialized LLMs (StarCoder, Code LLaMA, DeepSeek-Coder, and QwenCoder), critically examining the techniques, design decisions, and trade-offs. Further, we articulate the research-practice gap between academic research (e.g., benchmarks and tasks) and real-world deployment (e.g., software-related code tasks), including code correctness, security, contextual awareness of large codebases, and integration with development workflows, and map promising research directions to practical needs. Last, we conduct a series of experiments to provide a comprehensive analysis of code pre-training, supervised fine-tuning, and reinforcement learning, covering scaling law, framework selection, hyperparameter sensitivity, model architectures, and dataset comparisons.",
+      "keywords": [
+        "Transformer-based architectures",
+        "HumanEval",
+        "prompting paradigms",
+        "code pre-training",
+        "supervised fine-tuning",
+        "reinforcement learning",
+        "autonomous coding agents",
+        "GPT-4",
+        "Claude",
+        "LLaMA",
+        "StarCoder",
+        "Code LLaMA",
+        "DeepSeek-Coder",
+        "QwenCoder",
+        "code correctness",
+        "security",
+        "contextual awareness",
+        "software-related code tasks",
+        "scaling law",
+        "framework selection",
+        "hyperparameter sensitivity",
+        "model architectures",
+        "dataset comparisons"
+      ],
+      "url": "https://arxiv.org/abs/2511.18538",
+      "published_at": "2025-11-23",
+      "paper_id": "hf:2511.18538"
+    },
+    {
+      "title": "DeepSeek-V3.2: Pushing the Frontier of Open Large Language Models",
+      "summary": "We introduce DeepSeek-V3.2, a model that harmonizes high computational efficiency with superior reasoning and agent performance. The key technical breakthroughs of DeepSeek-V3.2 are as follows: (1) DeepSeek Sparse Attention (DSA): We introduce DSA, an efficient attention mechanism that substantially reduces computational complexity while preserving model performance in long-context scenarios. (2) Scalable Reinforcement Learning Framework: By implementing a robust reinforcement learning protocol and scaling post-training compute, DeepSeek-V3.2 performs comparably to GPT-5. Notably, our high-compute variant, DeepSeek-V3.2-Speciale, surpasses GPT-5 and exhibits reasoning proficiency on par with Gemini-3.0-Pro, achieving gold-medal performance in both the 2025 International Mathematical Olympiad (IMO) and the International Olympiad in Informatics (IOI). (3) Large-Scale Agentic Task Synthesis Pipeline: To integrate reasoning into tool-use scenarios, we developed a novel synthesis pipeline that systematically generates training data at scale. This methodology facilitates scalable agentic post-training, yielding substantial improvements in generalization and instruction-following robustness within complex, interactive environments.",
+      "keywords": [
+        "DeepSeek Sparse Attention",
+        "DSA",
+        "reinforcement learning framework",
+        "agentic task synthesis pipeline",
+        "computational efficiency",
+        "long-context scenarios",
+        "gold-medal performance",
+        "International Mathematical Olympiad",
+        "International Olympiad in Informatics",
+        "reasoning proficiency"
+      ],
+      "url": "https://arxiv.org/abs/2512.02556",
+      "published_at": "2025-12-02",
+      "paper_id": "hf:2512.02556"
+    },
+    {
+      "title": "Z-Image: An Efficient Image Generation Foundation Model with Single-Stream Diffusion Transformer",
+      "summary": "The landscape of high-performance image generation models is currently dominated by proprietary systems, such as Nano Banana Pro and Seedream 4.0. Leading open-source alternatives, including Qwen-Image, Hunyuan-Image-3.0 and FLUX.2, are characterized by massive parameter counts (20B to 80B), making them impractical for inference, and fine-tuning on consumer-grade hardware. To address this gap, we propose Z-Image, an efficient 6B-parameter foundation generative model built upon a Scalable Single-Stream Diffusion Transformer (S3-DiT) architecture that challenges the \"scale-at-all-costs\" paradigm. By systematically optimizing the entire model lifecycle -- from a curated data infrastructure to a streamlined training curriculum -- we complete the full training workflow in just 314K H800 GPU hours (approx. $630K). Our few-step distillation scheme with reward post-training further yields Z-Image-Turbo, offering both sub-second inference latency on an enterprise-grade H800 GPU and compatibility with consumer-grade hardware (<16GB VRAM). Additionally, our omni-pre-training paradigm also enables efficient training of Z-Image-Edit, an editing model with impressive instruction-following capabilities. Both qualitative and quantitative experiments demonstrate that our model achieves performance comparable to or surpassing that of leading competitors across various dimensions. Most notably, Z-Image exhibits exceptional capabilities in photorealistic image generation and bilingual text rendering, delivering results that rival top-tier commercial models, thereby demonstrating that state-of-the-art results are achievable with significantly reduced computational overhead. We publicly release our code, weights, and online demo to foster the development of accessible, budget-friendly, yet state-of-the-art generative models.",
+      "keywords": [
+        "Scalable Single-Stream Diffusion Transformer",
+        "S3-DiT",
+        "diffusion transformer",
+        "omni-pre-training",
+        "instruction-following capabilities",
+        "photorealistic image generation",
+        "bilingual text rendering",
+        "distillation scheme",
+        "reward post-training",
+        "H800 GPU",
+        "VRAM"
+      ],
+      "url": "https://arxiv.org/abs/2511.22699",
+      "published_at": "2025-11-27",
+      "paper_id": "hf:2511.22699"
+    },
+    {
+      "title": "DataFlow: An LLM-Driven Framework for Unified Data Preparation and Workflow Automation in the Era of Data-Centric AI",
+      "summary": "The rapidly growing demand for high-quality data in Large Language Models (LLMs) has intensified the need for scalable, reliable, and semantically rich data preparation pipelines. However, current practices remain dominated by ad-hoc scripts and loosely specified workflows, which lack principled abstractions, hinder reproducibility, and offer limited support for model-in-the-loop data generation. To address these challenges, we present DataFlow, a unified and extensible LLM-driven data preparation framework. DataFlow is designed with system-level abstractions that enable modular, reusable, and composable data transformations, and provides a PyTorch-style pipeline construction API for building debuggable and optimizable dataflows. The framework consists of nearly 200 reusable operators and six domain-general pipelines spanning text, mathematical reasoning, code, Text-to-SQL, agentic RAG, and large-scale knowledge extraction. To further improve usability, we introduce DataFlow-Agent, which automatically translates natural-language specifications into executable pipelines via operator synthesis, pipeline planning, and iterative verification. Across six representative use cases, DataFlow consistently improves downstream LLM performance. Our math, code, and text pipelines outperform curated human datasets and specialized synthetic baselines, achieving up to +3\\% execution accuracy in Text-to-SQL over SynSQL, +7\\% average improvements on code benchmarks, and 1--3 point gains on MATH, GSM8K, and AIME. Moreover, a unified 10K-sample dataset produced by DataFlow enables base models to surpass counterparts trained on 1M Infinity-Instruct data. These results demonstrate that DataFlow provides a practical and high-performance substrate for reliable, reproducible, and scalable LLM data preparation, and establishes a system-level foundation for future data-centric AI development.",
+      "keywords": [
+        "DataFlow",
+        "Large Language Models (LLMs)",
+        "data preparation pipelines",
+        "system-level abstractions",
+        "PyTorch-style pipeline construction API",
+        "reusable operators",
+        "domain-general pipelines",
+        "Text-to-SQL",
+        "agentic RAG",
+        "large-scale knowledge extraction",
+        "DataFlow-Agent",
+        "operator synthesis",
+        "pipeline planning",
+        "iterative verification"
+      ],
+      "url": "https://arxiv.org/abs/2512.16676",
+      "published_at": "2025-12-18",
+      "paper_id": "hf:2512.16676"
+    },
+    {
+      "title": "LongVT: Incentivizing \"Thinking with Long Videos\" via Native Tool Calling",
+      "summary": "Large multimodal models (LMMs) have shown great potential for video reasoning with textual Chain-of-Thought. However, they remain vulnerable to hallucinations, especially when processing long-form videos where evidence is sparse and temporally dispersed. Inspired by how humans comprehend long videos - by first skimming globally and then examining relevant clips for details - we introduce LongVT, an end-to-end agentic framework that enables \"Thinking with Long Videos\" via interleaved Multimodal Chain-of-Tool-Thought. Specifically, we exploit LMMs' inherent temporal grounding ability as a native video cropping tool to zoom in on a specific video clip and resample finer-grained video frames. This global-to-local reasoning loop continues until answers are grounded in retrieved visual evidence. Given the scarcity of fine-grained question-answering (QA) data for the long video reasoning task, we curate and will release a data suite named VideoSIAH to facilitate both training and evaluation. Specifically, our training dataset consists of 247.9K samples for tool-integrated cold-start supervised fine-tuning, 1.6K samples for agentic reinforcement learning, and 15.4K samples for agentic reinforcement fine-tuning, respectively. Our evaluation benchmark consists of 1,280 QA pairs that are carefully curated through a semi-automatic data pipeline with human-in-the-loop validation. With a meticulously designed three-stage training strategy and extensive empirical validation, LongVT consistently outperforms existing strong baselines across four challenging long-video understanding and reasoning benchmarks. Our codes, data, and model checkpoints are publicly available at https://github.com/EvolvingLMMs-Lab/LongVT .",
+      "keywords": [
+        "multimodal models",
+        "video reasoning",
+        "textual Chain-of-Thought",
+        "hallucinations",
+        "long-form videos",
+        "temporal grounding",
+        "video cropping",
+        "fine-grained question-answering",
+        "VideoSIAH",
+        "tool-integrated cold-start supervised fine-tuning",
+        "agentic reinforcement learning",
+        "agentic reinforcement fine-tuning"
+      ],
+      "url": "https://arxiv.org/abs/2511.20785",
+      "published_at": "2025-11-25",
+      "paper_id": "hf:2511.20785"
+    },
+    {
+      "title": "Live Avatar: Streaming Real-time Audio-Driven Avatar Generation with Infinite Length",
+      "summary": "Existing diffusion-based video generation methods are fundamentally constrained by sequential computation and long-horizon inconsistency, limiting their practical adoption in real-time, streaming audio-driven avatar synthesis. We present Live Avatar, an algorithm-system co-designed framework that enables efficient, high-fidelity, and infinite-length avatar generation using a 14-billion-parameter diffusion model. Our approach introduces Timestep-forcing Pipeline Parallelism (TPP), a distributed inference paradigm that pipelines denoising steps across multiple GPUs, effectively breaking the autoregressive bottleneck and ensuring stable, low-latency real-time streaming. To further enhance temporal consistency and mitigate identity drift and color artifacts, we propose the Rolling Sink Frame Mechanism (RSFM), which maintains sequence fidelity by dynamically recalibrating appearance using a cached reference image. Additionally, we leverage Self-Forcing Distribution Matching Distillation to facilitate causal, streamable adaptation of large-scale models without sacrificing visual quality. Live Avatar demonstrates state-of-the-art performance, reaching 20 FPS end-to-end generation on 5 H800 GPUs, and, to the best of our knowledge, is the first to achieve practical, real-time, high-fidelity avatar generation at this scale. Our work establishes a new paradigm for deploying advanced diffusion models in industrial long-form video synthesis applications.",
+      "keywords": [
+        "diffusion-based video generation",
+        "sequential computation",
+        "long-horizon inconsistency",
+        "real-time",
+        "streaming audio-driven avatar synthesis",
+        "Timestep-forcing Pipeline Parallelism",
+        "distributed inference paradigm",
+        "pipeline parallelism",
+        "denoising steps",
+        "autoregressive bottleneck",
+        "low-latency real-time streaming",
+        "Rolling Sink Frame Mechanism",
+        "sequence fidelity",
+        "Self-Forcing Distribution Matching Distillation",
+        "causal",
+        "streamable adaptation",
+        "visual quality",
+        "end-to-end generation",
+        "H800 GPUs"
+      ],
+      "url": "https://arxiv.org/abs/2512.04677",
+      "published_at": "2025-12-04",
+      "paper_id": "hf:2512.04677"
+    },
+    {
+      "title": "Kling-Omni Technical Report",
+      "summary": "We present Kling-Omni, a generalist generative framework designed to synthesize high-fidelity videos directly from multimodal visual language inputs. Adopting an end-to-end perspective, Kling-Omni bridges the functional separation among diverse video generation, editing, and intelligent reasoning tasks, integrating them into a holistic system. Unlike disjointed pipeline approaches, Kling-Omni supports a diverse range of user inputs, including text instructions, reference images, and video contexts, processing them into a unified multimodal representation to deliver cinematic-quality and highly-intelligent video content creation. To support these capabilities, we constructed a comprehensive data system that serves as the foundation for multimodal video creation. The framework is further empowered by efficient large-scale pre-training strategies and infrastructure optimizations for inference. Comprehensive evaluations reveal that Kling-Omni demonstrates exceptional capabilities in in-context generation, reasoning-based editing, and multimodal instruction following. Moving beyond a content creation tool, we believe Kling-Omni is a pivotal advancement toward multimodal world simulators capable of perceiving, reasoning, generating and interacting with the dynamic and complex worlds.",
+      "keywords": [
+        "generative framework",
+        "multimodal visual language inputs",
+        "end-to-end",
+        "video generation",
+        "editing",
+        "intelligent reasoning",
+        "unified multimodal representation",
+        "cinematic-quality",
+        "efficient large-scale pre-training",
+        "inference optimizations",
+        "in-context generation",
+        "reasoning-based editing",
+        "multimodal instruction following",
+        "multimodal world simulators"
+      ],
+      "url": "https://arxiv.org/abs/2512.16776",
+      "published_at": "2025-12-18",
+      "paper_id": "hf:2512.16776"
+    },
+    {
+      "title": "DAComp: Benchmarking Data Agents across the Full Data Intelligence Lifecycle",
+      "summary": "Real-world enterprise data intelligence workflows encompass data engineering that turns raw sources into analytical-ready tables and data analysis that convert those tables into decision-oriented insights. We introduce DAComp, a benchmark of 210 tasks that mirrors these complex workflows. Data engineering (DE) tasks require repository-level engineering on industrial schemas, including designing and building multi-stage SQL pipelines from scratch and evolving existing systems under evolving requirements. Data analysis (DA) tasks pose open-ended business problems that demand strategic planning, exploratory analysis through iterative coding, interpretation of intermediate results, and the synthesis of actionable recommendations. Engineering tasks are scored through execution-based, multi-metric evaluation. Open-ended tasks are assessed by a reliable, experimentally validated LLM-judge, which is guided by hierarchical, meticulously crafted rubrics. Our experiments reveal that even state-of-the-art agents falter on DAComp. Performance on DE tasks is particularly low, with success rates under 20%, exposing a critical bottleneck in holistic pipeline orchestration, not merely code generation. Scores on DA tasks also average below 40%, highlighting profound deficiencies in open-ended reasoning and demonstrating that engineering and analysis are distinct capabilities. By clearly diagnosing these limitations, DAComp provides a rigorous and realistic testbed to drive the development of truly capable autonomous data agents for enterprise settings. Our data and code are available at https://da-comp.github.io",
+      "keywords": [
+        "data engineering",
+        "data analysis",
+        "DE tasks",
+        "DA tasks",
+        "SQL pipelines",
+        "multi-metric evaluation",
+        "LLM-judge",
+        "hierarchical rubrics",
+        "autonomous data agents"
+      ],
+      "url": "https://arxiv.org/abs/2512.04324",
+      "published_at": "2025-12-03",
+      "paper_id": "hf:2512.04324"
+    },
+    {
+      "title": "Qwen3-VL Technical Report",
+      "summary": "We introduce Qwen3-VL, the most capable vision-language model in the Qwen series to date, achieving superior performance across a broad range of multimodal benchmarks. It natively supports interleaved contexts of up to 256K tokens, seamlessly integrating text, images, and video. The model family includes both dense (2B/4B/8B/32B) and mixture-of-experts (30B-A3B/235B-A22B) variants to accommodate diverse latency-quality trade-offs. Qwen3-VL delivers three core pillars: (i) markedly stronger pure-text understanding, surpassing comparable text-only backbones in several cases; (ii) robust long-context comprehension with a native 256K-token window for both text and interleaved multimodal inputs, enabling faithful retention, retrieval, and cross-referencing across long documents and videos; and (iii) advanced multimodal reasoning across single-image, multi-image, and video tasks, demonstrating leading performance on comprehensive evaluations such as MMMU and visual-math benchmarks (e.g., MathVista and MathVision). Architecturally, we introduce three key upgrades: (i) an enhanced interleaved-MRoPE for stronger spatial-temporal modeling across images and video; (ii) DeepStack integration, which effectively leverages multi-level ViT features to tighten vision-language alignment; and (iii) text-based time alignment for video, evolving from T-RoPE to explicit textual timestamp alignment for more precise temporal grounding. Under comparable token budgets and latency constraints, Qwen3-VL achieves superior performance in both dense and Mixture-of-Experts (MoE) architectures. We envision Qwen3-VL serving as a foundational engine for image-grounded reasoning, agentic decision-making, and multimodal code intelligence in real-world workflows.",
+      "keywords": [
+        "vision-language model",
+        "interleaved contexts",
+        "multimodal benchmarks",
+        "dense variants",
+        "mixture-of-experts",
+        "pure-text understanding",
+        "long-context comprehension",
+        "multimodal reasoning",
+        "MMMU",
+        "visual-math benchmarks",
+        "interleaved-MRoPE",
+        "DeepStack",
+        "text-based time alignment",
+        "T-RoPE",
+        "explicit textual timestamp alignment",
+        "vision-language alignment",
+        "image-grounded reasoning",
+        "agentic decision-making",
+        "multimodal code intelligence"
+      ],
+      "url": "https://arxiv.org/abs/2511.21631",
+      "published_at": "2025-11-26",
+      "paper_id": "hf:2511.21631"
+    },
+    {
+      "title": "Memory in the Age of AI Agents",
+      "summary": "Memory has emerged, and will continue to remain, a core capability of foundation model-based agents. As research on agent memory rapidly expands and attracts unprecedented attention, the field has also become increasingly fragmented. Existing works that fall under the umbrella of agent memory often differ substantially in their motivations, implementations, and evaluation protocols, while the proliferation of loosely defined memory terminologies has further obscured conceptual clarity. Traditional taxonomies such as long/short-term memory have proven insufficient to capture the diversity of contemporary agent memory systems. This work aims to provide an up-to-date landscape of current agent memory research. We begin by clearly delineating the scope of agent memory and distinguishing it from related concepts such as LLM memory, retrieval augmented generation (RAG), and context engineering. We then examine agent memory through the unified lenses of forms, functions, and dynamics. From the perspective of forms, we identify three dominant realizations of agent memory, namely token-level, parametric, and latent memory. From the perspective of functions, we propose a finer-grained taxonomy that distinguishes factual, experiential, and working memory. From the perspective of dynamics, we analyze how memory is formed, evolved, and retrieved over time. To support practical development, we compile a comprehensive summary of memory benchmarks and open-source frameworks. Beyond consolidation, we articulate a forward-looking perspective on emerging research frontiers, including memory automation, reinforcement learning integration, multimodal memory, multi-agent memory, and trustworthiness issues. We hope this survey serves not only as a reference for existing work, but also as a conceptual foundation for rethinking memory as a first-class primitive in the design of future agentic intelligence.",
+      "keywords": [
+        "agent memory",
+        "LLM memory",
+        "retrieval augmented generation (RAG)",
+        "context engineering",
+        "token-level memory",
+        "parametric memory",
+        "latent memory",
+        "factual memory",
+        "experiential memory",
+        "working memory",
+        "memory benchmarks",
+        "open-source frameworks",
+        "memory automation",
+        "reinforcement learning integration",
+        "multimodal memory",
+        "multi-agent memory",
+        "trustworthiness issues"
+      ],
+      "url": "https://arxiv.org/abs/2512.13564",
+      "published_at": "2025-12-15",
+      "paper_id": "hf:2512.13564"
+    },
+    {
+      "title": "Step-GUI Technical Report",
+      "summary": "Recent advances in multimodal large language models unlock unprecedented opportunities for GUI automation. However, a fundamental challenge remains: how to efficiently acquire high-quality training data while maintaining annotation reliability? We introduce a self-evolving training pipeline powered by the Calibrated Step Reward System, which converts model-generated trajectories into reliable training signals through trajectory-level calibration, achieving >90% annotation accuracy with 10-100x lower cost. Leveraging this pipeline, we introduce Step-GUI, a family of models (4B/8B) that achieves state-of-the-art GUI performance (8B: 80.2% AndroidWorld, 48.5% OSWorld, 62.6% ScreenShot-Pro) while maintaining robust general capabilities. As GUI agent capabilities improve, practical deployment demands standardized interfaces across heterogeneous devices while protecting user privacy. To this end, we propose GUI-MCP, the first Model Context Protocol for GUI automation with hierarchical architecture that combines low-level atomic operations and high-level task delegation to local specialist models, enabling high-privacy execution where sensitive data stays on-device. Finally, to assess whether agents can handle authentic everyday usage, we introduce AndroidDaily, a benchmark grounded in real-world mobile usage patterns with 3146 static actions and 235 end-to-end tasks across high-frequency daily scenarios (8B: static 89.91%, end-to-end 52.50%). Our work advances the development of practical GUI agents and demonstrates strong potential for real-world deployment in everyday digital interactions.",
+      "keywords": [
+        "multimodal large language models",
+        "GUI automation",
+        "self-evolving training pipeline",
+        "Calibrated Step Reward System",
+        "trajectory-level calibration",
+        "Step-GUI",
+        "GUI performance",
+        "GUI-MCP",
+        "Model Context Protocol",
+        "AndroidWorld",
+        "OSWorld",
+        "ScreenShot-Pro",
+        "AndroidDaily",
+        "real-world mobile usage patterns",
+        "hierarchical architecture",
+        "low-level atomic operations",
+        "high-level task delegation",
+        "local specialist models",
+        "high-privacy execution"
+      ],
+      "url": "https://arxiv.org/abs/2512.15431",
+      "published_at": "2025-12-17",
+      "paper_id": "hf:2512.15431"
+    },
+    {
+      "title": "Wan-Move: Motion-controllable Video Generation via Latent Trajectory Guidance",
+      "summary": "We present Wan-Move, a simple and scalable framework that brings motion control to video generative models. Existing motion-controllable methods typically suffer from coarse control granularity and limited scalability, leaving their outputs insufficient for practical use. We narrow this gap by achieving precise and high-quality motion control. Our core idea is to directly make the original condition features motion-aware for guiding video synthesis. To this end, we first represent object motions with dense point trajectories, allowing fine-grained control over the scene. We then project these trajectories into latent space and propagate the first frame's features along each trajectory, producing an aligned spatiotemporal feature map that tells how each scene element should move. This feature map serves as the updated latent condition, which is naturally integrated into the off-the-shelf image-to-video model, e.g., Wan-I2V-14B, as motion guidance without any architecture change. It removes the need for auxiliary motion encoders and makes fine-tuning base models easily scalable. Through scaled training, Wan-Move generates 5-second, 480p videos whose motion controllability rivals Kling 1.5 Pro's commercial Motion Brush, as indicated by user studies. To support comprehensive evaluation, we further design MoveBench, a rigorously curated benchmark featuring diverse content categories and hybrid-verified annotations. It is distinguished by larger data volume, longer video durations, and high-quality motion annotations. Extensive experiments on MoveBench and the public dataset consistently show Wan-Move's superior motion quality. Code, models, and benchmark data are made publicly available.",
+      "keywords": [
+        "motion control",
+        "video generative models",
+        "dense point trajectories",
+        "latent space",
+        "spatiotemporal feature map",
+        "motion guidance",
+        "image-to-video model",
+        "auxiliary motion encoders",
+        "fine-tuning",
+        "MoveBench",
+        "motion annotations"
+      ],
+      "url": "https://arxiv.org/abs/2512.08765",
+      "published_at": "2025-12-09",
+      "paper_id": "hf:2512.08765"
+    },
+    {
+      "title": "EgoX: Egocentric Video Generation from a Single Exocentric Video",
+      "summary": "Egocentric perception enables humans to experience and understand the world directly from their own point of view. Translating exocentric (third-person) videos into egocentric (first-person) videos opens up new possibilities for immersive understanding but remains highly challenging due to extreme camera pose variations and minimal view overlap. This task requires faithfully preserving visible content while synthesizing unseen regions in a geometrically consistent manner. To achieve this, we present EgoX, a novel framework for generating egocentric videos from a single exocentric input. EgoX leverages the pretrained spatio temporal knowledge of large-scale video diffusion models through lightweight LoRA adaptation and introduces a unified conditioning strategy that combines exocentric and egocentric priors via width and channel wise concatenation. Additionally, a geometry-guided self-attention mechanism selectively attends to spatially relevant regions, ensuring geometric coherence and high visual fidelity. Our approach achieves coherent and realistic egocentric video generation while demonstrating strong scalability and robustness across unseen and in-the-wild videos.",
+      "keywords": [
+        "video diffusion models",
+        "LoRA adaptation",
+        "unified conditioning",
+        "width and channel wise concatenation",
+        "geometry-guided self-attention",
+        "egocentric videos",
+        "exocentric videos"
+      ],
+      "url": "https://arxiv.org/abs/2512.08269",
+      "published_at": "2025-12-09",
+      "paper_id": "hf:2512.08269"
+    },
+    {
+      "title": "ToolOrchestra: Elevating Intelligence via Efficient Model and Tool Orchestration",
+      "summary": "Large language models are powerful generalists, yet solving deep and complex problems such as those of the Humanity's Last Exam (HLE) remains both conceptually challenging and computationally expensive. We show that small orchestrators managing other models and a variety of tools can both push the upper bound of intelligence and improve efficiency in solving difficult agentic tasks. We introduce ToolOrchestra, a method for training small orchestrators that coordinate intelligent tools. ToolOrchestra explicitly uses reinforcement learning with outcome-, efficiency-, and user-preference-aware rewards. Using ToolOrchestra, we produce Orchestrator, an 8B model that achieves higher accuracy at lower cost than previous tool-use agents while aligning with user preferences on which tools are to be used for a given query. On HLE, Orchestrator achieves a score of 37.1%, outperforming GPT-5 (35.1%) while being 2.5x more efficient. On tau2-Bench and FRAMES, Orchestrator surpasses GPT-5 by a wide margin while using only about 30% of the cost. Extensive analysis shows that Orchestrator achieves the best trade-off between performance and cost under multiple metrics, and generalizes robustly to unseen tools. These results demonstrate that composing diverse tools with a lightweight orchestration model is both more efficient and more effective than existing methods, paving the way for practical and scalable tool-augmented reasoning systems.",
+      "keywords": [
+        "large language models",
+        "ToolOrchestra",
+        "reinforcement learning",
+        "outcome-aware rewards",
+        "efficiency-aware rewards",
+        "user-preference-aware rewards",
+        "Orchestrator",
+        "tool-use agents",
+        "humanity's last exam",
+        "tau2-bench",
+        "FRAMES",
+        "tool-augmented reasoning systems"
+      ],
+      "url": "https://arxiv.org/abs/2511.21689",
+      "published_at": "2025-11-26",
+      "paper_id": "hf:2511.21689"
+    },
+    {
+      "title": "MMGR: Multi-Modal Generative Reasoning",
+      "summary": "Video foundation models generate visually realistic and temporally coherent content, but their reliability as world simulators depends on whether they capture physical, logical, and spatial constraints. Existing metrics such as Frechet Video Distance (FVD) emphasize perceptual quality and overlook reasoning failures, including violations of causality, physics, and global consistency. We introduce MMGR (Multi-Modal Generative Reasoning Evaluation and Benchmark), a principled evaluation framework based on five reasoning abilities: Physical, Logical, 3D Spatial, 2D Spatial, and Temporal. MMGR evaluates generative reasoning across three domains: Abstract Reasoning (ARC-AGI, Sudoku), Embodied Navigation (real-world 3D navigation and localization), and Physical Commonsense (sports and compositional interactions). MMGR applies fine-grained metrics that require holistic correctness across both video and image generation. We benchmark leading video models (Veo-3, Sora-2, Wan-2.2) and image models (Nano-banana, Nano-banana Pro, GPT-4o-image, Qwen-image), revealing strong performance gaps across domains. Models show moderate success on Physical Commonsense tasks but perform poorly on Abstract Reasoning (below 10 percent accuracy on ARC-AGI) and struggle with long-horizon spatial planning in embodied settings. Our analysis highlights key limitations in current models, including overreliance on perceptual data, weak global state consistency, and objectives that reward visual plausibility over causal correctness. MMGR offers a unified diagnostic benchmark and a path toward reasoning-aware generative world models.",
+      "keywords": [
+        "Frechet Video Distance (FVD)",
+        "MMGR",
+        "Multi-Modal Generative Reasoning Evaluation and Benchmark",
+        "Physical",
+        "Logical",
+        "3D Spatial",
+        "2D Spatial",
+        "Temporal",
+        "Abstract Reasoning",
+        "ARC-AGI",
+        "Sudoku",
+        "Embodied Navigation",
+        "Physical Commonsense",
+        "Veo-3",
+        "Sora-2",
+        "Wan-2.2",
+        "Nano-banana",
+        "Nano-banana Pro",
+        "GPT-4o-image",
+        "Qwen-image",
+        "perceptual quality",
+        "reasoning failures",
+        "causality",
+        "physics",
+        "global consistency",
+        "holistic correctness",
+        "generative reasoning",
+        "world simulators"
+      ],
+      "url": "https://arxiv.org/abs/2512.14691",
+      "published_at": "2025-12-16",
+      "paper_id": "hf:2512.14691"
+    },
+    {
+      "title": "T-pro 2.0: An Efficient Russian Hybrid-Reasoning Model and Playground",
+      "summary": "We introduce T-pro 2.0, an open-weight Russian LLM for hybrid reasoning and efficient inference. The model supports direct answering and reasoning-trace generation, using a Cyrillic-dense tokenizer and an adapted EAGLE speculative-decoding pipeline to reduce latency. To enable reproducible and extensible research, we release the model weights, the T-Wix 500k instruction corpus, the T-Math reasoning benchmark, and the EAGLE weights on Hugging Face. These resources allow users to study Russian-language reasoning and to extend or adapt both the model and the inference pipeline. A public web demo exposes reasoning and non-reasoning modes and illustrates the speedups achieved by our inference stack across domains. T-pro 2.0 thus serves as an accessible open system for building and evaluating efficient, practical Russian LLM applications.",
+      "keywords": [
+        "Cyrillic-dense tokenizer",
+        "EAGLE speculative-decoding pipeline",
+        "hybrid reasoning",
+        "efficient inference",
+        "reasoning-trace generation"
+      ],
+      "url": "https://arxiv.org/abs/2512.10430",
+      "published_at": "2025-12-11",
+      "paper_id": "hf:2512.10430"
+    },
+    {
+      "title": "Probing Scientific General Intelligence of LLMs with Scientist-Aligned Workflows",
+      "summary": "Despite advances in scientific AI, a coherent framework for Scientific General Intelligence (SGI)-the ability to autonomously conceive, investigate, and reason across scientific domains-remains lacking. We present an operational SGI definition grounded in the Practical Inquiry Model (PIM: Deliberation, Conception, Action, Perception) and operationalize it via four scientist-aligned tasks: deep research, idea generation, dry/wet experiments, and experimental reasoning. SGI-Bench comprises over 1,000 expert-curated, cross-disciplinary samples inspired by Science's 125 Big Questions, enabling systematic evaluation of state-of-the-art LLMs. Results reveal gaps: low exact match (10--20%) in deep research despite step-level alignment; ideas lacking feasibility and detail; high code executability but low execution result accuracy in dry experiments; low sequence fidelity in wet protocols; and persistent multimodal comparative-reasoning challenges. We further introduce Test-Time Reinforcement Learning (TTRL), which optimizes retrieval-augmented novelty rewards at inference, enhancing hypothesis novelty without reference answer. Together, our PIM-grounded definition, workflow-centric benchmark, and empirical insights establish a foundation for AI systems that genuinely participate in scientific discovery.",
+      "keywords": [
+        "Scientific General Intelligence",
+        "SGI",
+        "Practical Inquiry Model",
+        "PIM",
+        "deep research",
+        "idea generation",
+        "dry experiments",
+        "wet experiments",
+        "experimental reasoning",
+        "SGI-Bench",
+        "Big Questions",
+        "Low exact match",
+        "feasibility",
+        "detail",
+        "code executability",
+        "execution result accuracy",
+        "sequence fidelity",
+        "multimodal comparative-reasoning",
+        "Test-Time Reinforcement Learning",
+        "TTRL",
+        "retrieval-augmented novelty rewards",
+        "hypothesis novelty"
+      ],
+      "url": "https://arxiv.org/abs/2512.16969",
+      "published_at": "2025-12-18",
+      "paper_id": "hf:2512.16969"
+    },
+    {
+      "title": "Mindscape-Aware Retrieval Augmented Generation for Improved Long Context Understanding",
+      "summary": "Humans understand long and complex texts by relying on a holistic semantic representation of the content. This global view helps organize prior knowledge, interpret new information, and integrate evidence dispersed across a document, as revealed by the Mindscape-Aware Capability of humans in psychology. Current Retrieval-Augmented Generation (RAG) systems lack such guidance and therefore struggle with long-context tasks. In this paper, we propose Mindscape-Aware RAG (MiA-RAG), the first approach that equips LLM-based RAG systems with explicit global context awareness. MiA-RAG builds a mindscape through hierarchical summarization and conditions both retrieval and generation on this global semantic representation. This enables the retriever to form enriched query embeddings and the generator to reason over retrieved evidence within a coherent global context. We evaluate MiA-RAG across diverse long-context and bilingual benchmarks for evidence-based understanding and global sense-making. It consistently surpasses baselines, and further analysis shows that it aligns local details with a coherent global representation, enabling more human-like long-context retrieval and reasoning.",
+      "keywords": [
+        "Retrieval-Augmented Generation",
+        "LLM-based RAG systems",
+        "global context awareness",
+        "hierarchical summarization",
+        "mindscape",
+        "query embeddings",
+        "coherent global representation",
+        "long-context retrieval",
+        "evidence-based understanding",
+        "global sense-making"
+      ],
+      "url": "https://arxiv.org/abs/2512.17220",
+      "published_at": "2025-12-19",
+      "paper_id": "hf:2512.17220"
+    },
+    {
+      "title": "QwenLong-L1.5: Post-Training Recipe for Long-Context Reasoning and Memory Management",
+      "summary": "We introduce QwenLong-L1.5, a model that achieves superior long-context reasoning capabilities through systematic post-training innovations. The key technical breakthroughs of QwenLong-L1.5 are as follows: (1) Long-Context Data Synthesis Pipeline: We develop a systematic synthesis framework that generates challenging reasoning tasks requiring multi-hop grounding over globally distributed evidence. By deconstructing documents into atomic facts and their underlying relationships, and then programmatically composing verifiable reasoning questions, our approach creates high-quality training data at scale, moving substantially beyond simple retrieval tasks to enable genuine long-range reasoning capabilities. (2) Stabilized Reinforcement Learning for Long-Context Training: To overcome the critical instability in long-context RL, we introduce task-balanced sampling with task-specific advantage estimation to mitigate reward bias, and propose Adaptive Entropy-Controlled Policy Optimization (AEPO) that dynamically regulates exploration-exploitation trade-offs. (3) Memory-Augmented Architecture for Ultra-Long Contexts: Recognizing that even extended context windows cannot accommodate arbitrarily long sequences, we develop a memory management framework with multi-stage fusion RL training that seamlessly integrates single-pass reasoning with iterative memory-based processing for tasks exceeding 4M tokens. Based on Qwen3-30B-A3B-Thinking, QwenLong-L1.5 achieves performance comparable to GPT-5 and Gemini-2.5-Pro on long-context reasoning benchmarks, surpassing its baseline by 9.90 points on average. On ultra-long tasks (1M~4M tokens), QwenLong-L1.5's memory-agent framework yields a 9.48-point gain over the agent baseline. Additionally, the acquired long-context reasoning ability translates to enhanced performance in general domains like scientific reasoning, memory tool using, and extended dialogue.",
+      "keywords": [
+        "Long-Context Data Synthesis Pipeline",
+        "atomic facts",
+        "verifiable reasoning questions",
+        "Stabilized Reinforcement Learning",
+        "task-balanced sampling",
+        "task-specific advantage estimation",
+        "Adaptive Entropy-Controlled Policy Optimization",
+        "Memory-Augmented Architecture",
+        "multi-stage fusion RL training",
+        "single-pass reasoning",
+        "iterative memory-based processing",
+        "memory-agent framework"
+      ],
+      "url": "https://arxiv.org/abs/2512.12967",
+      "published_at": "2025-12-15",
+      "paper_id": "hf:2512.12967"
+    },
+    {
+      "title": "Adaptation of Agentic AI",
+      "summary": "Cutting-edge agentic AI systems are built on foundation models that can be adapted to plan, reason, and interact with external tools to perform increasingly complex and specialized tasks. As these systems grow in capability and scope, adaptation becomes a central mechanism for improving performance, reliability, and generalization. In this paper, we unify the rapidly expanding research landscape into a systematic framework that spans both agent adaptations and tool adaptations. We further decompose these into tool-execution-signaled and agent-output-signaled forms of agent adaptation, as well as agent-agnostic and agent-supervised forms of tool adaptation. We demonstrate that this framework helps clarify the design space of adaptation strategies in agentic AI, makes their trade-offs explicit, and provides practical guidance for selecting or switching among strategies during system design. We then review the representative approaches in each category, analyze their strengths and limitations, and highlight key open challenges and future opportunities. Overall, this paper aims to offer a conceptual foundation and practical roadmap for researchers and practitioners seeking to build more capable, efficient, and reliable agentic AI systems.",
+      "keywords": [
+        "agentic AI systems",
+        "foundation models",
+        "agent adaptations",
+        "tool adaptations",
+        "tool-execution-signaled",
+        "agent-output-signaled",
+        "agent-agnostic",
+        "agent-supervised"
+      ],
+      "url": "https://arxiv.org/abs/2512.16301",
+      "published_at": "2025-12-18",
+      "paper_id": "hf:2512.16301"
+    },
+    {
+      "title": "Towards Scalable Pre-training of Visual Tokenizers for Generation",
+      "summary": "The quality of the latent space in visual tokenizers (e.g., VAEs) is crucial for modern generative models. However, the standard reconstruction-based training paradigm produces a latent space that is biased towards low-level information, leading to a foundation flaw: better pixel-level accuracy does not lead to higher-quality generation. This implies that pouring extensive compute into visual tokenizer pre-training translates poorly to improved performance in generation. We identify this as the ``pre-training scaling problem`` and suggest a necessary shift: to be effective for generation, a latent space must concisely represent high-level semantics. We present VTP, a unified visual tokenizer pre-training framework, pioneering the joint optimization of image-text contrastive, self-supervised, and reconstruction losses. Our large-scale study reveals two principal findings: (1) understanding is a key driver of generation, and (2) much better scaling properties, where generative performance scales effectively with compute, parameters, and data allocated to the pretraining of the visual tokenizer. After large-scale pre-training, our tokenizer delivers a competitive profile (78.2 zero-shot accuracy and 0.36 rFID on ImageNet) and 4.1 times faster convergence on generation compared to advanced distillation methods. More importantly, it scales effectively: without modifying standard DiT training specs, solely investing more FLOPS in pretraining VTP achieves 65.8\\% FID improvement in downstream generation, while conventional autoencoder stagnates very early at 1/10 FLOPS. Our pre-trained models are available at https://github.com/MiniMax-AI/VTP.",
+      "keywords": [
+        "latent space",
+        "visual tokenizers",
+        "VAEs",
+        "reconstruction-based training",
+        "low-level information",
+        "pre-training scaling problem",
+        "high-level semantics",
+        "VTP",
+        "image-text contrastive",
+        "self-supervised",
+        "reconstruction losses",
+        "generative performance",
+        "ImageNet",
+        "zero-shot accuracy",
+        "rFID",
+        "FLOPS",
+        "DiT",
+        "advanced distillation methods"
+      ],
+      "url": "https://arxiv.org/abs/2512.13687",
+      "published_at": "2025-12-15",
+      "paper_id": "hf:2512.13687"
+    },
+    {
+      "title": "Stabilizing Reinforcement Learning with LLMs: Formulation and Practices",
+      "summary": "This paper proposes a novel formulation for reinforcement learning (RL) with large language models, explaining why and under what conditions the true sequence-level reward can be optimized via a surrogate token-level objective in policy gradient methods such as REINFORCE. Specifically, through a first-order approximation, we show that this surrogate becomes increasingly valid only when both the training-inference discrepancy and policy staleness are minimized. This insight provides a principled explanation for the crucial role of several widely adopted techniques in stabilizing RL training, including importance sampling correction, clipping, and particularly Routing Replay for Mixture-of-Experts (MoE) models. Through extensive experiments with a 30B MoE model totaling hundreds of thousands of GPU hours, we show that for on-policy training, the basic policy gradient algorithm with importance sampling correction achieves the highest training stability. When off-policy updates are introduced to accelerate convergence, combining clipping and Routing Replay becomes essential to mitigate the instability caused by policy staleness. Notably, once training is stabilized, prolonged optimization consistently yields comparable final performance regardless of cold-start initialization. We hope that the shared insights and the developed recipes for stable RL training will facilitate future research.",
+      "keywords": [
+        "reinforcement learning",
+        "large language models",
+        "sequence-level reward",
+        "token-level objective",
+        "policy gradient methods",
+        "REINFORCE",
+        "first-order approximation",
+        "training-inference discrepancy",
+        "policy staleness",
+        "importance sampling correction",
+        "clipping",
+        "Routing Replay",
+        "Mixture-of-Experts",
+        "on-policy training",
+        "off-policy updates"
+      ],
+      "url": "https://arxiv.org/abs/2512.01374",
+      "published_at": "2025-12-01",
+      "paper_id": "hf:2512.01374"
+    },
+    {
+      "title": "InsertAnywhere: Bridging 4D Scene Geometry and Diffusion Models for Realistic Video Object Insertion",
+      "summary": "Recent advances in diffusion-based video generation have opened new possibilities for controllable video editing, yet realistic video object insertion (VOI) remains challenging due to limited 4D scene understanding and inadequate handling of occlusion and lighting effects. We present InsertAnywhere, a new VOI framework that achieves geometrically consistent object placement and appearance-faithful video synthesis. Our method begins with a 4D aware mask generation module that reconstructs the scene geometry and propagates user specified object placement across frames while maintaining temporal coherence and occlusion consistency. Building upon this spatial foundation, we extend a diffusion based video generation model to jointly synthesize the inserted object and its surrounding local variations such as illumination and shading. To enable supervised training, we introduce ROSE++, an illumination aware synthetic dataset constructed by transforming the ROSE object removal dataset into triplets of object removed video, object present video, and a VLM generated reference image. Through extensive experiments, we demonstrate that our framework produces geometrically plausible and visually coherent object insertions across diverse real world scenarios, significantly outperforming existing research and commercial models.",
+      "keywords": [
+        "diffusion-based video generation",
+        "realistic video object insertion",
+        "4D scene understanding",
+        "occlusion effects",
+        "geometrically consistent object placement",
+        "appearance-faithful video synthesis",
+        "4D aware mask generation",
+        "diffusion based video generation model",
+        "ROSE++",
+        "illumination aware synthetic dataset",
+        "object removal dataset",
+        "VLM generated reference image",
+        "geometrically plausible",
+        "visually coherent object insertions"
+      ],
+      "url": "https://arxiv.org/abs/2512.17504",
+      "published_at": "2025-12-19",
+      "paper_id": "hf:2512.17504"
+    },
+    {
+      "title": "Coupling Experts and Routers in Mixture-of-Experts via an Auxiliary Loss",
+      "summary": "Mixture-of-Experts (MoE) models lack explicit constraints to ensure the router's decisions align well with the experts' capabilities, which ultimately limits model performance. To address this, we propose expert-router coupling (ERC) loss, a lightweight auxiliary loss that tightly couples the router's decisions with expert capabilities. Our approach treats each expert's router embedding as a proxy token for the tokens assigned to that expert, and feeds perturbed router embeddings through the experts to obtain internal activations. The ERC loss enforces two constraints on these activations: (1) Each expert must exhibit higher activation for its own proxy token than for the proxy tokens of any other expert. (2) Each proxy token must elicit stronger activation from its corresponding expert than from any other expert. These constraints jointly ensure that each router embedding faithfully represents its corresponding expert's capability, while each expert specializes in processing the tokens actually routed to it. The ERC loss is computationally efficient, operating only on n^2 activations, where n is the number of experts. This represents a fixed cost independent of batch size, unlike prior coupling methods that scale with the number of tokens (often millions per batch). Through pre-training MoE-LLMs ranging from 3B to 15B parameters and extensive analysis on trillions of tokens, we demonstrate the effectiveness of the ERC loss. Moreover, the ERC loss offers flexible control and quantitative tracking of expert specialization levels during training, providing valuable insights into MoEs.",
+      "keywords": [
+        "Mixture-of-Experts (MoE)",
+        "expert-router coupling (ERC) loss",
+        "router embeddings",
+        "proxy tokens",
+        "internal activations",
+        "MoE-LLMs",
+        "expert specialization levels",
+        "n² activations"
+      ],
+      "url": "https://arxiv.org/abs/2512.23447",
+      "published_at": "2025-12-29",
+      "paper_id": "hf:2512.23447"
+    },
+    {
+      "title": "TurboDiffusion: Accelerating Video Diffusion Models by 100-200 Times",
+      "summary": "We introduce TurboDiffusion, a video generation acceleration framework that can speed up end-to-end diffusion generation by 100-200x while maintaining video quality. TurboDiffusion mainly relies on several components for acceleration: (1) Attention acceleration: TurboDiffusion uses low-bit SageAttention and trainable Sparse-Linear Attention (SLA) to speed up attention computation. (2) Step distillation: TurboDiffusion adopts rCM for efficient step distillation. (3) W8A8 quantization: TurboDiffusion quantizes model parameters and activations to 8 bits to accelerate linear layers and compress the model. In addition, TurboDiffusion incorporates several other engineering optimizations.\n  We conduct experiments on the Wan2.2-I2V-14B-720P, Wan2.1-T2V-1.3B-480P, Wan2.1-T2V-14B-720P, and Wan2.1-T2V-14B-480P models. Experimental results show that TurboDiffusion achieves 100-200x speedup for video generation even on a single RTX 5090 GPU, while maintaining comparable video quality. The GitHub repository, which includes model checkpoints and easy-to-use code, is available at https://github.com/thu-ml/TurboDiffusion.",
+      "keywords": [
+        "SageAttention",
+        "Sparse-Linear Attention",
+        "rCM",
+        "W8A8 quantization",
+        "diffusion generation",
+        "video generation",
+        "RTX 5090 GPU"
+      ],
+      "url": "https://arxiv.org/abs/2512.16093",
+      "published_at": "2025-12-18",
+      "paper_id": "hf:2512.16093"
+    },
+    {
+      "title": "SemanticGen: Video Generation in Semantic Space",
+      "summary": "State-of-the-art video generative models typically learn the distribution of video latents in the VAE space and map them to pixels using a VAE decoder. While this approach can generate high-quality videos, it suffers from slow convergence and is computationally expensive when generating long videos. In this paper, we introduce SemanticGen, a novel solution to address these limitations by generating videos in the semantic space. Our main insight is that, due to the inherent redundancy in videos, the generation process should begin in a compact, high-level semantic space for global planning, followed by the addition of high-frequency details, rather than directly modeling a vast set of low-level video tokens using bi-directional attention. SemanticGen adopts a two-stage generation process. In the first stage, a diffusion model generates compact semantic video features, which define the global layout of the video. In the second stage, another diffusion model generates VAE latents conditioned on these semantic features to produce the final output. We observe that generation in the semantic space leads to faster convergence compared to the VAE latent space. Our method is also effective and computationally efficient when extended to long video generation. Extensive experiments demonstrate that SemanticGen produces high-quality videos and outperforms state-of-the-art approaches and strong baselines.",
+      "keywords": [
+        "VAE space",
+        "VAE decoder",
+        "semantic space",
+        "diffusion model",
+        "semantic video features",
+        "bi-directional attention"
+      ],
+      "url": "https://arxiv.org/abs/2512.20619",
+      "published_at": "2025-12-23",
+      "paper_id": "hf:2512.20619"
+    },
+    {
+      "title": "ReFusion: A Diffusion Large Language Model with Parallel Autoregressive Decoding",
+      "summary": "Autoregressive models (ARMs) are hindered by slow sequential inference. While masked diffusion models (MDMs) offer a parallel alternative, they suffer from critical drawbacks: high computational overhead from precluding Key-Value (KV) caching, and incoherent generation arising from learning dependencies over an intractable space of token combinations. To address these limitations, we introduce ReFusion, a novel masked diffusion model that achieves superior performance and efficiency by elevating parallel decoding from the token level to a higher slot level, where each slot is a fixed-length, contiguous sub-sequence. This is achieved through an iterative ``plan-and-infill'' decoding process: a diffusion-based planning step first identifies a set of weakly dependent slots, and an autoregressive infilling step then decodes these selected slots in parallel. The slot-based design simultaneously unlocks full KV cache reuse with a unified causal framework and reduces the learning complexity from the token combination space to a manageable slot-level permutation space. Extensive experiments on seven diverse benchmarks show that ReFusion not only overwhelmingly surpasses prior MDMs with 34% performance gains and an over 18times speedup on average, but also bridges the performance gap to strong ARMs while maintaining a 2.33times average speedup.",
+      "keywords": [
+        "autoregressive models",
+        "masked diffusion models",
+        "Key-Value caching",
+        "parallel decoding",
+        "token level",
+        "slot level",
+        "diffusion-based planning",
+        "autoregressive infilling",
+        "slot-based design",
+        "slot-level permutation space"
+      ],
+      "url": "https://arxiv.org/abs/2512.13586",
+      "published_at": "2025-12-15",
+      "paper_id": "hf:2512.13586"
+    },
+    {
+      "title": "Envision: Benchmarking Unified Understanding & Generation for Causal World Process Insights",
+      "summary": "Current multimodal models aim to transcend the limitations of single-modality representations by unifying understanding and generation, often using text-to-image (T2I) tasks to calibrate semantic consistency. However, their reliance on static, single-image generation in training and evaluation leads to overfitting to static pattern matching and semantic fusion, while fundamentally hindering their ability to model dynamic processes that unfold over time. To address these constraints, we propose Envision-a causal event progression benchmark for chained text-to-multi-image generation. Grounded in world knowledge and structured by spatiotemporal causality, it reorganizes existing evaluation dimensions and includes 1,000 four-stage prompts spanning six scientific and humanities domains. To transition evaluation from single images to sequential frames and assess whether models truly internalize world knowledge while adhering to causal-temporal constraints, we introduce Envision-Score, a holistic metric integrating multi-dimensional consistency, physicality, and aesthetics. Comprehensive evaluation of 15 models (10 specialized T2I models, 5 unified models) uncovers: specialized T2I models demonstrate proficiency in aesthetic rendering yet lack intrinsic world knowledge. Unified multimodal models bridge this gap, consistently outperforming specialized counterparts in causal narrative coherence. However, even these unified architectures remain subordinate to closed-source models and struggle to overcome the core challenge of spatiotemporal consistency. This demonstrates that a focus on causally-isolated single images impedes multi-frame reasoning and generation, promoting static pattern matching over dynamic world modeling-ultimately limiting world knowledge internalization, generation.",
+      "keywords": [
+        "multimodal models",
+        "text-to-image (T2I)",
+        "causal event progression",
+        "spatiotemporal causality",
+        "Envision-a",
+        "Envision-Score",
+        "multi-dimensional consistency",
+        "physicality",
+        "aesthetics",
+        "causal narrative coherence",
+        "spatiotemporal consistency",
+        "multi-frame reasoning",
+        "dynamic world modeling"
+      ],
+      "url": "https://arxiv.org/abs/2512.01816",
+      "published_at": "2025-12-01",
+      "paper_id": "hf:2512.01816"
+    },
+    {
+      "title": "DeepSeekMath-V2: Towards Self-Verifiable Mathematical Reasoning",
+      "summary": "Large language models have made significant progress in mathematical reasoning, which serves as an important testbed for AI and could impact scientific research if further advanced. By scaling reasoning with reinforcement learning that rewards correct final answers, LLMs have improved from poor performance to saturating quantitative reasoning competitions like AIME and HMMT in one year. However, this approach faces fundamental limitations. Pursuing higher final answer accuracy doesn't address a key issue: correct answers don't guarantee correct reasoning. Moreover, many mathematical tasks like theorem proving require rigorous step-by-step derivation rather than numerical answers, making final answer rewards inapplicable. To push the limits of deep reasoning, we believe it is necessary to verify the comprehensiveness and rigor of mathematical reasoning. Self-verification is particularly important for scaling test-time compute, especially for open problems without known solutions. Towards self-verifiable mathematical reasoning, we investigate how to train an accurate and faithful LLM-based verifier for theorem proving. We then train a proof generator using the verifier as the reward model, and incentivize the generator to identify and resolve as many issues as possible in their own proofs before finalizing them. To maintain the generation-verification gap as the generator becomes stronger, we propose to scale verification compute to automatically label new hard-to-verify proofs, creating training data to further improve the verifier. Our resulting model, DeepSeekMath-V2, demonstrates strong theorem-proving capabilities, achieving gold-level scores on IMO 2025 and CMO 2024 and a near-perfect 118/120 on Putnam 2024 with scaled test-time compute.",
+      "keywords": [
+        "large language models",
+        "mathematical reasoning",
+        "reinforcement learning",
+        "final answer accuracy",
+        "quantitative reasoning competitions",
+        "self-verification",
+        "theorem proving",
+        "proof generator",
+        "reward model",
+        "verification compute",
+        "theorem-proving capabilities",
+        "IMO",
+        "CMO",
+        "Putnam"
+      ],
+      "url": "https://arxiv.org/abs/2511.22570",
+      "published_at": "2025-11-27",
+      "paper_id": "hf:2511.22570"
+    },
+    {
+      "title": "Next-Embedding Prediction Makes Strong Vision Learners",
+      "summary": "Inspired by the success of generative pretraining in natural language, we ask whether the same principles can yield strong self-supervised visual learners. Instead of training models to output features for downstream use, we train them to generate embeddings to perform predictive tasks directly. This work explores such a shift from learning representations to learning models. Specifically, models learn to predict future patch embeddings conditioned on past ones, using causal masking and stop gradient, which we refer to as Next-Embedding Predictive Autoregression (NEPA). We demonstrate that a simple Transformer pretrained on ImageNet-1k with next embedding prediction as its sole learning objective is effective - no pixel reconstruction, discrete tokens, contrastive loss, or task-specific heads. This formulation retains architectural simplicity and scalability, without requiring additional design complexity. NEPA achieves strong results across tasks, attaining 83.8% and 85.3% top-1 accuracy on ImageNet-1K with ViT-B and ViT-L backbones after fine-tuning, and transferring effectively to semantic segmentation on ADE20K. We believe generative pretraining from embeddings provides a simple, scalable, and potentially modality-agnostic alternative to visual self-supervised learning.",
+      "keywords": [
+        "generative pretraining",
+        "predictive tasks",
+        "Next-Embedding Predictive Autoregression (NEPA)",
+        "causal masking",
+        "stop gradient",
+        "Transformer",
+        "ImageNet-1k",
+        "top-1 accuracy",
+        "ViT-B",
+        "ViT-L",
+        "semantic segmentation",
+        "ADE20K"
+      ],
+      "url": "https://arxiv.org/abs/2512.16922",
+      "published_at": "2025-12-18",
+      "paper_id": "hf:2512.16922"
+    },
+    {
+      "title": "Step-DeepResearch Technical Report",
+      "summary": "As LLMs shift toward autonomous agents, Deep Research has emerged as a pivotal metric. However, existing academic benchmarks like BrowseComp often fail to meet real-world demands for open-ended research, which requires robust skills in intent recognition, long-horizon decision-making, and cross-source verification. To address this, we introduce Step-DeepResearch, a cost-effective, end-to-end agent. We propose a Data Synthesis Strategy Based on Atomic Capabilities to reinforce planning and report writing, combined with a progressive training path from agentic mid-training to SFT and RL. Enhanced by a Checklist-style Judger, this approach significantly improves robustness. Furthermore, to bridge the evaluation gap in the Chinese domain, we establish ADR-Bench for realistic deep research scenarios. Experimental results show that Step-DeepResearch (32B) scores 61.4% on Scale AI Research Rubrics. On ADR-Bench, it significantly outperforms comparable models and rivals SOTA closed-source models like OpenAI and Gemini DeepResearch. These findings prove that refined training enables medium-sized models to achieve expert-level capabilities at industry-leading cost-efficiency.",
+      "keywords": [
+        "Deep Research",
+        "BrowseComp",
+        "Step-DeepResearch",
+        "Data Synthesis Strategy",
+        "Atomic Capabilities",
+        "agentic mid-training",
+        "SFT",
+        "RL",
+        "Checklist-style Judger",
+        "ADR-Bench",
+        "Scale AI Research Rubrics",
+        "OpenAI",
+        "Gemini DeepResearch"
+      ],
+      "url": "https://arxiv.org/abs/2512.20491",
+      "published_at": "2025-12-23",
+      "paper_id": "hf:2512.20491"
+    },
+    {
+      "title": "LLaDA2.0: Scaling Up Diffusion Language Models to 100B",
+      "summary": "This paper presents LLaDA2.0 -- a tuple of discrete diffusion large language models (dLLM) scaling up to 100B total parameters through systematic conversion from auto-regressive (AR) models -- establishing a new paradigm for frontier-scale deployment. Instead of costly training from scratch, LLaDA2.0 upholds knowledge inheritance, progressive adaption and efficiency-aware design principle, and seamless converts a pre-trained AR model into dLLM with a novel 3-phase block-level WSD based training scheme: progressive increasing block-size in block diffusion (warm-up), large-scale full-sequence diffusion (stable) and reverting back to compact-size block diffusion (decay). Along with post-training alignment with SFT and DPO, we obtain LLaDA2.0-mini (16B) and LLaDA2.0-flash (100B), two instruction-tuned Mixture-of-Experts (MoE) variants optimized for practical deployment. By preserving the advantages of parallel decoding, these models deliver superior performance and efficiency at the frontier scale. Both models were open-sourced.",
+      "keywords": [
+        "discrete diffusion large language models",
+        "dLLM",
+        "auto-regressive models",
+        "knowledge inheritance",
+        "progressive adaptation",
+        "efficiency-aware design",
+        "block-level WSD",
+        "block diffusion",
+        "full-sequence diffusion",
+        "post-training alignment",
+        "SFT",
+        "DPO",
+        "Mixture-of-Experts",
+        "parallel decoding"
+      ],
+      "url": "https://arxiv.org/abs/2512.15745",
+      "published_at": "2025-12-10",
+      "paper_id": "hf:2512.15745"
+    },
+    {
+      "title": "Nex-N1: Agentic Models Trained via a Unified Ecosystem for Large-Scale Environment Construction",
+      "summary": "The evolution of Large Language Models (LLMs) from passive responders to autonomous agents necessitates a fundamental shift in learning paradigms -- from static imitation to incentive-driven decision making. However, this transition is significantly impeded by the lack of scalable infrastructure capable of constructing high-quality interaction signals for effective policy learning. To address this, we introduce a comprehensive method designed to systematically scale the diversity and complexity of interactive environments. Our method realizes this scaling by addressing three orthogonal dimensions: (1) Complexity: NexAU, a flexible agent framework that supports building complex agent hierarchies via simple configurations; (2) Diversity: NexA4A automatically generates diverse agent hierarchies from natural language to cover infinite domains; and (3) Fidelity: NexGAP bridges the simulation-reality gap by integrating dynamic real-world environment for grounded trajectories synthesis. We train Nex-N1 upon the diverse and complex interactive environments established by our infrastructure. Empirical results on benchmarks such as SWE-bench and tau2 demonstrate that Nex-N1 consistently outperforms SOTA open-source models and achieves competitive performance against frontier proprietary models on complex agentic tasks. We open-source the Nex ecosystem and model weights to facilitate further research.",
+      "keywords": [
+        "Large Language Models",
+        "autonomous agents",
+        "incentive-driven decision making",
+        "policy learning",
+        "interaction signals",
+        "NexAU",
+        "agent hierarchies",
+        "NexA4A",
+        "natural language",
+        "NexGAP",
+        "simulation-reality gap",
+        "grounded trajectories synthesis",
+        "SWE-bench",
+        "tau2"
+      ],
+      "url": "https://arxiv.org/abs/2512.04987",
+      "published_at": "2025-12-04",
+      "paper_id": "hf:2512.04987"
+    },
+    {
+      "title": "Native Parallel Reasoner: Reasoning in Parallelism via Self-Distilled Reinforcement Learning",
+      "summary": "We introduce Native Parallel Reasoner (NPR), a teacher-free framework that enables Large Language Models (LLMs) to self-evolve genuine parallel reasoning capabilities. NPR transforms the model from sequential emulation to native parallel cognition through three key innovations: 1) a self-distilled progressive training paradigm that transitions from ``cold-start'' format discovery to strict topological constraints without external supervision; 2) a novel Parallel-Aware Policy Optimization (PAPO) algorithm that optimizes branching policies directly within the execution graph, allowing the model to learn adaptive decomposition via trial and error; and 3) a robust NPR Engine that refactors memory management and flow control of SGLang to enable stable, large-scale parallel RL training. Across eight reasoning benchmarks, NPR trained on Qwen3-4B achieves performance gains of up to 24.5% and inference speedups up to 4.6x. Unlike prior baselines that often fall back to autoregressive decoding, NPR demonstrates 100% genuine parallel execution, establishing a new standard for self-evolving, efficient, and scalable agentic reasoning.",
+      "keywords": [
+        "Native Parallel Reasoner",
+        "Large Language Models",
+        "self-evolve",
+        "parallel reasoning",
+        "self-distilled progressive training",
+        "cold-start format discovery",
+        "topological constraints",
+        "Parallel-Aware Policy Optimization",
+        "branching policies",
+        "execution graph",
+        "adaptive decomposition",
+        "trial and error",
+        "NPR Engine",
+        "memory management",
+        "flow control",
+        "parallel RL training",
+        "reasoning benchmarks",
+        "Qwen3-4B",
+        "genuine parallel execution",
+        "autoregressive decoding",
+        "agentic reasoning"
+      ],
+      "url": "https://arxiv.org/abs/2512.07461",
+      "published_at": "2025-12-08",
+      "paper_id": "hf:2512.07461"
+    },
+    {
+      "title": "TwinFlow: Realizing One-step Generation on Large Models with Self-adversarial Flows",
+      "summary": "Recent advances in large multi-modal generative models have demonstrated impressive capabilities in multi-modal generation, including image and video generation. These models are typically built upon multi-step frameworks like diffusion and flow matching, which inherently limits their inference efficiency (requiring 40-100 Number of Function Evaluations (NFEs)). While various few-step methods aim to accelerate the inference, existing solutions have clear limitations. Prominent distillation-based methods, such as progressive and consistency distillation, either require an iterative distillation procedure or show significant degradation at very few steps (< 4-NFE). Meanwhile, integrating adversarial training into distillation (e.g., DMD/DMD2 and SANA-Sprint) to enhance performance introduces training instability, added complexity, and high GPU memory overhead due to the auxiliary trained models. To this end, we propose TwinFlow, a simple yet effective framework for training 1-step generative models that bypasses the need of fixed pretrained teacher models and avoids standard adversarial networks during training, making it ideal for building large-scale, efficient models. On text-to-image tasks, our method achieves a GenEval score of 0.83 in 1-NFE, outperforming strong baselines like SANA-Sprint (a GAN loss-based framework) and RCGM (a consistency-based framework). Notably, we demonstrate the scalability of TwinFlow by full-parameter training on Qwen-Image-20B and transform it into an efficient few-step generator. With just 1-NFE, our approach matches the performance of the original 100-NFE model on both the GenEval and DPG-Bench benchmarks, reducing computational cost by 100times with minor quality degradation. Project page is available at https://zhenglin-cheng.com/twinflow.",
+      "keywords": [
+        "diffusion",
+        "flow matching",
+        "inference efficiency",
+        "Number of Function Evaluations",
+        "few-step methods",
+        "progressive distillation",
+        "consistency distillation",
+        "adversarial training",
+        "DMD/DMD2",
+        "SANA-Sprint",
+        "TwinFlow",
+        "GenEval",
+        "RCGM",
+        "Qwen-Image-20B",
+        "DPG-Bench"
+      ],
+      "url": "https://arxiv.org/abs/2512.05150",
+      "published_at": "2025-12-03",
+      "paper_id": "hf:2512.05150"
+    },
+    {
+      "title": "LongVie 2: Multimodal Controllable Ultra-Long Video World Model",
+      "summary": "Building video world models upon pretrained video generation systems represents an important yet challenging step toward general spatiotemporal intelligence. A world model should possess three essential properties: controllability, long-term visual quality, and temporal consistency. To this end, we take a progressive approach-first enhancing controllability and then extending toward long-term, high-quality generation. We present LongVie 2, an end-to-end autoregressive framework trained in three stages: (1) Multi-modal guidance, which integrates dense and sparse control signals to provide implicit world-level supervision and improve controllability; (2) Degradation-aware training on the input frame, bridging the gap between training and long-term inference to maintain high visual quality; and (3) History-context guidance, which aligns contextual information across adjacent clips to ensure temporal consistency. We further introduce LongVGenBench, a comprehensive benchmark comprising 100 high-resolution one-minute videos covering diverse real-world and synthetic environments. Extensive experiments demonstrate that LongVie 2 achieves state-of-the-art performance in long-range controllability, temporal coherence, and visual fidelity, and supports continuous video generation lasting up to five minutes, marking a significant step toward unified video world modeling.",
+      "keywords": [
+        "autoregressive framework",
+        "multi-modal guidance",
+        "degradation-aware training",
+        "history-context guidance",
+        "video world models",
+        "controllability",
+        "visual quality",
+        "temporal consistency",
+        "LongVGenBench",
+        "state-of-the-art performance",
+        "temporal coherence",
+        "visual fidelity"
+      ],
+      "url": "https://arxiv.org/abs/2512.13604",
+      "published_at": "2025-12-15",
+      "paper_id": "hf:2512.13604"
+    },
+    {
+      "title": "PhysBrain: Human Egocentric Data as a Bridge from Vision Language Models to Physical Intelligence",
+      "summary": "Robotic generalization relies on physical intelligence: the ability to reason about state changes, contact-rich interactions, and long-horizon planning under egocentric perception and action. However, most VLMs are trained primarily on third-person data, creating a fundamental viewpoint mismatch for humanoid robots. Scaling robot egocentric data collection remains impractical due to high cost and limited diversity, whereas large-scale human egocentric videos offer a scalable alternative that naturally capture rich interaction context and causal structure. The key challenge is to convert raw egocentric videos into structured and reliable embodiment training supervision. Accordingly, we propose an Egocentric2Embodiment translation pipeline that transforms first-person videos into multi-level, schema-driven VQA supervision with enforced evidence grounding and temporal consistency, enabling the construction of the Egocentric2Embodiment dataset (E2E-3M) at scale. An egocentric-aware embodied brain, termed PhysBrain, is obtained by training on the E2E-3M dataset. PhysBrain exhibits substantially improved egocentric understanding, particularly for planning on EgoThink. It provides an egocentric-aware initialization that enables more sample-efficient VLA fine-tuning and higher SimplerEnv success rates (53.9\\%), demonstrating effective transfer from human egocentric supervision to downstream robot control.",
+      "keywords": [
+        "Egocentric2Embodiment",
+        "VQA supervision",
+        "evidence grounding",
+        "temporal consistency",
+        "Egocentric2Embodiment dataset",
+        "E2E-3M",
+        "PhysBrain",
+        "egocentric-aware",
+        "VLA fine-tuning",
+        "SimplerEnv success rates"
+      ],
+      "url": "https://arxiv.org/abs/2512.16793",
+      "published_at": "2025-12-18",
+      "paper_id": "hf:2512.16793"
+    },
+    {
+      "title": "TUNA: Taming Unified Visual Representations for Native Unified Multimodal Models",
+      "summary": "Unified multimodal models (UMMs) aim to jointly perform multimodal understanding and generation within a single framework. We present TUNA, a native UMM that builds a unified continuous visual representation by cascading a VAE encoder with a representation encoder. This unified representation space allows end-to-end processing of images and videos for both understanding and generation tasks. Compared to prior UMMs with decoupled representations, TUNA's unified visual space avoids representation format mismatches introduced by separate encoders, outperforming decoupled alternatives in both understanding and generation. Moreover, we observe that stronger pretrained representation encoders consistently yield better performance across all multimodal tasks, highlighting the importance of the representation encoder. Finally, in this unified setting, jointly training on both understanding and generation data allows the two tasks to benefit from each other rather than interfere. Our extensive experiments on multimodal understanding and generation benchmarks show that TUNA achieves state-of-the-art results in image and video understanding, image and video generation, and image editing, demonstrating the effectiveness and scalability of its unified representation design.",
+      "keywords": [
+        "Unified multimodal models",
+        "UMMs",
+        "TUNA",
+        "VAE encoder",
+        "representation encoder",
+        "unified visual representation",
+        "multimodal understanding",
+        "multimodal generation",
+        "representation format mismatches",
+        "image understanding",
+        "video understanding",
+        "image generation",
+        "video generation",
+        "image editing"
+      ],
+      "url": "https://arxiv.org/abs/2512.02014",
+      "published_at": "2025-12-01",
+      "paper_id": "hf:2512.02014"
+    },
+    {
+      "title": "StereoWorld: Geometry-Aware Monocular-to-Stereo Video Generation",
+      "summary": "The growing adoption of XR devices has fueled strong demand for high-quality stereo video, yet its production remains costly and artifact-prone. To address this challenge, we present StereoWorld, an end-to-end framework that repurposes a pretrained video generator for high-fidelity monocular-to-stereo video generation. Our framework jointly conditions the model on the monocular video input while explicitly supervising the generation with a geometry-aware regularization to ensure 3D structural fidelity. A spatio-temporal tiling scheme is further integrated to enable efficient, high-resolution synthesis. To enable large-scale training and evaluation, we curate a high-definition stereo video dataset containing over 11M frames aligned to natural human interpupillary distance (IPD). Extensive experiments demonstrate that StereoWorld substantially outperforms prior methods, generating stereo videos with superior visual fidelity and geometric consistency. The project webpage is available at https://ke-xing.github.io/StereoWorld/.",
+      "keywords": [
+        "stereo video",
+        "monocular-to-stereo",
+        "pretrained video generator",
+        "geometry-aware regularization",
+        "spatio-temporal tiling",
+        "high-definition stereo video dataset",
+        "natural human interpupillary distance (IPD)",
+        "visual fidelity",
+        "geometric consistency"
+      ],
+      "url": "https://arxiv.org/abs/2512.09363",
+      "published_at": "2025-12-10",
+      "paper_id": "hf:2512.09363"
+    },
+    {
+      "title": "PaperDebugger: A Plugin-Based Multi-Agent System for In-Editor Academic Writing, Review, and Editing",
+      "summary": "Large language models are increasingly embedded into academic writing workflows, yet existing assistants remain external to the editor, preventing deep interaction with document state, structure, and revision history. This separation makes it impossible to support agentic, context-aware operations directly within LaTeX editors such as Overleaf. We present PaperDebugger, an in-editor, multi-agent, and plugin-based academic writing assistant that brings LLM-driven reasoning directly into the writing environment. Enabling such in-editor interaction is technically non-trivial: it requires reliable bidirectional synchronization with the editor, fine-grained version control and patching, secure state management, multi-agent scheduling, and extensible communication with external tools. PaperDebugger addresses these challenges through a Chrome-approved extension, a Kubernetes-native orchestration layer, and a Model Context Protocol (MCP) toolchain that integrates literature search, reference lookup, document scoring, and revision pipelines. Our demo showcases a fully integrated workflow, including localized edits, structured reviews, parallel agent execution, and diff-based updates, encapsulated within a minimal-intrusion user interface (UI). Early aggregated analytics demonstrate active user engagement and validate the practicality of an editor-native, agentic writing assistant. More details about this demo and video could be found at https://github.com/PaperDebugger/PaperDebugger.",
+      "keywords": [
+        "large language models",
+        "LaTeX editors",
+        "Overleaf",
+        "in-editor interaction",
+        "multi-agent",
+        "plugin-based",
+        "bidirectional synchronization",
+        "version control",
+        "patching",
+        "secure state management",
+        "multi-agent scheduling",
+        "Model Context Protocol",
+        "literature search",
+        "reference lookup",
+        "document scoring",
+        "revision pipelines",
+        "localized edits",
+        "structured reviews",
+        "parallel agent execution",
+        "diff-based updates"
+      ],
+      "url": "https://arxiv.org/abs/2512.02589",
+      "published_at": "2025-12-02",
+      "paper_id": "hf:2512.02589"
+    },
+    {
+      "title": "Deep Research: A Systematic Survey",
+      "summary": "Large language models (LLMs) have rapidly evolved from text generators into powerful problem solvers. Yet, many open tasks demand critical thinking, multi-source, and verifiable outputs, which are beyond single-shot prompting or standard retrieval-augmented generation. Recently, numerous studies have explored Deep Research (DR), which aims to combine the reasoning capabilities of LLMs with external tools, such as search engines, thereby empowering LLMs to act as research agents capable of completing complex, open-ended tasks. This survey presents a comprehensive and systematic overview of deep research systems, including a clear roadmap, foundational components, practical implementation techniques, important challenges, and future directions. Specifically, our main contributions are as follows: (i) we formalize a three-stage roadmap and distinguish deep research from related paradigms; (ii) we introduce four key components: query planning, information acquisition, memory management, and answer generation, each paired with fine-grained sub-taxonomies; (iii) we summarize optimization techniques, including prompting, supervised fine-tuning, and agentic reinforcement learning; and (iv) we consolidate evaluation criteria and open challenges, aiming to guide and facilitate future development. As the field of deep research continues to evolve rapidly, we are committed to continuously updating this survey to reflect the latest progress in this area.",
+      "keywords": [
+        "Deep Research",
+        "Large language models",
+        "LLMs",
+        "reasoning capabilities",
+        "search engines",
+        "research agents",
+        "three-stage roadmap",
+        "query planning",
+        "information acquisition",
+        "memory management",
+        "answer generation",
+        "sub-taxonomies",
+        "prompting",
+        "supervised fine-tuning",
+        "agentic reinforcement learning",
+        "evaluation criteria",
+        "open challenges"
+      ],
+      "url": "https://arxiv.org/abs/2512.02038",
+      "published_at": "2025-11-24",
+      "paper_id": "hf:2512.02038"
+    },
+    {
+      "title": "WorldPlay: Towards Long-Term Geometric Consistency for Real-Time Interactive World Modeling",
+      "summary": "This paper presents WorldPlay, a streaming video diffusion model that enables real-time, interactive world modeling with long-term geometric consistency, resolving the trade-off between speed and memory that limits current methods. WorldPlay draws power from three key innovations. 1) We use a Dual Action Representation to enable robust action control in response to the user's keyboard and mouse inputs. 2) To enforce long-term consistency, our Reconstituted Context Memory dynamically rebuilds context from past frames and uses temporal reframing to keep geometrically important but long-past frames accessible, effectively alleviating memory attenuation. 3) We also propose Context Forcing, a novel distillation method designed for memory-aware model. Aligning memory context between the teacher and student preserves the student's capacity to use long-range information, enabling real-time speeds while preventing error drift. Taken together, WorldPlay generates long-horizon streaming 720p video at 24 FPS with superior consistency, comparing favorably with existing techniques and showing strong generalization across diverse scenes. Project page and online demo can be found: https://3d-models.hunyuan.tencent.com/world/ and https://3d.hunyuan.tencent.com/sceneTo3D.",
+      "keywords": [
+        "Dual Action Representation",
+        "Reconstituted Context Memory",
+        "temporal reframing",
+        "Context Forcing",
+        "memory-aware model",
+        "long-horizon streaming video"
+      ],
+      "url": "https://arxiv.org/abs/2512.14614",
+      "published_at": "2025-12-16",
+      "paper_id": "hf:2512.14614"
+    },
+    {
+      "title": "Robust-R1: Degradation-Aware Reasoning for Robust Visual Understanding",
+      "summary": "Multimodal Large Language Models struggle to maintain reliable performance under extreme real-world visual degradations, which impede their practical robustness. Existing robust MLLMs predominantly rely on implicit training/adaptation that focuses solely on visual encoder generalization, suffering from limited interpretability and isolated optimization. To overcome these limitations, we propose Robust-R1, a novel framework that explicitly models visual degradations through structured reasoning chains. Our approach integrates: (i) supervised fine-tuning for degradation-aware reasoning foundations, (ii) reward-driven alignment for accurately perceiving degradation parameters, and (iii) dynamic reasoning depth scaling adapted to degradation intensity. To facilitate this approach, we introduce a specialized 11K dataset featuring realistic degradations synthesized across four critical real-world visual processing stages, each annotated with structured chains connecting degradation parameters, perceptual influence, pristine semantic reasoning chain, and conclusion. Comprehensive evaluations demonstrate state-of-the-art robustness: Robust-R1 outperforms all general and robust baselines on the real-world degradation benchmark R-Bench, while maintaining superior anti-degradation performance under multi-intensity adversarial degradations on MMMB, MMStar, and RealWorldQA.",
+      "keywords": [
+        "multimodal large language models",
+        "visual degradations",
+        "visual encoder generalization",
+        "supervised fine-tuning",
+        "reward-driven alignment",
+        "dynamic reasoning depth scaling",
+        "R-Bench",
+        "MMMB",
+        "MMStar",
+        "RealWorldQA"
+      ],
+      "url": "https://arxiv.org/abs/2512.17532",
+      "published_at": "2025-12-19",
+      "paper_id": "hf:2512.17532"
+    },
+    {
+      "title": "LiveTalk: Real-Time Multimodal Interactive Video Diffusion via Improved On-Policy Distillation",
+      "summary": "Real-time video generation via diffusion is essential for building general-purpose multimodal interactive AI systems. However, the simultaneous denoising of all video frames with bidirectional attention via an iterative process in diffusion models prevents real-time interaction. While existing distillation methods can make the model autoregressive and reduce sampling steps to mitigate this, they focus primarily on text-to-video generation, leaving the human-AI interaction unnatural and less efficient. This paper targets real-time interactive video diffusion conditioned on a multimodal context, including text, image, and audio, to bridge the gap. Given the observation that the leading on-policy distillation approach Self Forcing encounters challenges (visual artifacts like flickering, black frames, and quality degradation) with multimodal conditioning, we investigate an improved distillation recipe with emphasis on the quality of condition inputs as well as the initialization and schedule for the on-policy optimization. On benchmarks for multimodal-conditioned (audio, image, and text) avatar video generation including HDTF, AVSpeech, and CelebV-HQ, our distilled model matches the visual quality of the full-step, bidirectional baselines of similar or larger size with 20x less inference cost and latency. Further, we integrate our model with audio language models and long-form video inference technique Anchor-Heavy Identity Sinks to build LiveTalk, a real-time multimodal interactive avatar system. System-level evaluation on our curated multi-turn interaction benchmark shows LiveTalk outperforms state-of-the-art models (Sora2, Veo3) in multi-turn video coherence and content quality, while reducing response latency from 1 to 2 minutes to real-time generation, enabling seamless human-AI multimodal interaction.",
+      "keywords": [
+        "diffusion models",
+        "bidirectional attention",
+        "distillation methods",
+        "on-policy distillation",
+        "Self Forcing",
+        "audio language models",
+        "Anchor-Heavy Identity Sinks",
+        "multimodal conditioning",
+        "autoregressive",
+        "on-policy optimization"
+      ],
+      "url": "https://arxiv.org/abs/2512.23576",
+      "published_at": "2025-12-29",
+      "paper_id": "hf:2512.23576"
+    },
+    {
+      "title": "Video Reality Test: Can AI-Generated ASMR Videos fool VLMs and Humans?",
+      "summary": "Recent advances in video generation have produced vivid content that are often indistinguishable from real videos, making AI-generated video detection an emerging societal challenge. Prior AIGC detection benchmarks mostly evaluate video without audio, target broad narrative domains, and focus on classification solely. Yet it remains unclear whether state-of-the-art video generation models can produce immersive, audio-paired videos that reliably deceive humans and VLMs. To this end, we introduce Video Reality Test, an ASMR-sourced video benchmark suite for testing perceptual realism under tight audio-visual coupling, featuring the following dimensions: (i) Immersive ASMR video-audio sources. Built on carefully curated real ASMR videos, the benchmark targets fine-grained action-object interactions with diversity across objects, actions, and backgrounds. (ii) Peer-Review evaluation. An adversarial creator-reviewer protocol where video generation models act as creators aiming to fool reviewers, while VLMs serve as reviewers seeking to identify fakeness. Our experimental findings show: The best creator Veo3.1-Fast even fools most VLMs: the strongest reviewer (Gemini 2.5-Pro) achieves only 56\\% accuracy (random 50\\%), far below that of human experts (81.25\\%). Adding audio improves real-fake discrimination, yet superficial cues such as watermarks can still significantly mislead models. These findings delineate the current boundary of video generation realism and expose limitations of VLMs in perceptual fidelity and audio-visual consistency. Our code is available at https://github.com/video-reality-test/video-reality-test.",
+      "keywords": [
+        "ASMR",
+        "audio-visual coupling",
+        "Veo3.1-Fast",
+        "Gemini 2.5-Pro",
+        "perceptual realism",
+        "real-fake discrimination",
+        "audio-visual consistency"
+      ],
+      "url": "https://arxiv.org/abs/2512.13281",
+      "published_at": "2025-12-15",
+      "paper_id": "hf:2512.13281"
+    },
+    {
+      "title": "The Prism Hypothesis: Harmonizing Semantic and Pixel Representations via Unified Autoencoding",
+      "summary": "Deep representations across modalities are inherently intertwined. In this paper, we systematically analyze the spectral characteristics of various semantic and pixel encoders. Interestingly, our study uncovers a highly inspiring and rarely explored correspondence between an encoder's feature spectrum and its functional role: semantic encoders primarily capture low-frequency components that encode abstract meaning, whereas pixel encoders additionally retain high-frequency information that conveys fine-grained detail. This heuristic finding offers a unifying perspective that ties encoder behavior to its underlying spectral structure. We define it as the Prism Hypothesis, where each data modality can be viewed as a projection of the natural world onto a shared feature spectrum, just like the prism. Building on this insight, we propose Unified Autoencoding (UAE), a model that harmonizes semantic structure and pixel details via an innovative frequency-band modulator, enabling their seamless coexistence. Extensive experiments on ImageNet and MS-COCO benchmarks validate that our UAE effectively unifies semantic abstraction and pixel-level fidelity into a single latent space with state-of-the-art performance.",
+      "keywords": [
+        "spectral characteristics",
+        "semantic encoders",
+        "pixel encoders",
+        "feature spectrum",
+        "low-frequency components",
+        "high-frequency information",
+        "Prism Hypothesis",
+        "Unified Autoencoding",
+        "frequency-band modulator",
+        "ImageNet",
+        "MS-COCO",
+        "latent space"
+      ],
+      "url": "https://arxiv.org/abs/2512.19693",
+      "published_at": "2025-12-22",
+      "paper_id": "hf:2512.19693"
+    },
+    {
+      "title": "MultiShotMaster: A Controllable Multi-Shot Video Generation Framework",
+      "summary": "Current video generation techniques excel at single-shot clips but struggle to produce narrative multi-shot videos, which require flexible shot arrangement, coherent narrative, and controllability beyond text prompts. To tackle these challenges, we propose MultiShotMaster, a framework for highly controllable multi-shot video generation. We extend a pretrained single-shot model by integrating two novel variants of RoPE. First, we introduce Multi-Shot Narrative RoPE, which applies explicit phase shift at shot transitions, enabling flexible shot arrangement while preserving the temporal narrative order. Second, we design Spatiotemporal Position-Aware RoPE to incorporate reference tokens and grounding signals, enabling spatiotemporal-grounded reference injection. In addition, to overcome data scarcity, we establish an automated data annotation pipeline to extract multi-shot videos, captions, cross-shot grounding signals and reference images. Our framework leverages the intrinsic architectural properties to support multi-shot video generation, featuring text-driven inter-shot consistency, customized subject with motion control, and background-driven customized scene. Both shot count and duration are flexibly configurable. Extensive experiments demonstrate the superior performance and outstanding controllability of our framework.",
+      "keywords": [
+        "RoPE",
+        "Multi-Shot Narrative RoPE",
+        "Spatiotemporal Position-Aware RoPE",
+        "reference tokens",
+        "cross-shot grounding signals",
+        "reference images",
+        "text-driven inter-shot consistency",
+        "motion control",
+        "background-driven customized scene"
+      ],
+      "url": "https://arxiv.org/abs/2512.03041",
+      "published_at": "2025-12-02",
+      "paper_id": "hf:2512.03041"
+    },
+    {
+      "title": "Bottom-up Policy Optimization: Your Language Model Policy Secretly Contains Internal Policies",
+      "summary": "Existing reinforcement learning (RL) approaches treat large language models (LLMs) as a single unified policy, overlooking their internal mechanisms. Understanding how policy evolves across layers and modules is therefore crucial for enabling more targeted optimization and raveling out complex reasoning mechanisms. In this paper, we decompose the language model policy by leveraging the intrinsic split of the Transformer residual stream and the equivalence between the composition of hidden states with the unembedding matrix and the resulting samplable policy. This decomposition reveals Internal Layer Policies, corresponding to contributions from individual layers, and Internal Modular Policies, which align with the self-attention and feed-forward network (FFN) components within each layer. By analyzing the entropy of internal policy, we find that: (a) Early layers keep high entropy for exploration, top layers converge to near-zero entropy for refinement, with convergence patterns varying across model series. (b) LLama's prediction space rapidly converges in the final layer, whereas Qwen-series models, especially Qwen3, exhibit a more human-like, progressively structured reasoning pattern. Motivated by these findings, we propose Bottom-up Policy Optimization (BuPO), a novel RL paradigm that directly optimizes the internal layer policy during early training. By aligning training objective at lower layer, BuPO reconstructs foundational reasoning capabilities and achieves superior performance. Extensive experiments on complex reasoning benchmarks demonstrates the effectiveness of our method. Our code is available at https://github.com/Trae1ounG/BuPO.",
+      "keywords": [
+        "reinforcement learning",
+        "large language models",
+        "Transformer residual stream",
+        "unembedding matrix",
+        "Internal Layer Policies",
+        "Internal Modular Policies",
+        "self-attention",
+        "feed-forward network",
+        "entropy",
+        "Bottom-up Policy Optimization"
+      ],
+      "url": "https://arxiv.org/abs/2512.19673",
+      "published_at": "2025-12-22",
+      "paper_id": "hf:2512.19673"
+    },
+    {
+      "title": "Qwen-Image-Layered: Towards Inherent Editability via Layer Decomposition",
+      "summary": "Recent visual generative models often struggle with consistency during image editing due to the entangled nature of raster images, where all visual content is fused into a single canvas. In contrast, professional design tools employ layered representations, allowing isolated edits while preserving consistency. Motivated by this, we propose Qwen-Image-Layered, an end-to-end diffusion model that decomposes a single RGB image into multiple semantically disentangled RGBA layers, enabling inherent editability, where each RGBA layer can be independently manipulated without affecting other content. To support variable-length decomposition, we introduce three key components: (1) an RGBA-VAE to unify the latent representations of RGB and RGBA images; (2) a VLD-MMDiT (Variable Layers Decomposition MMDiT) architecture capable of decomposing a variable number of image layers; and (3) a Multi-stage Training strategy to adapt a pretrained image generation model into a multilayer image decomposer. Furthermore, to address the scarcity of high-quality multilayer training images, we build a pipeline to extract and annotate multilayer images from Photoshop documents (PSD). Experiments demonstrate that our method significantly surpasses existing approaches in decomposition quality and establishes a new paradigm for consistent image editing. Our code and models are released on https://github.com/QwenLM/Qwen-Image-Layered{https://github.com/QwenLM/Qwen-Image-Layered}",
+      "keywords": [
+        "diffusion models",
+        "RGBA-VAE",
+        "VLD-MMDiT",
+        "Multi-stage Training",
+        "image decomposition",
+        "semantically disentangled layers",
+        "image editing consistency"
+      ],
+      "url": "https://arxiv.org/abs/2512.15603",
+      "published_at": "2025-12-17",
+      "paper_id": "hf:2512.15603"
+    },
+    {
+      "title": "Emergent temporal abstractions in autoregressive models enable hierarchical reinforcement learning",
+      "summary": "Large-scale autoregressive models pretrained on next-token prediction and finetuned with reinforcement learning (RL) have achieved unprecedented success on many problem domains. During RL, these models explore by generating new outputs, one token at a time. However, sampling actions token-by-token can result in highly inefficient learning, particularly when rewards are sparse. Here, we show that it is possible to overcome this problem by acting and exploring within the internal representations of an autoregressive model. Specifically, to discover temporally-abstract actions, we introduce a higher-order, non-causal sequence model whose outputs control the residual stream activations of a base autoregressive model. On grid world and MuJoCo-based tasks with hierarchical structure, we find that the higher-order model learns to compress long activation sequence chunks onto internal controllers. Critically, each controller executes a sequence of behaviorally meaningful actions that unfold over long timescales and are accompanied with a learned termination condition, such that composing multiple controllers over time leads to efficient exploration on novel tasks. We show that direct internal controller reinforcement, a process we term \"internal RL\", enables learning from sparse rewards in cases where standard RL finetuning fails. Our results demonstrate the benefits of latent action generation and reinforcement in autoregressive models, suggesting internal RL as a promising avenue for realizing hierarchical RL within foundation models.",
+      "keywords": [],
+      "url": "https://arxiv.org/abs/2512.20605",
+      "published_at": "2025-12-23",
+      "paper_id": "hf:2512.20605"
+    }
+  ],
+  "clusters": [
+    {
+      "cluster_index": 0,
+      "size": 25,
+      "cohesion": 0.8888130021095276,
+      "centroid_b64": "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",
+      "members": [
+        {
+          "paper_id": "hf:2511.21689",
+          "rank_in_cluster": 0,
+          "sim_to_centroid": 0.9269325137138367
+        },
+        {
+          "paper_id": "hf:2512.02038",
+          "rank_in_cluster": 1,
+          "sim_to_centroid": 0.9255181550979614
+        },
+        {
+          "paper_id": "hf:2512.12967",
+          "rank_in_cluster": 2,
+          "sim_to_centroid": 0.9205756187438965
+        },
+        {
+          "paper_id": "hf:2512.02556",
+          "rank_in_cluster": 3,
+          "sim_to_centroid": 0.9157174229621887
+        },
+        {
+          "paper_id": "hf:2511.18538",
+          "rank_in_cluster": 4,
+          "sim_to_centroid": 0.914210855960846
+        },
+        {
+          "paper_id": "hf:2512.07461",
+          "rank_in_cluster": 5,
+          "sim_to_centroid": 0.9105985164642334
+        },
+        {
+          "paper_id": "hf:2512.16676",
+          "rank_in_cluster": 6,
+          "sim_to_centroid": 0.907143235206604
+        },
+        {
+          "paper_id": "hf:2512.04987",
+          "rank_in_cluster": 7,
+          "sim_to_centroid": 0.9007452726364136
+        },
+        {
+          "paper_id": "hf:2512.01374",
+          "rank_in_cluster": 8,
+          "sim_to_centroid": 0.8975744247436523
+        },
+        {
+          "paper_id": "hf:2512.20491",
+          "rank_in_cluster": 9,
+          "sim_to_centroid": 0.8952742218971252
+        },
+        {
+          "paper_id": "hf:2512.19673",
+          "rank_in_cluster": 10,
+          "sim_to_centroid": 0.894267201423645
+        },
+        {
+          "paper_id": "hf:2512.15745",
+          "rank_in_cluster": 11,
+          "sim_to_centroid": 0.8932753801345825
+        },
+        {
+          "paper_id": "hf:2512.16969",
+          "rank_in_cluster": 12,
+          "sim_to_centroid": 0.8913700580596924
+        },
+        {
+          "paper_id": "hf:2511.22570",
+          "rank_in_cluster": 13,
+          "sim_to_centroid": 0.8905020952224731
+        },
+        {
+          "paper_id": "hf:2511.21631",
+          "rank_in_cluster": 14,
+          "sim_to_centroid": 0.8874832391738892
+        },
+        {
+          "paper_id": "hf:2512.13564",
+          "rank_in_cluster": 15,
+          "sim_to_centroid": 0.878561794757843
+        },
+        {
+          "paper_id": "hf:2512.20605",
+          "rank_in_cluster": 16,
+          "sim_to_centroid": 0.8768925666809082
+        },
+        {
+          "paper_id": "hf:2512.10430",
+          "rank_in_cluster": 17,
+          "sim_to_centroid": 0.874793291091919
+        },
+        {
+          "paper_id": "hf:2512.17532",
+          "rank_in_cluster": 18,
+          "sim_to_centroid": 0.8740568161010742
+        },
+        {
+          "paper_id": "hf:2512.16301",
+          "rank_in_cluster": 19,
+          "sim_to_centroid": 0.8692085146903992
+        },
+        {
+          "paper_id": "hf:2512.15431",
+          "rank_in_cluster": 20,
+          "sim_to_centroid": 0.8621945977210999
+        },
+        {
+          "paper_id": "hf:2512.02589",
+          "rank_in_cluster": 21,
+          "sim_to_centroid": 0.8599169254302979
+        },
+        {
+          "paper_id": "hf:2512.17220",
+          "rank_in_cluster": 22,
+          "sim_to_centroid": 0.8592355251312256
+        },
+        {
+          "paper_id": "hf:2512.04324",
+          "rank_in_cluster": 23,
+          "sim_to_centroid": 0.8549154996871948
+        },
+        {
+          "paper_id": "hf:2512.23447",
+          "rank_in_cluster": 24,
+          "sim_to_centroid": 0.839361310005188
+        }
+      ]
+    },
+    {
+      "cluster_index": 1,
+      "size": 4,
+      "cohesion": 0.9288189709186554,
+      "centroid_b64": "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",
+      "members": [
+        {
+          "paper_id": "hf:2512.02014",
+          "rank_in_cluster": 0,
+          "sim_to_centroid": 0.9433667659759521
+        },
+        {
+          "paper_id": "hf:2512.19693",
+          "rank_in_cluster": 1,
+          "sim_to_centroid": 0.9289969205856323
+        },
+        {
+          "paper_id": "hf:2512.16922",
+          "rank_in_cluster": 2,
+          "sim_to_centroid": 0.9252948760986328
+        },
+        {
+          "paper_id": "hf:2512.16776",
+          "rank_in_cluster": 3,
+          "sim_to_centroid": 0.9176173210144043
+        }
+      ]
+    },
+    {
+      "cluster_index": 2,
+      "size": 8,
+      "cohesion": 0.9106715768575668,
+      "centroid_b64": "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",
+      "members": [
+        {
+          "paper_id": "hf:2511.22699",
+          "rank_in_cluster": 0,
+          "sim_to_centroid": 0.9418513774871826
+        },
+        {
+          "paper_id": "hf:2512.04677",
+          "rank_in_cluster": 1,
+          "sim_to_centroid": 0.9215196967124939
+        },
+        {
+          "paper_id": "hf:2512.05150",
+          "rank_in_cluster": 2,
+          "sim_to_centroid": 0.9142270684242249
+        },
+        {
+          "paper_id": "hf:2512.13687",
+          "rank_in_cluster": 3,
+          "sim_to_centroid": 0.9124285578727722
+        },
+        {
+          "paper_id": "hf:2512.16093",
+          "rank_in_cluster": 4,
+          "sim_to_centroid": 0.9121609926223755
+        },
+        {
+          "paper_id": "hf:2512.17504",
+          "rank_in_cluster": 5,
+          "sim_to_centroid": 0.907795786857605
+        },
+        {
+          "paper_id": "hf:2512.15603",
+          "rank_in_cluster": 6,
+          "sim_to_centroid": 0.8963969349861145
+        },
+        {
+          "paper_id": "hf:2512.13586",
+          "rank_in_cluster": 7,
+          "sim_to_centroid": 0.8789921998977661
+        }
+      ]
+    },
+    {
+      "cluster_index": 3,
+      "size": 13,
+      "cohesion": 0.9104915994864243,
+      "centroid_b64": "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",
+      "members": [
+        {
+          "paper_id": "hf:2512.13604",
+          "rank_in_cluster": 0,
+          "sim_to_centroid": 0.9424391984939575
+        },
+        {
+          "paper_id": "hf:2512.23576",
+          "rank_in_cluster": 1,
+          "sim_to_centroid": 0.9270470142364502
+        },
+        {
+          "paper_id": "hf:2512.14691",
+          "rank_in_cluster": 2,
+          "sim_to_centroid": 0.9255905151367188
+        },
+        {
+          "paper_id": "hf:2512.14614",
+          "rank_in_cluster": 3,
+          "sim_to_centroid": 0.9166713953018188
+        },
+        {
+          "paper_id": "hf:2512.08765",
+          "rank_in_cluster": 4,
+          "sim_to_centroid": 0.9132379293441772
+        },
+        {
+          "paper_id": "hf:2512.20619",
+          "rank_in_cluster": 5,
+          "sim_to_centroid": 0.9123565554618835
+        },
+        {
+          "paper_id": "hf:2512.01816",
+          "rank_in_cluster": 6,
+          "sim_to_centroid": 0.908811628818512
+        },
+        {
+          "paper_id": "hf:2511.20785",
+          "rank_in_cluster": 7,
+          "sim_to_centroid": 0.9081194400787354
+        },
+        {
+          "paper_id": "hf:2512.08269",
+          "rank_in_cluster": 8,
+          "sim_to_centroid": 0.9010065793991089
+        },
+        {
+          "paper_id": "hf:2512.13281",
+          "rank_in_cluster": 9,
+          "sim_to_centroid": 0.8985862731933594
+        },
+        {
+          "paper_id": "hf:2512.09363",
+          "rank_in_cluster": 10,
+          "sim_to_centroid": 0.8980293273925781
+        },
+        {
+          "paper_id": "hf:2512.03041",
+          "rank_in_cluster": 11,
+          "sim_to_centroid": 0.8965441584587097
+        },
+        {
+          "paper_id": "hf:2512.16793",
+          "rank_in_cluster": 12,
+          "sim_to_centroid": 0.8879507780075073
+        }
+      ]
+    }
+  ]
+}

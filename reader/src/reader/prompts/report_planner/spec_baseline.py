@@ -51,8 +51,8 @@ class FieldGuidance:
     question: str                 # "What question is this field answering?"
     use: Sequence[str]            # allowed evidence keys / signals
     decide: Sequence[str]         # decision rules / examples
-    if_blocked: Optional[Sequence[str]]     # what to do if you can't derive without invention
-    if_unblocked: Optional[Sequence[str]]   # what to collect/prepare for next step when you can derive without invention
+    if_blocked: Optional[Sequence[str]] = None    # what to do if you can't derive without invention
+    if_unblocked: Optional[Sequence[str]] = None  # what to collect/prepare for next step when you can derive without invention
 
 
 

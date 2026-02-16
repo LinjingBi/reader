@@ -2,7 +2,7 @@
 
 from reader.config import ReaderConfig
 from reader.adapters import memo
-from reader.pipelines.blocks import get_hf_paper_metadata, generate_clustering_reports, summarize_clusters_parallel, serialize_cluster_reports, convert_cluster_reports_to_memo_payload, create_report_job
+from reader.pipelines.blocks import summarize_clusters_parallel, serialize_cluster_reports, convert_cluster_reports_to_memo_payload, create_report_job
 from reader.logging.logging_setup import get_logger
 from reader.pipelines.metrics import JudgeOutput, ClusterReport
 from typing import Dict, Tuple, Optional
@@ -18,17 +18,10 @@ def run_monthly(cfg: ReaderConfig) -> None:
     Args:
         cfg: ReaderConfig instance
     """
-    # Get paper metadata from HF API or cached file
-    papers, period_start, period_end = get_hf_paper_metadata(cfg)
+    # Get period dates from config
+    period_start = cfg.run.period_start
+    period_end = cfg.run.period_end
     
-    # # dump hf metadata(paper, cluster, embed config) to memo db
-    # if cfg.memo.enabled:
-    #     # Generate monthly clustering reports and payload
-    #     fresh_paper_payload = generate_clustering_reports(cfg, papers, period_start, period_end)
-    #     logger.info(f"Memo ingest started: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
-    #     memo.fresh_paper(fresh_paper_payload, cfg)
-
-    #     logger.info(f"Memo ingest successful: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
     # # enrich monthly clusters with llm and dump to memo db
     # if cfg.cluster_summarization.enable and cfg.memo.enabled:
     #     logger.info("Memo get-best-run started: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")

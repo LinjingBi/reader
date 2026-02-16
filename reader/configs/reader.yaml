@@ -1,30 +1,6 @@
 run:
-  month_key: "month=2025-08"                 # keep the exact query key shape
-  max_papers: 50
-  artifacts_dir: "artifacts"
-  log_config_path: "/Users/bii/reader/reader/src/reader/logging/config.yaml"  # Absolute path to logging config file
-  log_file_path: "artifacts/logs/reader.log"
-
-sources:
-  hf:
-    daily_papers_api: "https://huggingface.co/api/daily_papers"
-    paper_page_base_url: "https://huggingface.co/papers/"
-    output_json: "papers_report.json"        # used only for optional dump
-
-algos:
-  embedding:
-    model: "BAAI/bge-small-en-v1.5"
-    modes: ["B", "C"]
-    top_n_keywords: 10
-
-  clustering:
-    method: "kmeans"
-    k_candidates: [4, 5]
-    random_seed: 42
-
-outputs:
-  # best_cluster_text_report_path_template: "best_clustering_md_reports_{month_key}.md"
-  best_cluster_report_path_template: "best_clustering_json_reports_{month_key}.json"
+  period_start: "2025-08-01"                 # Period start date in YYYY-MM-DD format
+  period_end: "2025-08-31"                  # Period end date in YYYY-MM-DD format
 
 memo:
   enabled: true                    # Set to true to enable memo CLI integration
@@ -41,11 +17,6 @@ llm_gemini:
   api_key_env: "GEMINI_API_KEY"  # Environment variable name for API key
   gemini_rpm_limit: 15           # Requests per minute limit
   gemini_tpm_limit: 250000       # Tokens per minute limit
-
-cluster_summarization:
-  enable: false  # Set to true to enable cluster summarization
-  llm_model: "models/gemini-2.5-flash-lite"  # Must match one from llm_gemini.models
-  prompt_template: "enrich_p0_per_cluster_gemini.txt" # all prompts must under reader/src/reader/prompts/
 
 report_generation:
   enable: false  # Set to true to enable report generation

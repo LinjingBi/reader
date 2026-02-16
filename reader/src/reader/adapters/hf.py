@@ -3,14 +3,25 @@
 import httpx
 import asyncio
 import json
+from dataclasses import dataclass
 from typing import List, Dict
 from datetime import datetime
 
-from reader.models import Paper
-from reader.config import ReaderConfig
+from reader.pipelines.hf_data.config.config import HFDataPipeConfig
 from reader.logging.logging_setup import get_logger
 
 logger = get_logger()
+
+
+@dataclass
+class Paper:
+    """Paper model representing a research paper"""
+    pid: str
+    title: str
+    summary: str
+    keywords: List[str]
+    url: str = ""
+    published_at: str = ""
 
 
 async def fetch_papers(client: httpx.AsyncClient, url: str, params: str) -> List[Dict]:
@@ -44,13 +55,13 @@ async def fetch_papers(client: httpx.AsyncClient, url: str, params: str) -> List
         return []
 
 
-async def get_monthly_report(config: ReaderConfig) -> Dict:
+async def get_monthly_report(config: HFDataPipeConfig) -> Dict:
     """
     Fetch papers for all 12 months concurrently.
     
     Args:
-        config: ReaderConfig instance
-        
+        config: HFDataPipeConfig instance
+    
     Returns:
         Dictionary with 'papers' and 'metadata' keys
     """
@@ -84,14 +95,14 @@ async def get_monthly_report(config: ReaderConfig) -> Dict:
     return results
 
 
-def parse_papers(papers: List[Dict], config: ReaderConfig) -> List[Paper]:
+def parse_papers(papers: List[Dict], config: HFDataPipeConfig) -> List[Paper]:
     """
     Parse paper dictionaries into Paper objects.
     
     Args:
         papers: List of paper dictionaries from API
-        config: ReaderConfig instance
-        
+        config: HFDataPipeConfig instance
+    
     Returns:
         List of Paper objects
     """
@@ -119,13 +130,13 @@ def parse_papers(papers: List[Dict], config: ReaderConfig) -> List[Paper]:
     return result
 
 
-def save_papers_to_file(results: Dict, config: ReaderConfig, output_txt: str = 'papers_report.txt') -> None:
+def save_papers_to_file(results: Dict, config: HFDataPipeConfig, output_txt: str = 'papers_report.txt') -> None:
     """
     Save papers to file in the specified format.
     
     Args:
         results: Results dictionary with 'papers' key
-        config: ReaderConfig instance
+        config: HFDataPipeConfig instance
         output_txt: Optional path for text output file
     """
     output_json = config.sources.hf.output_json

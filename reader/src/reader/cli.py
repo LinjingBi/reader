@@ -4,8 +4,10 @@ import argparse
 import sys
 from pathlib import Path
 
-from reader.config import load_config
+# from reader.config import load_config
+from reader.pipelines.hf_data.config.config import load_config
 from reader.pipelines.monthly import run_monthly
+from reader.pipelines.collect_data import run_hf_data
 from reader.logging.logging_setup import setup_logging, get_logger
 
 
@@ -41,7 +43,8 @@ def main():
     
     # Run pipeline
     try:
-        run_monthly(config)
+        # run_monthly(config)
+        run_hf_data(config)
     except Exception as e:
         logger.error(f"Error running pipeline: {e}", exc_info=True)
         sys.exit(1)
