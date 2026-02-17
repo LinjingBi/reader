@@ -79,6 +79,9 @@ reader/*best_clustering_*.json
 reader/*best_clustering_*.md
 reader/configs/reader.yaml
 
+# Paper chunk runs
+paper_chunk/runs/
+
 # PDF benchmark data (keep JSON files, ignore PDFs)
 reader/scripts/pdflib_benchmark/data/*.pdf
 

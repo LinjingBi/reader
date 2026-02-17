@@ -72,7 +72,9 @@ sub(issue, bug level)
 [x] - [reader] refactor call1 prompt and output pydantic models to collect llm instructions for evidence/memo metadata collection.  
 [x] - [paper-chunk] prepare env(especially paper chunk pipeline) for call1 test.note setup using paper_chunk.    
 [x] - [reader] create separated folder for hf data pipeline. note. pipelines/hf_data  
-[ ] - [paper-chunk] run phase 1 script to get phase 1 heristic rules and also phase 2 candidates.  
+[x] - [paper-chunk] run phase 1 script to get phase 1 heristic rules and also phase 2 candidates.  
+[x] - [paper-chunk] refactor paper curation script to aysnc+multi-thread, refactor alias regex compiler for multi-phrase match.  
+[ ] - [paper-chunk] phase 2 design & implementation.  
 
 [ ] - [reader] test call 1 llm report planner(heuristic rules for response?), choose a proper model, update llm config in reader.yaml to per model.    
 

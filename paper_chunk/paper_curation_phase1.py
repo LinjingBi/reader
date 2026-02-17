@@ -14,6 +14,7 @@ Run:
 from __future__ import annotations
 
 import argparse
+import asyncio
 import datetime as _dt
 import json
 import math
@@ -21,6 +22,7 @@ import os
 import re
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
@@ -87,21 +89,68 @@ def normalize_whitespace(text: str) -> str:
     return text.strip()
 
 
+# def compile_alias_regex(alias: str) -> re.Pattern:
+#     """
+#     Compile a safe regex for an alias:
+#     - case-insensitive
+#     - anchors full line
+#     - whitespace flexible
+#     - escapes special chars
+#     """
+#     alias = alias.strip().lower()
+#     # split on whitespace to allow flexible spaces
+#     parts = [re.escape(p) for p in re.split(r"\s+", alias) if p]
+#     if not parts:
+#         parts = [re.escape(alias)]
+#     pat = r"^\s*" + r"\s+".join(parts) + r"\s*$"
+#     return re.compile(pat, re.I)
 def compile_alias_regex(alias: str) -> re.Pattern:
     """
-    Compile a safe regex for an alias:
-    - case-insensitive
-    - anchors full line
-    - whitespace flexible
-    - escapes special chars
+    Compile alias regex as *whole-phrase containment* within a heading_key.
+
+    This enables:
+      - "experiments and results" to match "experiments" and "results"
+      - "summary and discussion" to match "summary" and "discussion"
+      - numbered headings are already stripped by normalize_heading_key()
+
+    Also supports a small whitelist of safe pluralization on the last token.
     """
     alias = alias.strip().lower()
-    # split on whitespace to allow flexible spaces
-    parts = [re.escape(p) for p in re.split(r"\s+", alias) if p]
-    if not parts:
-        parts = [re.escape(alias)]
-    pat = r"^\s*" + r"\s+".join(parts) + r"\s*$"
+    tokens = [t for t in re.split(r"\s+", alias) if t]
+    if not tokens:
+        tokens = [alias]
+
+    plural_whitelist = {
+        "work": r"work(?:s)?",
+        "experiment": r"experiment(?:s)?",
+        "conclusion": r"conclusion(?:s)?",
+        "method": r"method(?:s)?",
+        "preliminary": r"preliminar(?:y|ies)",
+        "result": r"result(?:s)?",
+        "limitation": r"limitation(?:s)?",
+        "discussion": r"discussion(?:s)?",
+        "setting": r"setting(?:s)?",
+        "dataset": r"dataset(?:s)?",
+        "evaluation": r"evaluation(?:s)?",
+    }
+
+    parts: List[str] = []
+    for i, tok in enumerate(tokens):
+        tok_l = tok.lower()
+        if i == len(tokens) - 1 and tok_l in plural_whitelist:
+            parts.append(plural_whitelist[tok_l])
+        else:
+            parts.append(re.escape(tok_l))
+
+    # phrase with flexible whitespace
+    phrase = r"\s+".join(parts)
+
+    # "word-ish" boundaries:
+    # - avoid matching inside longer tokens
+    # - but allow punctuation/whitespace around
+    pat = rf"(?:^|[^\w]){phrase}(?:$|[^\w])"
     return re.compile(pat, re.I)
+
 
 
 @dataclass
@@ -170,6 +219,16 @@ def fetch(url: str, timeout_s: float = 25.0) -> Tuple[int, bytes, Dict[str, str]
         headers={"User-Agent": "paper-curation-phase1/0.1"},
     ) as client:
         r = client.get(url)
+        return r.status_code, r.content, dict(r.headers)
+
+
+async def async_fetch(url: str, timeout_s: float = 25.0) -> Tuple[int, bytes, Dict[str, str]]:
+    async with httpx.AsyncClient(
+        follow_redirects=True,
+        timeout=timeout_s,
+        headers={"User-Agent": "paper-curation-phase1/0.1"},
+    ) as client:
+        r = await client.get(url)
         return r.status_code, r.content, dict(r.headers)
 
 
@@ -497,7 +556,7 @@ def blocks_to_selector_text(blocks: List[Dict[str, Any]], rules: Rules) -> Tuple
     return selector_text, heading_events
 
 
-def process_one_paper(paper_id: str, url_hint: str, rules: Rules) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+async def process_one_paper(paper_id: str, url_hint: str, rules: Rules, executor: Optional[ThreadPoolExecutor] = None) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
     """
     Returns:
       paper_event dict
@@ -515,19 +574,23 @@ def process_one_paper(paper_id: str, url_hint: str, rules: Rules) -> Tuple[Dict[
 
     selector_text: Dict[str, str] = {s: "" for s in SELECTORS}
     heading_events: List[Dict[str, Any]] = []
+    
+    # Get event loop once for executor calls
+    loop = asyncio.get_event_loop()
 
     # HTML first
     t0 = time.time()
     try:
-        code, content, _hdr = fetch(urls["html_url"])
+        code, content, _hdr = await async_fetch(urls["html_url"])
         fetch_ms = int((time.time() - t0) * 1000)
         if code == 200 and content and (b"<html" in content[:2000].lower() or b"<!doctype" in content[:2000].lower()):
             source_used = "html"
             t1 = time.time()
-            blocks, w = html_extract_heading_blocks(content, rules)
+            # Run CPU-bound parsing in thread pool
+            blocks, w = await loop.run_in_executor(executor, html_extract_heading_blocks, content, rules)
             parse_ms = int((time.time() - t1) * 1000)
             warnings.extend(w)
-            selector_text, heading_events = blocks_to_selector_text(blocks, rules)
+            selector_text, heading_events = await loop.run_in_executor(executor, blocks_to_selector_text, blocks, rules)
             status = "ok" if all(selector_text[s].strip() for s in SELECTORS if s in ("summary","introduction","method","conclusion")) else "partial"
         else:
             warnings.append(f"HTML unavailable (status={code}) -> PDF fallback.")
@@ -541,15 +604,16 @@ def process_one_paper(paper_id: str, url_hint: str, rules: Rules) -> Tuple[Dict[
     if source_used != "html":
         t0 = time.time()
         try:
-            code, content, _hdr = fetch(urls["pdf_url"])
+            code, content, _hdr = await async_fetch(urls["pdf_url"])
             fetch_ms = int((time.time() - t0) * 1000)
             if code == 200 and content[:4] == b"%PDF":
                 source_used = "pdf"
                 t1 = time.time()
-                blocks, w = pdf_extract_heading_blocks(content, rules)
+                # Run CPU-bound parsing in thread pool
+                blocks, w = await loop.run_in_executor(executor, pdf_extract_heading_blocks, content, rules)
                 parse_ms = int((time.time() - t1) * 1000)
                 warnings.extend(w)
-                selector_text, heading_events = blocks_to_selector_text(blocks, rules)
+                selector_text, heading_events = await loop.run_in_executor(executor, blocks_to_selector_text, blocks, rules)
                 status = "ok" if any(selector_text.values()) else "partial"
             else:
                 pdf_available = False
@@ -845,7 +909,7 @@ def write_jsonl(path: Path, rows: Iterable[Dict[str, Any]]) -> None:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
 
-def run(papers_path: Path, rules_path: Path, out_dir: Path, top_k: int = 50) -> Path:
+async def run(papers_path: Path, rules_path: Path, out_dir: Path, top_k: int = 50, max_papers: Optional[int] = None) -> Path:
     run_id = utc_run_id()
     run_dir = out_dir / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -855,18 +919,31 @@ def run(papers_path: Path, rules_path: Path, out_dir: Path, top_k: int = 50) -> 
     (run_dir / "rules.yaml").write_text(rules_path.read_text(encoding="utf-8"), encoding="utf-8")
 
     papers = json.loads(papers_path.read_text(encoding="utf-8"))
+    
+    # Apply max_papers limit if specified
+    if max_papers is not None:
+        papers = papers[:max_papers]
+    
     paper_events: List[Dict[str, Any]] = []
     heading_events_all: List[Dict[str, Any]] = []
 
-    for i, p in enumerate(papers, start=1):
+    # Auto-detect concurrency based on CPU cores
+    concurrency = min(os.cpu_count() or 4, len(papers))
+    
+    # Create thread pool executor for CPU-bound work
+    executor = ThreadPoolExecutor(max_workers=concurrency)
+    
+    # Process papers concurrently
+    async def process_with_enrichment(i: int, p: Dict[str, Any]) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
         pid = p.get("id") or p.get("paper_id")
         url = p.get("url", "")
         if not pid:
             eprint(f"[skip] missing id in papers.json entry: {p}")
-            continue
+            return None, None
+        
         eprint(f"[{i}/{len(papers)}] {pid}")
-        pe, hes = process_one_paper(str(pid), str(url), rules)
-
+        pe, hes = await process_one_paper(str(pid), str(url), rules, executor)
+        
         # enrich heading events with paper object
         for ev in hes:
             ev["run_id"] = run_id
@@ -879,9 +956,27 @@ def run(papers_path: Path, rules_path: Path, out_dir: Path, top_k: int = 50) -> 
             }
         pe["run_id"] = run_id
         pe["rules_version"] = rules.version
-
-        paper_events.append(pe)
-        heading_events_all.extend(hes)
+        
+        return pe, hes
+    
+    # Process papers in batches to respect concurrency limit
+    semaphore = asyncio.Semaphore(concurrency)
+    
+    async def process_with_semaphore(i: int, p: Dict[str, Any]) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+        async with semaphore:
+            return await process_with_enrichment(i, p)
+    
+    # Gather all results
+    tasks = [process_with_semaphore(i, p) for i, p in enumerate(papers, start=1)]
+    results = await asyncio.gather(*tasks)
+    
+    # Collect results
+    for pe, hes in results:
+        if pe is not None and hes is not None:
+            paper_events.append(pe)
+            heading_events_all.extend(hes)
+    
+    executor.shutdown(wait=True)
 
     # write logs
     write_jsonl(run_dir / "paper_events.jsonl", paper_events)
@@ -904,14 +999,15 @@ def main() -> None:
     ap_run.add_argument("--rules", type=str, required=True, help="Path to rules.yaml")
     ap_run.add_argument("--out", type=str, default="runs", help="Output directory")
     ap_run.add_argument("--top-k", type=int, default=50, help="Top K unmapped headings to report")
+    ap_run.add_argument("--max", type=int, default=None, help="Maximum number of papers to process (for testing/debugging)")
 
     args = ap.parse_args()
 
     if args.cmd == "run":
         out_dir = Path(args.out)
         out_dir.mkdir(parents=True, exist_ok=True)
-        run_dir = run(Path(args.papers), Path(args.rules), out_dir, top_k=int(args.top_k))
-        print(str(run_dir))
+        run_dir = asyncio.run(run(Path(args.papers), Path(args.rules), out_dir, top_k=int(args.top_k), max_papers=args.max))
+        print("Check: " + str(run_dir))
 
 
 if __name__ == "__main__":

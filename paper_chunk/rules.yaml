@@ -7,7 +7,7 @@ selectors:
 
   introduction:
     desc: "Motivation, problem setting, contributions."
-    aliases: ["introduction"]
+    aliases: ["introduction", "motivation", "overview"]
 
   related_work:
     desc: "Prior work, background, preliminaries."
@@ -15,31 +15,31 @@ selectors:
 
   method:
     desc: "Proposed method / approach / model / algorithm."
-    aliases: ["method", "methods", "methodology", "approach", "model", "algorithm", "framework", "architecture"]
+    aliases: ["method", "methodology", "approach", "model", "algorithm", "framework", "architecture", "post-training", "pre-training", "setup", "training recipe", "data", "training", "data curation", "dataset", "data collection", "inference", "training details", "pretraining", "infrastructure", "reward design", "supervised fine-tuning"]
 
   experiment:
     desc: "Evaluation setup, datasets, metrics, implementation details."
-    aliases: ["experiments", "evaluation", "experimental setup", "implementation details", "benchmarks", "ablation study"]
+    aliases: ["experiment", "evaluation", "experimental setup", "implementation details", "benchmarks", "ablation study", "ablations", "experimental result", "main result", "baselines", "reproducibility statement", "experimental setting", "metrics", "test-time scaling", "benchmark construction"]
 
   results:
     desc: "Quantitative/qualitative results."
-    aliases: ["results"]
+    aliases: ["result"]
 
   discussion:
     desc: "Interpretation, analysis, broader implications."
-    aliases: ["discussion", "analysis"]
+    aliases: ["discussion", "analysis", "further analysis"]
 
   limitations:
     desc: "Limitations, failure cases, caveats."
-    aliases: ["limitations", "failure cases", "caveats"]
+    aliases: ["limitation", "failure cases", "caveats"]
 
   conclusion:
     desc: "Conclusions, future work."
-    aliases: ["conclusion", "conclusions", "future work"]
+    aliases: ["conclusion", "future work", "impact statement", "applications"]
 
 combined_heading_policy:
   enabled: true
   join_tokens: ["and", "&", "/"]
 
 references_policy:
-  stop_headings: ["references", "bibliography"]
+  stop_headings: ["references", "bibliography", "acknowledgements", "acknowledgment", "ethics statement"]
