@@ -74,7 +74,11 @@ sub(issue, bug level)
 [x] - [reader] create separated folder for hf data pipeline. note. pipelines/hf_data  
 [x] - [paper-chunk] run phase 1 script to get phase 1 heristic rules and also phase 2 candidates.  
 [x] - [paper-chunk] refactor paper curation script to aysnc+multi-thread, refactor alias regex compiler for multi-phrase match.  
-[ ] - [paper-chunk] phase 2 design & implementation.  
+[?] - [paper-chunk] phase 2 design & implementation. puspend. waiting for call1&call 2 feddback.        
+[x] - [paper-chunk] finalized the rules.yaml in phase 1 and fix unmapped header suggest candidate confidence normalization and cross paper voting issues.  
+[ ] - [reader] add new paper-chunk algo-lib.  
+[ ] - [reader] integrate paper-chunk algo-lib into hf_data pipe.  
+[ ] - [memo,reader] cmds to write and read paper-chunk data to memo.  
 
 [ ] - [reader] test call 1 llm report planner(heuristic rules for response?), choose a proper model, update llm config in reader.yaml to per model.    
 

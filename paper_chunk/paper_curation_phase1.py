@@ -49,6 +49,9 @@ SELECTORS = [
     "conclusion",
 ]
 
+# Required selectors that must be present for a paper to be marked as "ok" in HTML extraction.
+REQUIRED_SELECTORS_FOR_OK = ("summary", "introduction", "method", "conclusion")
+
 CAPTION_PAT = re.compile(r"^\s*(figure|fig\.|table)\s*\d+[:\.\s]", re.I)
 
 
@@ -170,7 +173,7 @@ class Rules:
         crv = int(obj.get("compiled_regex_version", 1))
         selectors = obj.get("selectors", {})
         join_tokens = obj.get("combined_heading_policy", {}).get("join_tokens", ["and", "&", "/"])
-        stop_headings = obj.get("references_policy", {}).get("stop_headings", ["references", "bibliography"])
+        stop_headings = obj.get("ignore_policy", {}).get("stop_headings", ["references", "bibliography"])
 
         alias_regex: Dict[str, List[Tuple[str, re.Pattern]]] = {}
         for sel, meta in selectors.items():
@@ -198,7 +201,7 @@ class Rules:
         matched_aliases: List[str] = []
         for sel, pairs in self.alias_regex.items():
             for alias, rgx in pairs:
-                if rgx.match(hk):
+                if rgx.search(hk):
                     matched_sels.append(sel)
                     matched_aliases.append(alias)
                     break
@@ -465,16 +468,34 @@ def suggest_candidates(heading_key: str, snippet: str, heading_index: int) -> Li
         scores["conclusion"] += 0.4
         scores["limitations"] += 0.2
 
-    # normalize to confidences (softmax-ish but simpler)
+    # normalize to confidences with winner-focused amplification
     items = [(sel, sc) for sel, sc in scores.items() if sc > 0.0]
     if not items:
         return []
     items.sort(key=lambda x: x[1], reverse=True)
+    
+    # Winner detection: if top score is 2x the second score, return only top candidate
+    if len(items) >= 2:
+        top_score = items[0][1]
+        second_score = items[1][1]
+        if second_score > 0 and top_score >= 2.0 * second_score:
+            # Clear winner - return only top candidate with high confidence
+            sel = items[0][0]
+            reasons = []
+            if any(kw in hk for kw in KW_RULES.get(sel, [])):
+                reasons.append("heading keyword")
+            if any(kw in sn for kw in KW_RULES.get(sel, [])):
+                reasons.append("snippet keyword")
+            reasons.append("position prior")
+            return [{"selector": sel, "confidence": 0.95, "reasons": reasons}]
+    
+    # Amplification: square scores before normalizing to amplify winners
     top = items[:3]
-    total = sum(sc for _, sc in top) or 1.0
+    squared_scores = [(sel, sc * sc) for sel, sc in top]
+    total = sum(sc for _, sc in squared_scores) or 1.0
     candidates = []
-    for sel, sc in top:
-        conf = sc / total
+    for sel, sc_squared in squared_scores:
+        conf = sc_squared / total
         reasons = []
         if any(kw in hk for kw in KW_RULES.get(sel, [])):
             reasons.append("heading keyword")
@@ -591,7 +612,7 @@ async def process_one_paper(paper_id: str, url_hint: str, rules: Rules, executor
             parse_ms = int((time.time() - t1) * 1000)
             warnings.extend(w)
             selector_text, heading_events = await loop.run_in_executor(executor, blocks_to_selector_text, blocks, rules)
-            status = "ok" if all(selector_text[s].strip() for s in SELECTORS if s in ("summary","introduction","method","conclusion")) else "partial"
+            status = "ok" if all(selector_text[s].strip() for s in REQUIRED_SELECTORS_FOR_OK) else "partial"
         else:
             warnings.append(f"HTML unavailable (status={code}) -> PDF fallback.")
     except Exception as e:
@@ -614,6 +635,7 @@ async def process_one_paper(paper_id: str, url_hint: str, rules: Rules, executor
                 parse_ms = int((time.time() - t1) * 1000)
                 warnings.extend(w)
                 selector_text, heading_events = await loop.run_in_executor(executor, blocks_to_selector_text, blocks, rules)
+                # PDF extraction: "ok" if any selector has text, otherwise "partial"
                 status = "ok" if any(selector_text.values()) else "partial"
             else:
                 pdf_available = False
@@ -754,10 +776,11 @@ def aggregate_report(run_id: str, rules: Rules, paper_events: List[Dict[str, Any
             b["representative_raw"][raw] = b["representative_raw"].get(raw, 0) + 1
             add_example(b, ex)
 
-            # collect suggestion distribution
+            # collect suggestion distribution (weighted by confidence scores)
             for c in candidates:
                 sel = c["selector"]
-                b["suggest_votes"][sel] = b["suggest_votes"].get(sel, 0) + 1
+                conf = c.get("confidence", 0.0)
+                b["suggest_votes"][sel] = b["suggest_votes"].get(sel, 0.0) + conf
 
     # build top_unmapped list
     top_unmapped = []
@@ -831,7 +854,7 @@ def aggregate_report(run_id: str, rules: Rules, paper_events: List[Dict[str, Any
     }
 
     MIN_COUNT = 5
-    MIN_SHARE = 0.80
+    MIN_SHARE = 0.65  # Adjusted for weighted voting + winner-focused normalization
 
     ambiguous_set = set(a["heading_key"] for a in ambiguous_headings)
 

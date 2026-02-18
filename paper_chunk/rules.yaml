@@ -11,15 +11,15 @@ selectors:
 
   related_work:
     desc: "Prior work, background, preliminaries."
-    aliases: ["related work", "background", "preliminaries", "prior work"]
+    aliases: ["related work", "background", "preliminary", "prior work"]
 
   method:
     desc: "Proposed method / approach / model / algorithm."
-    aliases: ["method", "methodology", "approach", "model", "algorithm", "framework", "architecture", "post-training", "pre-training", "setup", "training recipe", "data", "training", "data curation", "dataset", "data collection", "inference", "training details", "pretraining", "infrastructure", "reward design", "supervised fine-tuning"]
+    aliases: ["method", "methodology", "approach", "model", "algorithm", "framework", "architecture", "post-training", "pre-training", "setup", "training recipe", "data", "training", "data curation", "dataset", "data collection", "inference", "training details", "pretraining", "infrastructure", "reward design", "supervised fine-tuning", "distillation"]
 
   experiment:
     desc: "Evaluation setup, datasets, metrics, implementation details."
-    aliases: ["experiment", "evaluation", "experimental setup", "implementation details", "benchmarks", "ablation study", "ablations", "experimental result", "main result", "baselines", "reproducibility statement", "experimental setting", "metrics", "test-time scaling", "benchmark construction"]
+    aliases: ["experiment", "evaluation", "experimental setup", "implementation details", "benchmarks", "ablation study", "ablations", "ablation studies", "experimental result", "main result", "baselines", "reproducibility statement", "experimental setting", "metrics", "test-time scaling", "benchmark construction", "implementations"]
 
   results:
     desc: "Quantitative/qualitative results."
@@ -38,8 +38,7 @@ selectors:
     aliases: ["conclusion", "future work", "impact statement", "applications"]
 
 combined_heading_policy:
-  enabled: true
   join_tokens: ["and", "&", "/"]
 
-references_policy:
-  stop_headings: ["references", "bibliography", "acknowledgements", "acknowledgment", "ethics statement"]
+ignore_policy:
+  stop_headings: ["references", "bibliography", "acknowledgments", "acknowledgment", "acknowledgement","acknowledgements","ethics statement", "contributions", "contribution", "contributors"]
