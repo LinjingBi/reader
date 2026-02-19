@@ -3,7 +3,7 @@ use crate::db;
 use anyhow::Result;
 use std::io::{self, Write};
 
-fn validate_get_topic_resolver_metadata(cluster_pk_hash: &str, db_path: &str, schema_path: Option<&str>) -> ValidationResult {
+fn validate_get_topic_resolver_metadata(_cluster_pk_hash: &str, db_path: &str, schema_path: Option<&str>) -> ValidationResult {
     let mut validation = ValidationResult::new();
 
     eprintln!("Validation starts...");

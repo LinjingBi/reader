@@ -1,0 +1,27 @@
+{
+  "success": true,
+  "meta": {
+    "source": "hf_monthly",
+    "period_start": "2025-01-01",
+    "period_end": "2025-01-31",
+    "papers_count": 2,
+    "clusters_count": 2
+  },
+  "details": {
+    "abc123def456...": [
+      {
+        "paper_id": "arxiv:2501.00001",
+        "rank_in_cluster": 0,
+        "paper_url": "https://arxiv.org/abs/2501.00001"
+      }
+    ],
+    "def456ghi789...": [
+      {
+        "paper_id": "arxiv:2501.00002",
+        "rank_in_cluster": 1,
+        "paper_url": "https://arxiv.org/abs/2501.00002"
+      }
+    ]
+  }
+}
+

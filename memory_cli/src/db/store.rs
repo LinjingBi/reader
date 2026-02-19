@@ -5,12 +5,14 @@ use crate::contracts::{
     ReportJobStatus,
     GetTopicResolverMetadataResponse, TopicCentroid, ClusterMetadata,
     GetReportPlannerMetadataResponse, NewObservation, TopPaper, HistoryReport,
+    PaperOutput,
 };
 use anyhow::{Context, Result};
 use chrono::Utc;
 use rusqlite::{params, Connection, Transaction};
 use sha2::{Sha256, Digest};
 use hex;
+use std::collections::HashMap;
 
 /// Thin repository layer. Exposes only safe, pre-defined operations.
 pub struct Store<'a> {
@@ -43,13 +45,14 @@ impl<'a> Store<'a> {
 
     /// Atomic ingest of month snapshot + papers + best clustering (Step 1–2).
     /// Split into two transactions: Tx A (ingest) and Tx B (clusters).
-    pub fn fresh_paper(&self, req: &FreshPaperRequest) -> Result<()> {
+    /// Returns a HashMap mapping cluster_index to pk_hash.
+    pub fn fresh_paper(&self, req: &FreshPaperRequest) -> Result<HashMap<i64, String>> {
         let now = Utc::now().to_rfc3339();
         let role = req.role.clone().unwrap_or_else(|| "hf_batch".to_string());
 
         // Tx A: Ingest (configs, snapshot, papers)
         {
-            let tx_a = self.conn.transaction()?;
+            let tx_a = self.conn.unchecked_transaction()?;
             
             // Upsert configs
             self.upsert_embed_config(&tx_a, &req.embed_config.embed_config_id, &req.embed_config.json_payload.to_string(), &now)?;
@@ -69,8 +72,9 @@ impl<'a> Store<'a> {
         }
 
         // Tx B: Clusters
+        let mut pk_hash_map = HashMap::new();
         {
-            let tx_b = self.conn.transaction()?;
+            let tx_b = self.conn.unchecked_transaction()?;
 
             // Ensure only one selected_best per snapshot+role (enforced by partial unique index)
             tx_b.execute(
@@ -105,7 +109,7 @@ impl<'a> Store<'a> {
 
             // Insert clusters + members
             for c in &req.clusters {
-                self.insert_cluster(
+                let pk_hash = self.insert_cluster(
                     &tx_b,
                     &req.source,
                     &req.period_start,
@@ -119,6 +123,7 @@ impl<'a> Store<'a> {
                     c.cohesion,
                     &now,
                 )?;
+                pk_hash_map.insert(c.cluster_index, pk_hash);
 
                 for m in &c.members {
                     self.insert_cluster_member(
@@ -140,7 +145,7 @@ impl<'a> Store<'a> {
             tx_b.commit()?;
         }
 
-        Ok(())
+        Ok(pk_hash_map)
     }
 
     /// Read the selected best run for a snapshot period.
@@ -218,6 +223,61 @@ impl<'a> Store<'a> {
         Ok(out)
     }
 
+    /// Query paper details for multiple clusters by pk_hash in a single query.
+    pub fn get_paper_details_bulk(&self, pk_hashes: &[String]) -> Result<HashMap<String, Vec<PaperOutput>>> {
+        if pk_hashes.is_empty() {
+            return Ok(HashMap::new());
+        }
+        
+        // Build query with IN clause using placeholders
+        let placeholders: Vec<String> = (1..=pk_hashes.len()).map(|i| format!("?{}", i)).collect();
+        let query = format!(
+            "SELECT c.pk_hash, p.paper_id, cm.rank_in_cluster, p.url
+             FROM cluster_member cm
+             JOIN paper p ON p.paper_id = cm.paper_id
+             JOIN cluster c ON (
+                 cm.source = c.source AND
+                 cm.period_start = c.period_start AND
+                 cm.period_end = c.period_end AND
+                 cm.embed_config_id = c.embed_config_id AND
+                 cm.cluster_config_id = c.cluster_config_id AND
+                 cm.role = c.role AND
+                 cm.cluster_index = c.cluster_index
+             )
+             WHERE c.pk_hash IN ({})
+             ORDER BY c.pk_hash, cm.rank_in_cluster ASC",
+            placeholders.join(", ")
+        );
+        
+        let mut stmt = self.conn.prepare(&query)?;
+        
+        // Build params array - need to collect references with proper lifetime
+        let params: Vec<&str> = pk_hashes.iter().map(|s| s.as_str()).collect();
+        let params_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|s| s as &dyn rusqlite::ToSql).collect();
+        
+        let mut details: HashMap<String, Vec<PaperOutput>> = HashMap::new();
+        
+        let rows = stmt.query_map(&params_refs[..], |row| {
+            Ok((
+                row.get::<_, String>(0)?, // pk_hash
+                PaperOutput {
+                    paper_id: row.get(1)?,
+                    rank_in_cluster: row.get(2)?,
+                    paper_url: row.get(3)?,
+                },
+            ))
+        })?;
+        
+        for row_result in rows {
+            let (pk_hash, paper_output) = row_result?;
+            details.entry(pk_hash)
+                .or_insert_with(Vec::new)
+                .push(paper_output);
+        }
+        
+        Ok(details)
+    }
+
     // ---------- SQL helpers ----------
 
     fn upsert_embed_config(&self, tx: &Transaction, id: &str, json_payload: &str, now: &str) -> Result<()> {
@@ -285,7 +345,7 @@ impl<'a> Store<'a> {
         Ok(())
     }
 
-    fn insert_cluster(&self, tx: &Transaction, source: &str, period_start: &str, period_end: &str, embed_config_id: &str, cluster_config_id: &str, role: &str, cluster_index: i64, size: i64, centroid_b64: &str, cohesion: Option<f64>, now: &str) -> Result<()> {
+    fn insert_cluster(&self, tx: &Transaction, source: &str, period_start: &str, period_end: &str, embed_config_id: &str, cluster_config_id: &str, role: &str, cluster_index: i64, size: i64, centroid_b64: &str, cohesion: Option<f64>, now: &str) -> Result<String> {
         let pk_hash = Self::compute_cluster_pk_hash(source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index);
         tx.execute(
             "INSERT INTO cluster(source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index, pk_hash, size, centroid_b64, cohesion, created_at)
@@ -297,7 +357,7 @@ impl<'a> Store<'a> {
                cohesion=excluded.cohesion",
             params![source, period_start, period_end, embed_config_id, cluster_config_id, role, cluster_index, pk_hash, size, centroid_b64, cohesion, now],
         )?;
-        Ok(())
+        Ok(pk_hash)
     }
 
     fn insert_cluster_member(&self, tx: &Transaction, source: &str, period_start: &str, period_end: &str, embed_config_id: &str, cluster_config_id: &str, role: &str, cluster_index: i64, paper_id: &str, rank_in_cluster: i64, sim_to_centroid: Option<f64>) -> Result<()> {

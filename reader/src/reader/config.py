@@ -14,7 +14,6 @@ class RunConfig(BaseModel):
 
 class MemoConfig(BaseModel):
     """Memo CLI configuration"""
-    enabled: bool = Field(default=False, description="Enable memo CLI integration")
     bin: str = Field(..., description="Path to memo binary")
     db_path: str = Field(default=None, description="Path to memo database")
     db_schema_path: str = Field(default=None, description="Path to memo database schema")

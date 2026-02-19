@@ -76,11 +76,13 @@ sub(issue, bug level)
 [x] - [paper-chunk] refactor paper curation script to aysnc+multi-thread, refactor alias regex compiler for multi-phrase match.  
 [?] - [paper-chunk] phase 2 design & implementation. puspend. waiting for call1&call 2 feddback.        
 [x] - [paper-chunk] finalized the rules.yaml in phase 1 and fix unmapped header suggest candidate confidence normalization and cross paper voting issues.  
-[ ] - [reader] add new paper-chunk algo-lib.  
-[ ] - [reader] integrate paper-chunk algo-lib into hf_data pipe.  
-[ ] - [memo,reader] cmds to write and read paper-chunk data to memo.  
+[x] - [reader] add new paper-chunk algo-lib.  
+[x] - [reader] integrate paper-chunk algo-lib into hf_data pipe.  
+[x] - [memo] refactor fresh-paper cmd to return paper cluster details by default.  
+[ ] - [memo,reader] cmds to write and read paper-chunk data/versioning to memo. note. check memory_cli/schemas/paper_chunk.sql for schema draft.    
 
 [ ] - [reader] test call 1 llm report planner(heuristic rules for response?), choose a proper model, update llm config in reader.yaml to per model.    
+[ ] - [paper-chunk] test training mode and remove duplicate code under paper_chunk dir.   
 
 
 [ ] - [reader,memo] generate the report writter prompt from llm call 2, memo supply metadata if necessary.  

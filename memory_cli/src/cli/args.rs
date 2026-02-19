@@ -43,6 +43,9 @@ EXAMPLES:
         /// JSON payload path. Use '-' to read from stdin.
         #[arg(long)]
         input: String,
+        /// Skip querying paper details (faster, smaller output).
+        #[arg(long)]
+        no_details: bool,
     },
 
     /// Read the selected best clustering run for a period (for LLM enrichment prompt).

@@ -20,6 +20,8 @@ dependencies = [
     "google-genai>=0.2.0",
     "tenacity>=8.0.0",
     "textual>=0.40.0",
+    "selectolax>=0.3.0",
+    "pymupdf>=1.22; platform_system != 'Emscripten'",
 ]
 
 [project.optional-dependencies]

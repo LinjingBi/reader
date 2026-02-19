@@ -4,7 +4,6 @@ use anyhow::Result;
 use std::io::{self, Write};
 
 fn validate_get_report_planner_metadata(
-    cluster_pk_hash: &str,
     topic_id: Option<i64>,
     db_path: &str,
     schema_path: Option<&str>,
@@ -45,7 +44,7 @@ pub fn handle(
     add_topic_reports: Option<i64>,
     add_top_papers: bool,
 ) -> Result<()> {
-    let validation = validate_get_report_planner_metadata(cluster_pk_hash, add_topic_reports, db_path, schema_path);
+    let validation = validate_get_report_planner_metadata(add_topic_reports, db_path, schema_path);
 
     if !validation.is_all_passed() {
         return Err(validation.to_error().unwrap());

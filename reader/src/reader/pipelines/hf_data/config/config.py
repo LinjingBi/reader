@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field
 class RunConfig(BaseModel):
     """Run configuration"""
     month_key: str = Field(..., description="Month key in format 'month=YYYY-MM'")
-    max_papers: int = Field(default=50, description="Maximum papers to process")
     artifacts_dir: str = Field(default="artifacts", description="Directory for artifacts")
     log_config_path: str = Field(..., description="Path to logging configuration YAML file")
     log_file_path: str = Field(..., description="Path to log file")
@@ -61,11 +60,15 @@ class OutputsConfig(BaseModel):
 
 class MemoConfig(BaseModel):
     """Memo CLI configuration"""
-    enabled: bool = Field(default=False, description="Enable memo CLI integration")
     bin: str = Field(..., description="Path to memo binary")
     db_path: str = Field(default=None, description="Path to memo database")
     db_schema_path: str = Field(default=None, description="Path to memo database schema")
     timeout_sec: int = Field(default=60, description="Timeout for memo CLI calls")
+
+
+class PaperChunkConfig(BaseModel):
+    """Paper chunk configuration"""
+    rules_path: str = Field(..., description="Path to paper chunk rules YAML file")
 
 
 class HFDataPipeConfig(BaseModel):
@@ -73,6 +76,7 @@ class HFDataPipeConfig(BaseModel):
     run: RunConfig
     sources: SourcesConfig
     algos: AlgosConfig
+    paper_chunk: PaperChunkConfig
     outputs: OutputsConfig
     memo: MemoConfig
 

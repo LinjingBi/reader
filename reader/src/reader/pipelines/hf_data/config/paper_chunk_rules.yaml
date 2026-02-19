@@ -1,0 +1,44 @@
+version: 1
+compiled_regex_version: 1
+selectors:
+  summary:
+    desc: "Abstract / summary of the paper."
+    aliases: ["abstract", "summary"]
+
+  introduction:
+    desc: "Motivation, problem setting, contributions."
+    aliases: ["introduction", "motivation", "overview"]
+
+  related_work:
+    desc: "Prior work, background, preliminaries."
+    aliases: ["related work", "background", "preliminary", "prior work"]
+
+  method:
+    desc: "Proposed method / approach / model / algorithm."
+    aliases: ["method", "methodology", "approach", "model", "algorithm", "framework", "architecture", "post-training", "pre-training", "setup", "training recipe", "data", "training", "data curation", "dataset", "data collection", "inference", "training details", "pretraining", "infrastructure", "reward design", "supervised fine-tuning", "distillation"]
+
+  experiment:
+    desc: "Evaluation setup, datasets, metrics, implementation details."
+    aliases: ["experiment", "evaluation", "experimental setup", "implementation details", "benchmarks", "ablation study", "ablations", "ablation studies", "experimental result", "main result", "baselines", "reproducibility statement", "experimental setting", "metrics", "test-time scaling", "benchmark construction", "implementations"]
+
+  results:
+    desc: "Quantitative/qualitative results."
+    aliases: ["result"]
+
+  discussion:
+    desc: "Interpretation, analysis, broader implications."
+    aliases: ["discussion", "analysis", "further analysis"]
+
+  limitations:
+    desc: "Limitations, failure cases, caveats."
+    aliases: ["limitation", "failure cases", "caveats"]
+
+  conclusion:
+    desc: "Conclusions, future work."
+    aliases: ["conclusion", "future work", "impact statement", "applications"]
+
+combined_heading_policy:
+  join_tokens: ["and", "&", "/"]
+
+ignore_policy:
+  stop_headings: ["references", "bibliography", "acknowledgments", "acknowledgment", "acknowledgement","acknowledgements","ethics statement", "contributions", "contribution", "contributors"]

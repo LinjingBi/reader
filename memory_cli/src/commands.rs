@@ -14,8 +14,8 @@ pub use validation::ValidationResult;
 
 pub fn dispatch(args: Args) -> Result<()> {
     match args.cmd {
-        Command::FreshPaper { input } => {
-            fresh_paper::handle(args.dry_run, &args.db, args.schema.as_deref(), &input)
+        Command::FreshPaper { input, no_details } => {
+            fresh_paper::handle(args.dry_run, &args.db, args.schema.as_deref(), &input, no_details)
         }
         Command::GetBestRun { source, period_start, period_end, top_n } => {
             get_best_run::handle(args.dry_run, &args.db, args.schema.as_deref(), &source, &period_start, &period_end, top_n)

@@ -36,9 +36,9 @@ def run_monthly(cfg: ReaderConfig) -> None:
     #     logger.info(f"Memo inject-clusters-observation successful: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
     
     # report generation
-    if cfg.memo.enabled and cfg.report_generation and cfg.report_generation.enable:
+    if cfg.report_generation and cfg.report_generation.enable:
         logger.info(f"Memo get-clusters-observation started: snapshot_id=hf_monthly|{period_start}|{period_end}")
-        clusters_observation = memo.get_clusters_observation('hf_monthly', period_start, period_end, cfg)
+        clusters_observation = memo.get_clusters_observation('hf_monthly', period_start, period_end, cfg.memo)
         logger.info(f"Memo get-clusters-observation successful: snapshot_id=hf_monthly|{period_start}|{period_end}")
         
         # Get user intent options from enum

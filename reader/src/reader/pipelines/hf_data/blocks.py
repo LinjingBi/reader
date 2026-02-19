@@ -10,6 +10,7 @@ import numpy as np
 
 from algo_lib.clustering import get_best_clustering
 from algo_lib.typing import PaperLike
+from algo_lib.paperchunk.types import PaperId, Url
 
 from reader.pipelines.hf_data.config.config import (
     HFDataPipeConfig,
@@ -27,6 +28,7 @@ from reader.pipelines.hf_data.report import (
     ClusterConfigPayload,
 )
 from reader.adapters.hf import get_monthly_report, parse_papers, save_papers_to_file
+from reader.adapters.memo import FreshPaperResponseWithDetails
 from reader.logging.logging_setup import get_logger
 
 logger = get_logger()
@@ -342,4 +344,22 @@ def generate_clustering_reports(
         )
     
     return fresh_paper_payload
+
+
+def convert_papers_for_chunking(fresh_paper_response: FreshPaperResponseWithDetails) -> Dict[PaperId, Url]:
+    """
+    Convert papers from fresh_paper_response to the format expected by run_scoring.
+    
+    Args:
+        fresh_paper_response: FreshPaperResponseWithDetails instance containing paper details
+    
+    Returns:
+        Dictionary mapping PaperId to Url
+    """
+    papers_dict: Dict[PaperId, Url] = {}
+    if fresh_paper_response.details:
+        for pk_hash, paper_list in fresh_paper_response.details.items():
+            for paper_output in paper_list:
+                papers_dict[paper_output.paper_id] = paper_output.paper_url
+    return papers_dict
 

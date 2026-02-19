@@ -119,12 +119,17 @@ def parse_papers(papers: List[Dict], config: HFDataPipeConfig) -> List[Paper]:
             except (ValueError, AttributeError):
                 pass
         
+        # Ensure base URL ends with '/' for proper URL concatenation
+        base_url = config.sources.hf.paper_page_base_url.rstrip('/')
+        paper_id = paper['paper']['id']
+        url = f"{base_url}/{paper_id}"
+        
         result.append(Paper(
             pid=paper['paper']['id'],
             title=paper['paper']['title'],
             summary=paper['paper']['summary'],
             keywords=paper['paper'].get('ai_keywords', []),
-            url=f"{config.sources.hf.paper_page_base_url}{paper['paper']['id']}",
+            url=url,
             published_at=published_at
         ))
     return result

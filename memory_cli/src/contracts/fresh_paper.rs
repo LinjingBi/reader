@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Reader -> Memo CLI payload for Step 1–2:
 /// - persist source snapshot + papers
@@ -64,4 +65,31 @@ pub struct FreshPaperResponse {
     pub period_end: String,
     pub papers_count: usize,
     pub clusters_count: usize,
+}
+
+/// Paper output in details section.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaperOutput {
+    pub paper_id: String,
+    pub rank_in_cluster: i64,
+    pub paper_url: String,
+}
+
+/// Metadata without success field.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FreshPaperMeta {
+    pub source: String,
+    pub period_start: String,
+    pub period_end: String,
+    pub papers_count: usize,
+    pub clusters_count: usize,
+}
+
+/// Combined response with success, meta, and details.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FreshPaperResponseWithDetails {
+    pub success: bool,
+    pub meta: FreshPaperMeta,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub details: Option<HashMap<String, Vec<PaperOutput>>>,
 }

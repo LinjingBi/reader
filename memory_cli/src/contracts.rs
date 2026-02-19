@@ -13,7 +13,10 @@ pub use fresh_paper::{
     EmbedConfig,
     FreshPaperRequest,
     FreshPaperResponse,
+    FreshPaperResponseWithDetails,
+    FreshPaperMeta,
     PaperInput,
+    PaperOutput,
 };
 pub use get_best_run::{ClusterCard, GetBestRunResponse, PaperCard};
 pub use get_cluster_observation::{ClusterObservationData, GetClusterObservationResponse};

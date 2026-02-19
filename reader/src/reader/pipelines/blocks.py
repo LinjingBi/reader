@@ -406,10 +406,7 @@ def _resolve_report_job_topic(cluster_pk_hash: str, cfg: ReaderConfig) -> None:
         Exception: For any other unexpected errors
     """
     # Get topic resolver metadata from memo
-    metadata = memo.get_topic_resolver_metadata(cluster_pk_hash, cfg)
-    if metadata is None:
-        logger.warning(f"Failed to get topic resolver metadata for cluster {cluster_pk_hash} (memo may be disabled)")
-        return
+    metadata = memo.get_topic_resolver_metadata(cluster_pk_hash, cfg.memo)
     
     try:
         # Convert TopicCentroid list to TopicInput list
@@ -518,13 +515,8 @@ def create_report_job(cluster_pk_hash: str, user_intent: str, cfg: ReaderConfig)
 
     def _fetch_report_and_print_report_url(cluster_pk_hash: str, cfg: ReaderConfig):
         pass
-    if not cfg.memo.enabled:
-        return None
     
-    start_report_job_response = memo.start_report_job(cluster_pk_hash, cfg)
-    
-    if start_report_job_response is None:
-        return None
+    start_report_job_response = memo.start_report_job(cluster_pk_hash, cfg.memo)
     
     # kick off a new report generation job
     if start_report_job_response.status == 'running' and start_report_job_response.new_job:
@@ -596,14 +588,10 @@ def _generate_planner_prompt(
     # Call memo.get_report_planner_metadata
     cluster_metadata = memo.get_report_planner_metadata(
         cluster_pk_hash=cluster_pk_hash,
-        config=config,
+        config=config.memo,
         topic_id=topic_id,
         add_top_papers=add_top_papers,
     )
-    
-    # Check if memo returned None (memo disabled)
-    if cluster_metadata is None:
-        raise ValueError("memo.get_report_planner_metadata returned None (memo is disabled). cluster_metadata is required.")
     
     # Call build_baseline_planner_prompt with intent_spec and cluster_metadata
     prompt = build_baseline_planner_prompt(intent_spec=intent_spec, cluster_metadata=cluster_metadata)

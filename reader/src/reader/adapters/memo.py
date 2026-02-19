@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 import pydantic
 from pydantic import BaseModel, RootModel
 
-from reader.config import ReaderConfig
+from reader.config import MemoConfig
 from reader.pipelines.hf_data.report import FreshPaperPayload
 from reader.pipelines.report import InjectClustersObservationInput
 from reader.logging.logging_setup import get_logger
@@ -182,23 +182,48 @@ class GetReportPlannerMetadataResponse(BaseModel):
     history_reports: Optional[List[HistoryReport]] = None  # Optional top ≤3 reports for the specified topic
 
 
-def fresh_paper(payload: FreshPaperPayload, config: ReaderConfig) -> None:
+# ============================================================================
+# fresh-paper command models
+# ============================================================================
+
+class PaperOutput(BaseModel):
+    """Paper output in details section."""
+    paper_id: str
+    rank_in_cluster: int
+    paper_url: str
+
+
+class FreshPaperMeta(BaseModel):
+    """Metadata without success field."""
+    source: str
+    period_start: str  # YYYY-MM-DD
+    period_end: str  # YYYY-MM-DD
+    papers_count: int
+    clusters_count: int
+
+
+class FreshPaperResponseWithDetails(BaseModel):
+    """Response from fresh-paper command."""
+    success: bool
+    meta: FreshPaperMeta
+    details: Optional[Dict[str, List[PaperOutput]]] = None  # Optional details mapping pk_hash to papers
+
+
+def fresh_paper(payload: FreshPaperPayload, config: MemoConfig, no_details: bool = False) -> FreshPaperResponseWithDetails:
     """
     Call memo CLI fresh-paper command to ingest papers and clustering.
     
     Args:
         payload: FreshPaperPayload instance.
-        config: ReaderConfig instance
+        config: MemoConfig instance
+        no_details: If True, skip querying paper details (faster, smaller output)
         
     Returns:
-        None on success, or None if memo is disabled
+        FreshPaperResponseWithDetails instance
         
     Raises:
         MemoFreshPaperError: If the subcommand execution fails
     """
-    if not config.memo.enabled:
-        return None
-    
     try:
         # Convert payload to JSON string
         payload_json = payload.model_dump_json(indent=2, exclude_none=False)
@@ -206,34 +231,46 @@ def fresh_paper(payload: FreshPaperPayload, config: ReaderConfig) -> None:
         
         # Build command (use '-' to read from stdin)
         cmd = [
-            config.memo.bin,
+            config.bin,
         ]
-        if config.memo.db_path:
+        if config.db_path:
             cmd.append('--db')
-            cmd.append(config.memo.db_path)
-        if config.memo.db_schema_path:
+            cmd.append(config.db_path)
+        if config.db_schema_path:
             cmd.append('--schema')
-            cmd.append(config.memo.db_schema_path)
+            cmd.append(config.db_schema_path)
         cmd.extend(['fresh-paper', '--input', '-'])
+        if no_details:
+            cmd.append('--no-details')
         
         # Run memo CLI with stdin input
-        subprocess.run(
+        result = subprocess.run(
             cmd,
             input=payload_json,
             capture_output=True,
             text=True,
-            timeout=config.memo.timeout_sec,
+            timeout=config.timeout_sec,
             check=True,
         )
         
-        return
+        # Parse JSON output and create Pydantic model
+        response = FreshPaperResponseWithDetails.model_validate_json(result.stdout)
+        
+        # Validate success field
+        if not response.success:
+            raise MemoFreshPaperError(f"memo fresh-paper returned success=false: {result.stdout}")
+        
+        return response
             
     except subprocess.TimeoutExpired as e:
-        logger.warning(f"memo fresh-paper timed out after {config.memo.timeout_sec}s")
-        raise MemoFreshPaperError(f"memo fresh-paper timed out after {config.memo.timeout_sec}s") from e
+        logger.warning(f"memo fresh-paper timed out after {config.timeout_sec}s")
+        raise MemoFreshPaperError(f"memo fresh-paper timed out after {config.timeout_sec}s") from e
     except subprocess.CalledProcessError as e:
         logger.error(f"Error calling memo fresh-paper: {e.stderr}")
         raise MemoFreshPaperError(f"Error calling memo fresh-paper: {e.stderr}") from e
+    except pydantic.ValidationError as e:
+        logger.error(f"Error validating memo output: {e}")
+        raise MemoFreshPaperError(f"Error validating memo output: {e}") from e
     except Exception as e:
         logger.error(f"Unexpected error in memo fresh-paper: {e}", exc_info=True)
         raise MemoFreshPaperError(f"Unexpected error in memo fresh-paper: {e}") from e
@@ -243,7 +280,7 @@ def get_best_clustering(
     source: str,
     period_start: str,
     period_end: str,
-    config: ReaderConfig,
+    config: MemoConfig,
     top_n: int = 10,
 ) -> GetBestRunResponse:
     """
@@ -253,29 +290,26 @@ def get_best_clustering(
         source: Snapshot source (e.g., 'hf_monthly')
         period_start: Period start date (YYYY-MM-DD)
         period_end: Period end date (YYYY-MM-DD)
-        config: ReaderConfig instance
+        config: MemoConfig instance
         top_n: Maximum papers per cluster to include (default: 10)
         
     Returns:
-        GetBestRunResponse instance, or None if memo is disabled
+        GetBestRunResponse instance
         
     Raises:
         MemoGetBestRunError: If the subcommand execution fails
     """
-    if not config.memo.enabled:
-        return None
-    
     try:
         # Build command
         cmd = [
-            config.memo.bin,
+            config.bin,
         ]
-        if config.memo.db_path:
+        if config.db_path:
             cmd.append('--db')
-            cmd.append(config.memo.db_path)
-        if config.memo.db_schema_path:
+            cmd.append(config.db_path)
+        if config.db_schema_path:
             cmd.append('--schema')
-            cmd.append(config.memo.db_schema_path)
+            cmd.append(config.db_schema_path)
         cmd.extend(['get-best-run', '--source', source, '--period-start', period_start, '--period-end', period_end, '--top-n', str(top_n)])
         
         # Run memo CLI
@@ -283,7 +317,7 @@ def get_best_clustering(
             cmd,
             capture_output=True,
             text=True,
-            timeout=config.memo.timeout_sec,
+            timeout=config.timeout_sec,
             check=True,
         )
         
@@ -291,8 +325,8 @@ def get_best_clustering(
         return GetBestRunResponse.model_validate_json(result.stdout)
         
     except subprocess.TimeoutExpired as e:
-        logger.warning(f"memo get-best-run timed out after {config.memo.timeout_sec}s")
-        raise MemoGetBestRunError(f"memo get-best-run timed out after {config.memo.timeout_sec}s") from e
+        logger.warning(f"memo get-best-run timed out after {config.timeout_sec}s")
+        raise MemoGetBestRunError(f"memo get-best-run timed out after {config.timeout_sec}s") from e
     except subprocess.CalledProcessError as e:
         logger.error(f"Error calling memo get-best-run: {e.stderr}")
         raise MemoGetBestRunError(f"Error calling memo get-best-run: {e.stderr}") from e
@@ -304,22 +338,19 @@ def get_best_clustering(
         raise MemoGetBestRunError(f"Unexpected error in memo get-best-run: {e}") from e
 
 
-def inject_clusters_observation(payload: InjectClustersObservationInput, config: ReaderConfig) -> None:
+def inject_clusters_observation(payload: InjectClustersObservationInput, config: MemoConfig) -> None:
     """
     Call memo CLI inject-clusters-observation command to inject cluster observations.
     
     Args:
         payload: InjectClustersObservationInput dict mapping pk_hash to ClusterObservation
-        config: ReaderConfig instance
+        config: MemoConfig instance
         
     Returns: none
         
     Raises:
         MemoInjectClustersObservationError: If the subcommand execution fails
     """
-    if not config.memo.enabled:
-        return None
-    
     try:
         # Convert payload dict to JSON string
         # Each value in the dict is a ClusterObservation (Pydantic model)
@@ -331,14 +362,14 @@ def inject_clusters_observation(payload: InjectClustersObservationInput, config:
         
         # Build command (use '-' to read from stdin)
         cmd = [
-            config.memo.bin,
+            config.bin,
         ]
-        if config.memo.db_path:
+        if config.db_path:
             cmd.append('--db')
-            cmd.append(config.memo.db_path)
-        if config.memo.db_schema_path:
+            cmd.append(config.db_path)
+        if config.db_schema_path:
             cmd.append('--schema')
-            cmd.append(config.memo.db_schema_path)
+            cmd.append(config.db_schema_path)
         cmd.extend(['inject-clusters-observation', '--input', '-'])
         
         # Run memo CLI with stdin input
@@ -347,15 +378,15 @@ def inject_clusters_observation(payload: InjectClustersObservationInput, config:
             input=payload_json,
             capture_output=True,
             text=True,
-            timeout=config.memo.timeout_sec,
+            timeout=config.timeout_sec,
             check=True,
         )
         
         return None
         
     except subprocess.TimeoutExpired as e:
-        logger.warning(f"memo inject-clusters-observation timed out after {config.memo.timeout_sec}s")
-        raise MemoInjectClustersObservationError(f"memo inject-clusters-observation timed out after {config.memo.timeout_sec}s") from e
+        logger.warning(f"memo inject-clusters-observation timed out after {config.timeout_sec}s")
+        raise MemoInjectClustersObservationError(f"memo inject-clusters-observation timed out after {config.timeout_sec}s") from e
     except subprocess.CalledProcessError as e:
         logger.error(f"Error calling memo inject-clusters-observation: {e.stderr}")
         raise MemoInjectClustersObservationError(f"Error calling memo inject-clusters-observation: {e.stderr}") from e
@@ -371,8 +402,8 @@ def get_clusters_observation(
     source: str,
     period_start: str,
     period_end: str,
-    config: ReaderConfig,
-) -> Optional[Dict[str, ClusterObservationData]]:
+    config: MemoConfig,
+) -> Dict[str, ClusterObservationData]:
     """
     Call memo CLI get-clusters-observation command to retrieve cluster observations.
     
@@ -380,28 +411,25 @@ def get_clusters_observation(
         source: Snapshot source (e.g., 'hf_monthly')
         period_start: Period start date (YYYY-MM-DD)
         period_end: Period end date (YYYY-MM-DD)
-        config: ReaderConfig instance
+        config: MemoConfig instance
         
     Returns:
-        Dict mapping pk_hash to ClusterObservationData, or None if memo is disabled
+        Dict mapping pk_hash to ClusterObservationData
         
     Raises:
         MemoGetClustersObservationError: If the subcommand execution fails
     """
-    if not config.memo.enabled:
-        return None
-    
     try:
         # Build command
         cmd = [
-            config.memo.bin,
+            config.bin,
         ]
-        if config.memo.db_path:
+        if config.db_path:
             cmd.append('--db')
-            cmd.append(config.memo.db_path)
-        if config.memo.db_schema_path:
+            cmd.append(config.db_path)
+        if config.db_schema_path:
             cmd.append('--schema')
-            cmd.append(config.memo.db_schema_path)
+            cmd.append(config.db_schema_path)
         cmd.extend(['get-clusters-observation', '--source', source, '--period-start', period_start, '--period-end', period_end])
         
         # Run memo CLI
@@ -409,7 +437,7 @@ def get_clusters_observation(
             cmd,
             capture_output=True,
             text=True,
-            timeout=config.memo.timeout_sec,
+            timeout=config.timeout_sec,
             check=True,
         )
         
@@ -417,8 +445,8 @@ def get_clusters_observation(
         return GetClusterObservationResponse.model_validate_json(result.stdout).root
         
     except subprocess.TimeoutExpired as e:
-        logger.warning(f"memo get-clusters-observation timed out after {config.memo.timeout_sec}s")
-        raise MemoGetClustersObservationError(f"memo get-clusters-observation timed out after {config.memo.timeout_sec}s") from e
+        logger.warning(f"memo get-clusters-observation timed out after {config.timeout_sec}s")
+        raise MemoGetClustersObservationError(f"memo get-clusters-observation timed out after {config.timeout_sec}s") from e
     except subprocess.CalledProcessError as e:
         logger.error(f"Error calling memo get-clusters-observation: {e.stderr}")
         raise MemoGetClustersObservationError(f"Error calling memo get-clusters-observation: {e.stderr}") from e
@@ -432,35 +460,32 @@ def get_clusters_observation(
 
 def start_report_job(
     cluster_pk_hash: str,
-    config: ReaderConfig,
-) -> Optional[StartReportJobResponse]:
+    config: MemoConfig,
+) -> StartReportJobResponse:
     """
     Call memo CLI start-report-job command to start a report generation job for a cluster.
     
     Args:
         cluster_pk_hash: Cluster pk_hash (primary key hash from cluster table)
-        config: ReaderConfig instance
+        config: MemoConfig instance
         
     Returns:
-        StartReportJobResponse instance, or None if memo is disabled
+        StartReportJobResponse instance
         
     Raises:
         MemoStartReportJobError: If the subcommand execution fails
     """
-    if not config.memo.enabled:
-        return None
-    
     try:
         # Build command
         cmd = [
-            config.memo.bin,
+            config.bin,
         ]
-        if config.memo.db_path:
+        if config.db_path:
             cmd.append('--db')
-            cmd.append(config.memo.db_path)
-        if config.memo.db_schema_path:
+            cmd.append(config.db_path)
+        if config.db_schema_path:
             cmd.append('--schema')
-            cmd.append(config.memo.db_schema_path)
+            cmd.append(config.db_schema_path)
         cmd.extend(['start-report-job', '--cluster-pk-hash', cluster_pk_hash])
         
         # Run memo CLI
@@ -468,7 +493,7 @@ def start_report_job(
             cmd,
             capture_output=True,
             text=True,
-            timeout=config.memo.timeout_sec,
+            timeout=config.timeout_sec,
             check=True,
         )
         
@@ -476,8 +501,8 @@ def start_report_job(
         return StartReportJobResponse.model_validate_json(result.stdout)
         
     except subprocess.TimeoutExpired as e:
-        logger.warning(f"memo start-report-job timed out after {config.memo.timeout_sec}s")
-        raise MemoStartReportJobError(f"memo start-report-job timed out after {config.memo.timeout_sec}s") from e
+        logger.warning(f"memo start-report-job timed out after {config.timeout_sec}s")
+        raise MemoStartReportJobError(f"memo start-report-job timed out after {config.timeout_sec}s") from e
     except subprocess.CalledProcessError as e:
         logger.error(f"Error calling memo start-report-job: {e.stderr}")
         raise MemoStartReportJobError(f"Error calling memo start-report-job: {e.stderr}") from e
@@ -491,35 +516,32 @@ def start_report_job(
 
 def get_topic_resolver_metadata(
     cluster_pk_hash: str,
-    config: ReaderConfig,
-) -> Optional[GetTopicResolverMetadataResponse]:
+    config: MemoConfig,
+) -> GetTopicResolverMetadataResponse:
     """
     Call memo CLI get-topic-resolver-metadata command to retrieve topic resolver metadata.
     
     Args:
         cluster_pk_hash: Cluster pk_hash (primary key hash from cluster table)
-        config: ReaderConfig instance
+        config: MemoConfig instance
         
     Returns:
-        GetTopicResolverMetadataResponse instance, or None if memo is disabled
+        GetTopicResolverMetadataResponse instance
         
     Raises:
         MemoGetTopicResolverMetadataError: If the subcommand execution fails
     """
-    if not config.memo.enabled:
-        return None
-    
     try:
         # Build command
         cmd = [
-            config.memo.bin,
+            config.bin,
         ]
-        if config.memo.db_path:
+        if config.db_path:
             cmd.append('--db')
-            cmd.append(config.memo.db_path)
-        if config.memo.db_schema_path:
+            cmd.append(config.db_path)
+        if config.db_schema_path:
             cmd.append('--schema')
-            cmd.append(config.memo.db_schema_path)
+            cmd.append(config.db_schema_path)
         cmd.extend(['get-topic-resolver-metadata', '--cluster-pk-hash', cluster_pk_hash])
         
         # Run memo CLI
@@ -527,7 +549,7 @@ def get_topic_resolver_metadata(
             cmd,
             capture_output=True,
             text=True,
-            timeout=config.memo.timeout_sec,
+            timeout=config.timeout_sec,
             check=True,
         )
         
@@ -535,8 +557,8 @@ def get_topic_resolver_metadata(
         return GetTopicResolverMetadataResponse.model_validate_json(result.stdout)
         
     except subprocess.TimeoutExpired as e:
-        logger.warning(f"memo get-topic-resolver-metadata timed out after {config.memo.timeout_sec}s")
-        raise MemoGetTopicResolverMetadataError(f"memo get-topic-resolver-metadata timed out after {config.memo.timeout_sec}s") from e
+        logger.warning(f"memo get-topic-resolver-metadata timed out after {config.timeout_sec}s")
+        raise MemoGetTopicResolverMetadataError(f"memo get-topic-resolver-metadata timed out after {config.timeout_sec}s") from e
     except subprocess.CalledProcessError as e:
         logger.error(f"Error calling memo get-topic-resolver-metadata: {e.stderr}")
         raise MemoGetTopicResolverMetadataError(f"Error calling memo get-topic-resolver-metadata: {e.stderr}") from e
@@ -550,39 +572,36 @@ def get_topic_resolver_metadata(
 
 def get_report_planner_metadata(
     cluster_pk_hash: str,
-    config: ReaderConfig,
+    config: MemoConfig,
     topic_id: Optional[str] = None,
     add_top_papers: bool = False,
-) -> Optional[GetReportPlannerMetadataResponse]:
+) -> GetReportPlannerMetadataResponse:
     """
     Call memo CLI get-report-planner-metadata command to retrieve report planner metadata.
     
     Args:
         cluster_pk_hash: Cluster pk_hash (primary key hash from cluster table)
-        config: ReaderConfig instance
+        config: MemoConfig instance
         topic_id: Optional topic_id (as string) to include top ≤3 reports for that topic
         add_top_papers: Whether to include Top-K papers (K≤5) for the cluster
         
     Returns:
-        GetReportPlannerMetadataResponse instance, or None if memo is disabled
+        GetReportPlannerMetadataResponse instance
         
     Raises:
         MemoGetReportPlannerMetadataError: If the subcommand execution fails
     """
-    if not config.memo.enabled:
-        return None
-    
     try:
         # Build command
         cmd = [
-            config.memo.bin,
+            config.bin,
         ]
-        if config.memo.db_path:
+        if config.db_path:
             cmd.append('--db')
-            cmd.append(config.memo.db_path)
-        if config.memo.db_schema_path:
+            cmd.append(config.db_path)
+        if config.db_schema_path:
             cmd.append('--schema')
-            cmd.append(config.memo.db_schema_path)
+            cmd.append(config.db_schema_path)
         cmd.extend(['get-report-planner-metadata', '--cluster-pk-hash', cluster_pk_hash])
         
         if topic_id is not None:
@@ -595,7 +614,7 @@ def get_report_planner_metadata(
             cmd,
             capture_output=True,
             text=True,
-            timeout=config.memo.timeout_sec,
+            timeout=config.timeout_sec,
             check=True,
         )
         
@@ -603,8 +622,8 @@ def get_report_planner_metadata(
         return GetReportPlannerMetadataResponse.model_validate_json(result.stdout)
         
     except subprocess.TimeoutExpired as e:
-        logger.warning(f"memo get-report-planner-metadata timed out after {config.memo.timeout_sec}s")
-        raise MemoGetReportPlannerMetadataError(f"memo get-report-planner-metadata timed out after {config.memo.timeout_sec}s") from e
+        logger.warning(f"memo get-report-planner-metadata timed out after {config.timeout_sec}s")
+        raise MemoGetReportPlannerMetadataError(f"memo get-report-planner-metadata timed out after {config.timeout_sec}s") from e
     except subprocess.CalledProcessError as e:
         logger.error(f"Error calling memo get-report-planner-metadata: {e.stderr}")
         raise MemoGetReportPlannerMetadataError(f"Error calling memo get-report-planner-metadata: {e.stderr}") from e

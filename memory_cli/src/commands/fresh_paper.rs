@@ -1,4 +1,4 @@
-use crate::contracts::{FreshPaperRequest, FreshPaperResponse};
+use crate::contracts::{FreshPaperRequest, FreshPaperResponseWithDetails, FreshPaperMeta};
 use crate::commands::validation::{self, ValidationResult};
 use crate::db;
 use anyhow::Result;
@@ -66,7 +66,7 @@ fn validate_fresh_paper(input_path: &str, db_path: &str, schema_path: Option<&st
     (validation, req)
 }
 
-pub fn handle(dry_run: bool, db_path: &str, schema_path: Option<&str>, input_path: &str) -> Result<()> {
+pub fn handle(dry_run: bool, db_path: &str, schema_path: Option<&str>, input_path: &str, no_details: bool) -> Result<()> {
     let (validation, req) = validate_fresh_paper(input_path, db_path, schema_path);
 
     if !validation.is_all_passed() {
@@ -86,18 +86,34 @@ pub fn handle(dry_run: bool, db_path: &str, schema_path: Option<&str>, input_pat
     }
 
     let store = db::store::Store::new(&conn);
-    store.fresh_paper(&req)?;
+    let pk_hash_map = store.fresh_paper(&req)?;
     
     eprintln!("Successfully ingested papers and clusters");
     
-    // Output JSON response to stdout
-    let resp = FreshPaperResponse {
-        success: true,
+    // Build meta
+    let meta = FreshPaperMeta {
         source: req.source.clone(),
         period_start: req.period_start.clone(),
         period_end: req.period_end.clone(),
         papers_count: req.papers.len(),
         clusters_count: req.clusters.len(),
+    };
+    
+    // Query database for paper details using pk_hashes (if not disabled)
+    let details = if no_details {
+        None
+    } else {
+        let pk_hashes: Vec<String> = pk_hash_map.values().cloned().collect();
+        let details = store.get_paper_details_bulk(&pk_hashes)?;
+        eprintln!("Successfully retrieved paper details for {} clusters", details.len());
+        Some(details)
+    };
+    
+    // Build response
+    let resp = FreshPaperResponseWithDetails {
+        success: true,
+        meta,
+        details,
     };
     
     let out = serde_json::to_string(&resp)?;

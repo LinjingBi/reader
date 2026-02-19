@@ -1,6 +1,5 @@
 run:
   month_key: "month=2025-09"                 # keep the exact query key shape
-  max_papers: 50
   artifacts_dir: "artifacts"
   log_config_path: "/Users/bii/reader/reader/src/reader/logging/config.yaml"  # Absolute path to logging config file
   log_file_path: "artifacts/logs/reader.log"
@@ -23,14 +22,19 @@ algos:
     k_candidates: [4, 5]
     random_seed: 42
 
-outputs:
-  # best_cluster_text_report_path_template: "best_clustering_md_reports_{month_key}.md"
-  best_cluster_report_path_template: "/Users/bii/reader/paper_chunk/clusters_data/best_clustering_{month_key}.json"
+paper_chunk:
+  rules_path: "/Users/bii/reader/reader/src/reader/pipelines/hf_data/config/paper_chunk_rules.yaml"
+
+cluster_summarization:
+
+
 
 memo:
-  enabled: true                    # Set to true to enable memo CLI integration
   bin: "/Users/bii/reader/memory_cli/target/debug/memo"
   db_path: "/Users/bii/reader/reader/src/reader/pipelines/hf_data/db/memo.sqlite"  # optional, if not provided, a temporary database will be created
   db_schema_path: "/Users/bii/reader/reader/src/reader/pipelines/hf_data/db/fresh_paper.sql" # optional, if not provided, no schema will be applied
   timeout_sec: 60
 
+outputs:
+  # best_cluster_text_report_path_template: "best_clustering_md_reports_{month_key}.md"
+  best_cluster_report_path_template: "/Users/bii/reader/paper_chunk/clusters_data/best_clustering_{month_key}.json"
