@@ -1,0 +1,66 @@
+{
+  "lib_config": {
+    "lib_config_id": "algo_lib.paperchunk|v1",
+    "json_payload": {
+      "rules_path": "/path/to/paper_chunk_rules.yaml",
+      "version": "v1",
+      "description": "Paper chunking configuration for extracting structured sections from academic papers"
+    }
+  },
+  "papers": [
+    {
+      "paper_id": "arxiv:2501.00001",
+      "status": "ok",
+      "chunks": [
+        {
+          "selector_id": "summary",
+          "text_id": "arxiv:2501.00001:html:0",
+          "text": "This paper presents a novel approach to efficient large language model training. We introduce gradient checkpointing techniques that reduce memory consumption by up to 40% while maintaining training stability.",
+          "score": 1.0
+        },
+        {
+          "selector_id": "method",
+          "text_id": "arxiv:2501.00001:html:1",
+          "text": "Our method employs a hierarchical checkpointing strategy that selectively stores activations at different granularities. We implement a dynamic memory allocation algorithm that adapts to the available GPU memory.",
+          "score": 0.5
+        },
+        {
+          "selector_id": "method",
+          "text_id": "arxiv:2501.00001:html:2",
+          "text": "The training pipeline consists of three main stages: forward pass with selective checkpointing, backward pass with recomputation, and gradient accumulation. We optimize each stage independently.",
+          "score": 0.5
+        },
+        {
+          "selector_id": "results",
+          "text_id": "arxiv:2501.00001:html:3",
+          "text": "Experiments on GPT-2 and BERT models show 35-42% memory reduction with less than 5% training time overhead. The method scales effectively to models with up to 1B parameters.",
+          "score": 1.0
+        }
+      ]
+    },
+    {
+      "paper_id": "arxiv:2501.00002",
+      "status": "partial",
+      "chunks": [
+        {
+          "selector_id": "summary",
+          "text_id": "arxiv:2501.00002:html:0",
+          "text": "We investigate the application of reinforcement learning to robotic manipulation tasks. Our approach combines imitation learning with policy gradient methods.",
+          "score": 1.0
+        },
+        {
+          "selector_id": "method",
+          "text_id": "arxiv:2501.00002:html:1",
+          "text": "The training process uses a two-stage approach: first, we collect expert demonstrations using kinesthetic teaching. Second, we fine-tune the policy using PPO.",
+          "score": 1.0
+        }
+      ]
+    },
+    {
+      "paper_id": "arxiv:2501.00003",
+      "status": "error",
+      "chunks": []
+    }
+  ]
+}
+

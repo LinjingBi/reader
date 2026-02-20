@@ -4,13 +4,15 @@ import os
 import base64
 import json
 import calendar
+import asyncio
 from pathlib import Path
-from typing import Dict, List, Sequence, Optional
+from typing import Dict, List, Sequence, Optional, Any
 import numpy as np
 
 from algo_lib.clustering import get_best_clustering
 from algo_lib.typing import PaperLike
-from algo_lib.paperchunk.types import PaperId, Url
+from algo_lib.paperchunk.types import PaperId, Url, PaperStatus
+from algo_lib.paperchunk.scoring import run_scoring
 
 from reader.pipelines.hf_data.config.config import (
     HFDataPipeConfig,
@@ -26,6 +28,11 @@ from reader.pipelines.hf_data.report import (
     EmbedConfigPayload,
     ClusterConfig,
     ClusterConfigPayload,
+    InjectPapersChunkPayload,
+    PaperChunkLibConfig,
+    PaperChunkLibConfigPayload,
+    ChunkEntry,
+    PaperChunkData,
 )
 from reader.adapters.hf import get_monthly_report, parse_papers, save_papers_to_file
 from reader.adapters.memo import FreshPaperResponseWithDetails
@@ -346,7 +353,7 @@ def generate_clustering_reports(
     return fresh_paper_payload
 
 
-def convert_papers_for_chunking(fresh_paper_response: FreshPaperResponseWithDetails) -> Dict[PaperId, Url]:
+def _convert_papers_for_chunking(fresh_paper_response: FreshPaperResponseWithDetails) -> Dict[PaperId, Url]:
     """
     Convert papers from fresh_paper_response to the format expected by run_scoring.
     
@@ -362,4 +369,66 @@ def convert_papers_for_chunking(fresh_paper_response: FreshPaperResponseWithDeta
             for paper_output in paper_list:
                 papers_dict[paper_output.paper_id] = paper_output.paper_url
     return papers_dict
+
+
+def process_paper_chunks(
+    cfg: HFDataPipeConfig,
+    fresh_paper_response: FreshPaperResponseWithDetails,
+) -> InjectPapersChunkPayload:
+    """
+    Process paper chunks: convert papers, run scoring, and convert ScoreOutput to InjectPapersChunkPayload.
+    
+    Args:
+        cfg: HFDataPipeConfig instance
+        fresh_paper_response: FreshPaperResponseWithDetails instance containing paper details
+    
+    Returns:
+        InjectPapersChunkPayload instance ready for memo injection
+    """
+    # Convert papers for chunking and run scoring
+    papers_dict = _convert_papers_for_chunking(fresh_paper_response)
+    score_output = asyncio.run(run_scoring(papers_dict, cfg.paper_chunk.rules_path))
+    logger.info(f"Paper chunk scoring completed: total_papers={score_output.summary.total_papers}, scored_ok={score_output.summary.scored_ok}")
+    
+    # Extract version and compiled_regex_version from score_output.rules_meta
+    lib_config_payload = PaperChunkLibConfigPayload(
+        version=score_output.rules_meta.version,
+        compiled_regex_version=score_output.rules_meta.compiled_regex_version,
+    )
+    
+    # Convert ScoreOutput to request format
+    # Group chunks by paper_id
+    paper_chunks: Dict[str, List[ChunkEntry]] = {}
+    for score_row in score_output.sel2texts_score_table:
+        paper_id = score_row.paper_id
+        if paper_id not in paper_chunks:
+            paper_chunks[paper_id] = []
+        
+        # Get text from text_table
+        text = score_output.text_table.get(score_row.text_id, "")
+        
+        paper_chunks[paper_id].append(ChunkEntry(
+            selector_id=score_row.selector_id,
+            text_id=score_row.text_id,
+            text=text,
+            score=score_row.score,
+        ))
+    
+    # Build papers list
+    papers = []
+    for paper_id, status in score_output.papers_status.items():
+        chunks = paper_chunks.get(paper_id, [])
+        papers.append(PaperChunkData(
+            paper_id=paper_id,
+            status=status.value if isinstance(status, PaperStatus) else status,
+            chunks=chunks,
+        ))
+    
+    # Build complete payload
+    payload = InjectPapersChunkPayload(
+        lib_config=PaperChunkLibConfig(json_payload=lib_config_payload),
+        papers=papers,
+    )
+    
+    return payload
 

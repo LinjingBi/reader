@@ -6,6 +6,7 @@ from typing import Dict, List, Tuple
 from .types import (
     PaperId, Url, SelectorId, TextId,
     DebugHeadingEvent, ScoreRow, TextTable, ScoreSummary, ScoreOutput,
+    PaperStatus, PapersStatus, RulesMeta,
 )
 from .configs import EngineConfig, ScoreConfig
 from .rules import Rules
@@ -60,6 +61,7 @@ async def run_scoring(
     debug_events: List[DebugHeadingEvent] = []
     text_table: TextTable = {}
     selector_contrib: Dict[SelectorId, List[Tuple[PaperId, TextId, float]]] = defaultdict(list)
+    papers_status: PapersStatus = {}
 
     fetched_ok = parsed_ok = used_html = used_pdf = scored_ok = 0
     ok_papers = partial_papers = fail_papers = 0
@@ -67,6 +69,7 @@ async def run_scoring(
     for pid, fr in fetch_map.items():
         if not fr.ok:
             fail_papers += 1
+            papers_status[pid] = PaperStatus.error
             debug_events.append(DebugHeadingEvent(
                 paper_id=pid, url=fr.url, source_used=None, block_index=None,
                 heading_raw=None, heading_key=None, status="fetch_fail", note=fr.error
@@ -77,6 +80,7 @@ async def run_scoring(
         pr = parse_paper(fr, rules, prefer=engine.prefer)
         if not pr.ok:
             fail_papers += 1
+            papers_status[pid] = PaperStatus.error
             debug_events.append(DebugHeadingEvent(
                 paper_id=pid, url=fr.url, source_used=pr.source_used, block_index=None,
                 heading_raw=None, heading_key=None, status="parse_fail", note=pr.error
@@ -90,6 +94,7 @@ async def run_scoring(
         blocks = pr.blocks or []
         if not blocks:
             fail_papers += 1
+            papers_status[pid] = PaperStatus.error
             debug_events.append(DebugHeadingEvent(
                 paper_id=pid, url=fr.url, source_used=pr.source_used, block_index=None,
                 heading_raw=None, heading_key=None, status="no_blocks",
@@ -147,15 +152,18 @@ async def run_scoring(
 
         if not mapped_any:
             fail_papers += 1
+            papers_status[pid] = PaperStatus.error
             continue
 
         scored_ok += 1
         if engine.required_selectors and set(engine.required_selectors).issubset(found_required):
             ok_papers += 1
+            papers_status[pid] = PaperStatus.ok
         else:
             partial_papers += 1
+            papers_status[pid] = PaperStatus.partial
 
-    # Final score normalization: optionally normalize weights within each selector
+    # Final selector -> texts score normalization: optionally normalize weights within each selector
     # If normalize_within_selector=True: weights are normalized so they sum to 1.0 per selector
     # If normalize_within_selector=False: raw weights are used (may sum to >1.0 if multiple matches)
     score_rows: List[ScoreRow] = []
@@ -181,4 +189,15 @@ async def run_scoring(
         fail_papers=fail_papers,
         required_selectors=engine.required_selectors,
     )
-    return ScoreOutput(summary=summary, debug_heading_events=debug_events, text_table=text_table, score_table=score_rows)
+    rules_meta = RulesMeta(
+        version=rules.version,
+        compiled_regex_version=rules.compiled_regex_version,
+    )
+    return ScoreOutput(
+        summary=summary,
+        debug_heading_events=debug_events,
+        text_table=text_table,
+        sel2texts_score_table=score_rows,
+        papers_status=papers_status,
+        rules_meta=rules_meta,
+    )

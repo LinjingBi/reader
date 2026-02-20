@@ -95,3 +95,45 @@ class FreshPaperPayload(BaseModel):
     papers: List[PaperInput] = Field(..., description="List of papers")
     clusters: List[ClusterInput] = Field(..., description="List of clusters")
 
+
+class PaperChunkLibConfigPayload(BaseModel):
+    """Paper chunk library configuration payload."""
+    version: int = Field(..., description="rules version number")
+    compiled_regex_version: int = Field(..., description="rules compiled regex version")
+
+
+class PaperChunkLibConfig(BaseModel):
+    """Paper chunk library configuration with dynamic config ID."""
+    json_payload: PaperChunkLibConfigPayload = Field(..., description="Paper chunk rules config")
+    
+    @computed_field
+    @property
+    def lib_config_id(self) -> str:
+        """Get lib_config_id from algo_lib.paperchunk version."""
+        try:
+            from algo_lib.paperchunk import __version__ as paperchunk_version
+            return f"algo_lib.paperchunk|{paperchunk_version}"
+        except ImportError:
+            raise ValueError("algo_lib.paperchunk is not versioned")
+
+
+class ChunkEntry(BaseModel):
+    """Chunk entry with selector, text, and score."""
+    selector_id: str = Field(..., description="Selector name (e.g., 'summary', 'method')")
+    text_id: str = Field(..., description="Text ID from ScoreOutput.text_table keys")
+    text: str = Field(..., description="Text content from ScoreOutput.text_table values")
+    score: float = Field(..., description="Score from ScoreOutput.sel2texts_score_table")
+
+
+class PaperChunkData(BaseModel):
+    """Per-paper chunk data."""
+    paper_id: str = Field(..., description="Paper ID")
+    status: str = Field(..., description="Paper status: 'ok' | 'partial' | 'error'")
+    chunks: List[ChunkEntry] = Field(..., description="List of chunks (empty if status == 'error')")
+
+
+class InjectPapersChunkPayload(BaseModel):
+    """Payload for memo inject-papers-chunk command."""
+    lib_config: PaperChunkLibConfig = Field(..., description="Library configuration")
+    papers: List[PaperChunkData] = Field(..., description="List of papers with chunks")
+

@@ -4,6 +4,7 @@ mod get_cluster_observation;
 mod get_report_planner_metadata;
 mod get_topic_resolver_metadata;
 mod inject_clusters_observation;
+mod inject_papers_chunk;
 mod start_report_job;
 mod validation;
 
@@ -34,6 +35,9 @@ pub fn dispatch(args: Args) -> Result<()> {
         }
         Command::GetReportPlannerMetadata { cluster_pk_hash, add_topic_reports, add_top_papers } => {
             get_report_planner_metadata::handle(args.dry_run, &args.db, args.schema.as_deref(), &cluster_pk_hash, add_topic_reports, add_top_papers)
+        }
+        Command::InjectPapersChunk { input } => {
+            inject_papers_chunk::handle(args.dry_run, &args.db, args.schema.as_deref(), &input)
         }
     }
 }

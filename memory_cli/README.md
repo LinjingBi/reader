@@ -17,23 +17,39 @@ Schema is applied automatically on each command (idempotent): `schemas/schema.sq
 ./target/release/memo-cli fresh-paper --input examples/fresh_paper_payload.json --db memo.sqlite
 ```
 
-### 2) Read best clustering for LLM prompt (Step 3)
+### 2) Inject paper chunks (Step 2.5)
+```bash
+./target/release/memo-cli inject-papers-chunk --input examples/inject_papers_chunk_input.json --db memo.sqlite
+cat chunks.json | ./target/release/memo-cli inject-papers-chunk --input -
+```
+
+Ingests paper chunk data from the Python scoring pipeline. The command:
+- Upserts chunk library configuration
+- For each paper: creates/updates paper run mapping, deletes old chunks, and inserts new chunks
+- Processes all papers in a single transaction (all-or-nothing)
+- Outputs metadata: `total_papers_count` and `total_chunks_count`
+
+Input format: JSON with `lib_config` and `papers` array. Each paper has `paper_id`, `status` ("ok" | "partial" | "error"), and `chunks` array. Each chunk contains `selector_id`, `text_id`, `text`, and `score`.
+
+See `examples/inject_papers_chunk_input.json` for input format and `examples/inject_papers_chunk_output.json` for output format.
+
+### 3) Read best clustering for LLM prompt (Step 3)
 ```bash
 ./target/release/memo-cli get-best-run --source hf_monthly --period-start 2025-01-01 --period-end 2025-01-31 --top-n 10 --db memo.sqlite
 ```
 
-### 3) Inject cluster observations (LLM enrichment results)
+### 4) Inject cluster observations (LLM enrichment results)
 ```bash
 ./target/release/memo-cli inject-clusters-observation --input observations.json --db memo.sqlite
 cat observations.json | ./target/release/memo-cli inject-clusters-observation --input -
 ```
 
-### 4) Get cluster observations for clusters within a period range
+### 5) Get cluster observations for clusters within a period range
 ```bash
 ./target/release/memo-cli get-clusters-observation --source hf_monthly --period-start 2025-01-01 --period-end 2025-01-31 --db memo.sqlite
 ```
 
-### 5) Start a report generation job for a cluster
+### 6) Start a report generation job for a cluster
 ```bash
 ./target/release/memo-cli start-report-job --cluster-pk-hash abc123def456 --db memo.sqlite
 ```
@@ -46,7 +62,7 @@ The command checks for existing jobs and handles different states:
   - If error occurred within 5 minutes: Returns remaining wait time
   - If error occurred more than 5 minutes ago: Resets job to `running` status
 
-### 6) Get topic resolver metadata
+### 7) Get topic resolver metadata
 ```bash
 ./target/release/memo-cli --db memo.sqlite get-topic-resolver-metadata --cluster-pk-hash abc123def456
 ./target/release/memo-cli get-topic-resolver-metadata --cluster-pk-hash abc123def456
@@ -56,7 +72,7 @@ Returns a JSON object containing:
 - `topics`: List of all topics with their centroid data (id, centroid_b64, centroid_weight)
 - `cluster`: Cluster metadata with centroid and centroid_weight (cluster size) for the specified cluster_pk_hash
 
-### 7) Get report planner metadata
+### 8) Get report planner metadata
 ```bash
 ./target/release/memo-cli get-report-planner-metadata --cluster-pk-hash abc123def456
 ./target/release/memo-cli get-report-planner-metadata --cluster-pk-hash abc123def456 --add-top-papers

@@ -9,7 +9,7 @@ import pydantic
 from pydantic import BaseModel, RootModel
 
 from reader.config import MemoConfig
-from reader.pipelines.hf_data.report import FreshPaperPayload
+from reader.pipelines.hf_data.report import FreshPaperPayload, InjectPapersChunkPayload
 from reader.pipelines.report import InjectClustersObservationInput
 from reader.logging.logging_setup import get_logger
 
@@ -49,6 +49,11 @@ class MemoGetTopicResolverMetadataError(Exception):
 
 class MemoGetReportPlannerMetadataError(Exception):
     """Exception raised when get-report-planner-metadata subcommand fails."""
+    pass
+
+
+class MemoInjectPapersChunkError(Exception):
+    """Exception raised when inject-papers-chunk subcommand fails."""
     pass
 
 
@@ -207,6 +212,22 @@ class FreshPaperResponseWithDetails(BaseModel):
     success: bool
     meta: FreshPaperMeta
     details: Optional[Dict[str, List[PaperOutput]]] = None  # Optional details mapping pk_hash to papers
+
+
+# ============================================================================
+# inject-papers-chunk command models
+# ============================================================================
+
+class InjectPapersChunkMeta(BaseModel):
+    """Metadata without success field."""
+    total_papers_count: int
+    total_chunks_count: int
+
+
+class InjectPapersChunkResponse(BaseModel):
+    """Response from inject-papers-chunk command."""
+    success: bool
+    meta: InjectPapersChunkMeta
 
 
 def fresh_paper(payload: FreshPaperPayload, config: MemoConfig, no_details: bool = False) -> FreshPaperResponseWithDetails:
@@ -633,3 +654,69 @@ def get_report_planner_metadata(
     except Exception as e:
         logger.error(f"Unexpected error in memo get-report-planner-metadata: {e}", exc_info=True)
         raise MemoGetReportPlannerMetadataError(f"Unexpected error in memo get-report-planner-metadata: {e}") from e
+
+
+def inject_papers_chunk(
+    payload: InjectPapersChunkPayload,
+    config: MemoConfig,
+) -> InjectPapersChunkResponse:
+    """
+    Call memo CLI inject-papers-chunk command to inject paper chunks.
+    
+    Args:
+        payload: InjectPapersChunkPayload instance containing lib_config and papers
+        config: MemoConfig instance
+        
+    Returns:
+        InjectPapersChunkResponse instance
+        
+    Raises:
+        MemoInjectPapersChunkError: If the subcommand execution fails
+    """
+    try:
+        # Convert payload to JSON string
+        payload_json = payload.model_dump_json(indent=2, exclude_none=False)
+        
+        # Build command (use '-' to read from stdin)
+        cmd = [
+            config.bin,
+        ]
+        if config.db_path:
+            cmd.append('--db')
+            cmd.append(config.db_path)
+        if config.db_schema_path:
+            cmd.append('--schema')
+            cmd.append(config.db_schema_path)
+        cmd.extend(['inject-papers-chunk', '--input', '-'])
+        
+        # Run memo CLI with stdin input
+        result = subprocess.run(
+            cmd,
+            input=payload_json,
+            capture_output=True,
+            text=True,
+            timeout=config.timeout_sec,
+            check=True,
+        )
+        
+        # Parse JSON output and create Pydantic model
+        response = InjectPapersChunkResponse.model_validate_json(result.stdout)
+        
+        # Validate success field
+        if not response.success:
+            raise MemoInjectPapersChunkError(f"memo inject-papers-chunk returned success=false: {result.stdout}")
+        
+        return response
+            
+    except subprocess.TimeoutExpired as e:
+        logger.warning(f"memo inject-papers-chunk timed out after {config.timeout_sec}s")
+        raise MemoInjectPapersChunkError(f"memo inject-papers-chunk timed out after {config.timeout_sec}s") from e
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Error calling memo inject-papers-chunk: {e.stderr}")
+        raise MemoInjectPapersChunkError(f"Error calling memo inject-papers-chunk: {e.stderr}") from e
+    except pydantic.ValidationError as e:
+        logger.error(f"Error validating memo output: {e}")
+        raise MemoInjectPapersChunkError(f"Error validating memo output: {e}") from e
+    except Exception as e:
+        logger.error(f"Unexpected error in memo inject-papers-chunk: {e}", exc_info=True)
+        raise MemoInjectPapersChunkError(f"Unexpected error in memo inject-papers-chunk: {e}") from e

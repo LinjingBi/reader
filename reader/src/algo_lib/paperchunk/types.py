@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import Dict, List, Optional, Tuple, Literal
 
 # -------------------------
@@ -121,11 +122,16 @@ class DebugHeadingEvent:
 # -------------------------
 TextTable = Dict[TextId, str]
 
+class PaperStatus(str, Enum):
+    """Status of a paper in the scoring pipeline."""
+    ok = "ok"  # Paper has all required selectors found
+    partial = "partial"  # Paper has some mappings but missing required selectors
+    error = "error"  # Paper failed at any stage (fetch, parse, no blocks, or no mappings)
+
+PapersStatus = Dict[PaperId, PaperStatus]
+
 @dataclass(frozen=True)
 class ScoreRow:
-    """
-    Represents a selector -> texts scoring relationship, not text -> selectors scoring.
-    """
     paper_id: PaperId
     selector_id: SelectorId
     text_id: TextId
@@ -133,23 +139,38 @@ class ScoreRow:
 
 @dataclass(frozen=True)
 class ScoreSummary:
-    total_papers: int
-    fetched_ok: int
-    parsed_ok: int
-    scored_ok: int
-    used_html: int
-    used_pdf: int
-    ok_papers: int
-    partial_papers: int
-    fail_papers: int
-    required_selectors: Tuple[SelectorId, ...] = ()
+    """
+    Summary statistics for paper scoring pipeline execution.
+    
+    Fields track papers through three stages: fetch -> parse -> score.
+    Relationships: fetched_ok >= parsed_ok >= scored_ok (cascading success).
+    """
+    total_papers: int  # Total number of papers processed
+    fetched_ok: int  # Papers successfully fetched from URLs
+    parsed_ok: int  # Papers successfully parsed into heading blocks (subset of fetched_ok)
+    scored_ok: int  # Papers with at least one mapped heading (subset of parsed_ok)
+    used_html: int  # Papers parsed using HTML source (sum with used_pdf <= parsed_ok)
+    used_pdf: int  # Papers parsed using PDF source (sum with used_html <= parsed_ok)
+    ok_papers: int  # Papers with all required selectors found (subset of scored_ok)
+    partial_papers: int  # Papers with some mappings but missing required selectors (subset of scored_ok)
+    fail_papers: int  # Papers that failed at any stage (fetch, parse, no blocks, or no mappings)
+    required_selectors: Tuple[SelectorId, ...] = ()  # Selectors that must be found for a paper to be "ok"
+
+@dataclass(frozen=True)
+class RulesMeta:
+    """Rules metadata containing version information."""
+    version: int
+    compiled_regex_version: int
 
 @dataclass(frozen=True)
 class ScoreOutput:
     summary: ScoreSummary
     debug_heading_events: List[DebugHeadingEvent]
     text_table: TextTable
-    score_table: List[ScoreRow]
+    # Represents a selector -> texts scoring relationship, not text -> selectors scoring.
+    sel2texts_score_table: List[ScoreRow]
+    papers_status: PapersStatus  # Mapping of paper_id to its status (ok/partial/error)
+    rules_meta: RulesMeta  # Rules metadata (version and compiled_regex_version)
 
 # -------------------------
 # Training output

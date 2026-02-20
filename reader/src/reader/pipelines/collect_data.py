@@ -1,10 +1,8 @@
 """HF data pipeline orchestration"""
 
-import asyncio
 from reader.pipelines.hf_data.config.config import HFDataPipeConfig, load_config
 from reader.adapters import memo
-from reader.pipelines.hf_data.blocks import get_hf_paper_metadata, generate_clustering_reports, convert_papers_for_chunking
-from algo_lib.paperchunk.scoring import run_scoring
+from reader.pipelines.hf_data.blocks import get_hf_paper_metadata, generate_clustering_reports, process_paper_chunks
 from reader.logging.logging_setup import get_logger
 
 logger = get_logger()
@@ -22,24 +20,15 @@ def run_hf_data(cfg: HFDataPipeConfig) -> None:
     # Generate monthly clustering reports and payload
     fresh_paper_payload = generate_clustering_reports(cfg, papers, period_start, period_end)
     
-    logger.info(f"Memo ingest started: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
+    logger.info(f"Memo fresh-paper ingest started: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
     fresh_paper_response = memo.fresh_paper(fresh_paper_payload, cfg.memo)
-    logger.info(f"Memo ingest successful: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
+    logger.info(f"Memo fresh-paper ingest successful: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
     
-    # Convert papers for chunking and run scoring
-    papers_dict = convert_papers_for_chunking(fresh_paper_response)
-
-    # papers_dict = {
-    #     # "2501.01234": "https://arxiv.org/abs/2501.01234",
-    #     # "2501.01235": "https://arxiv.org/abs/2501.01235",
-
-    #     "2501.01236": "https://arxiv.org/abs/2501.01236",
-    # }
-    score_output = asyncio.run(run_scoring(papers_dict, cfg.paper_chunk.rules_path))
-    # print(score_output.score_table)
-    logger.info(f"Paper chunk scoring completed: total_papers={score_output.summary.total_papers}, scored_ok={score_output.summary.scored_ok}")
+    # Process paper chunks: convert papers, run scoring, and convert to payload
+    inject_payload = process_paper_chunks(cfg, fresh_paper_response)
     
-
-
-
+    # Call memo inject-papers-chunk and log output
+    logger.info(f"Memo inject-papers-chunk ingest started")
+    inject_response = memo.inject_papers_chunk(inject_payload, cfg.memo)
+    logger.info(f"Memo inject-papers-chunk completed: total_papers={inject_response.meta.total_papers_count}, total_chunks={inject_response.meta.total_chunks_count}")
 

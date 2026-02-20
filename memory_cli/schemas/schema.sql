@@ -310,3 +310,94 @@ CREATE INDEX IF NOT EXISTS idx_topic_cluster_link_topic
 
 CREATE INDEX IF NOT EXISTS idx_topic_cluster_link_match_score
   ON topic_cluster_link(match_score);
+
+-- -----------------------------
+-- Paper chunking (v2 schema: chunk_text + map_id-based scoring)
+-- -----------------------------
+
+-- 1) Which chunker / extractor config produced the chunks
+CREATE TABLE IF NOT EXISTS chunk_lib_config (
+  lib_config_id   TEXT PRIMARY KEY,
+  json_payload    TEXT NOT NULL DEFAULT '{}',
+  created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+-- 2) One run per paper per lib version (you can allow multiple reruns)
+CREATE TABLE IF NOT EXISTS paper_run_map (
+  run_id          INTEGER PRIMARY KEY,
+  paper_id        TEXT NOT NULL,                -- FK to paper
+  lib_config_id   TEXT NOT NULL,                -- FK to chunk_lib_config
+  UNIQUE(paper_id, lib_config_id),
+  status          TEXT NOT NULL,   -- ok|partial|error
+  is_latest       INTEGER NOT NULL DEFAULT 0,   -- 0/1 wrt the runs for the same paper_id
+  created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  FOREIGN KEY(paper_id)      REFERENCES paper(paper_id) ON DELETE CASCADE,
+  FOREIGN KEY(lib_config_id) REFERENCES chunk_lib_config(lib_config_id) ON DELETE RESTRICT,
+  CHECK (status IN ('ok','partial','error')),
+  CHECK (is_latest IN (0,1))
+);
+
+CREATE INDEX IF NOT EXISTS idx_paper_run_map_latest
+  ON paper_run_map(paper_id, lib_config_id, is_latest);
+
+CREATE INDEX IF NOT EXISTS idx_paper_run_map_paper_created
+  ON paper_run_map(paper_id, created_at DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_paper_run_map_one_latest
+  ON paper_run_map(paper_id, lib_config_id)
+  WHERE is_latest = 1;
+
+-- 3) Selector dimension (DB layer selectors)
+CREATE TABLE IF NOT EXISTS chunk_selector (
+  selector_id     INTEGER PRIMARY KEY,
+  name            TEXT NOT NULL UNIQUE,         -- e.g. summary/introduction/method/...
+  created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_chunk_selector_name
+  ON chunk_selector(name);
+
+-- 4) Chunk text store: pure text + metadata (source of truth for content)
+CREATE TABLE IF NOT EXISTS chunk_text (
+  run_id          INTEGER NOT NULL,
+  text_id         TEXT NOT NULL,
+  text            TEXT NOT NULL,
+  char_count      INTEGER NOT NULL,
+  created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  PRIMARY KEY(run_id, text_id),
+  FOREIGN KEY(run_id) REFERENCES paper_run_map(run_id) ON DELETE CASCADE,
+  CHECK (char_count >= 0)
+);
+
+-- 5) Mapping table: ties a run+selector to a text_id. Uses surrogate map_id for tight downstream binding.
+CREATE TABLE IF NOT EXISTS paper_chunk_map (
+  map_id          INTEGER PRIMARY KEY,
+  run_id          INTEGER NOT NULL,
+  selector_id     INTEGER NOT NULL,
+  text_id         TEXT NOT NULL,
+  created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  FOREIGN KEY(run_id)      REFERENCES paper_run_map(run_id) ON DELETE CASCADE,
+  FOREIGN KEY(selector_id) REFERENCES chunk_selector(selector_id) ON DELETE RESTRICT,
+  FOREIGN KEY(run_id, text_id) REFERENCES chunk_text(run_id, text_id) ON DELETE CASCADE,
+  -- natural uniqueness for correctness:
+  UNIQUE(run_id, selector_id, text_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pcm_run_selector
+  ON paper_chunk_map(run_id, selector_id);
+
+CREATE INDEX IF NOT EXISTS idx_pcm_run_text
+  ON paper_chunk_map(run_id, text_id);
+
+CREATE INDEX IF NOT EXISTS idx_pcm_text
+  ON paper_chunk_map(text_id);
+
+-- 6) Selector -> texts scoring table (only scoring table in MVP)
+CREATE TABLE IF NOT EXISTS selector_texts_score (
+  map_id          INTEGER PRIMARY KEY,
+  score           REAL NOT NULL,                -- e.g. 1.0 or 1/N, optionally normalized within selector
+  created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  FOREIGN KEY(map_id) REFERENCES paper_chunk_map(map_id) ON DELETE CASCADE
+);

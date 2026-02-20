@@ -79,10 +79,12 @@ sub(issue, bug level)
 [x] - [reader] add new paper-chunk algo-lib.  
 [x] - [reader] integrate paper-chunk algo-lib into hf_data pipe.  
 [x] - [memo] refactor fresh-paper cmd to return paper cluster details by default.  
-[ ] - [memo,reader] cmds to write and read paper-chunk data/versioning to memo. note. check memory_cli/schemas/paper_chunk.sql for schema draft.    
+[x] - [memo,reader] new memo cmd to write paper-chunk data/versioning to db. note. new cmd inject-papers-chunk added.      
+[ ] - [memo,reader] integration test paperchunk algo-lib, memo inject-papers-chunk, reader hf_data.  
 
 [ ] - [reader] test call 1 llm report planner(heuristic rules for response?), choose a proper model, update llm config in reader.yaml to per model.    
 [ ] - [paper-chunk] test training mode and remove duplicate code under paper_chunk dir.   
+[ ] - [hf-data] collect pipeline events as jsonl for performance analysis.  
 
 
 [ ] - [reader,memo] generate the report writter prompt from llm call 2, memo supply metadata if necessary.  

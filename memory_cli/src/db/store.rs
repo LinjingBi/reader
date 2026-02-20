@@ -6,6 +6,7 @@ use crate::contracts::{
     GetTopicResolverMetadataResponse, TopicCentroid, ClusterMetadata,
     GetReportPlannerMetadataResponse, NewObservation, TopPaper, HistoryReport,
     PaperOutput,
+    InjectPapersChunkRequest,
 };
 use anyhow::{Context, Result};
 use chrono::Utc;
@@ -46,6 +47,19 @@ impl<'a> Store<'a> {
     /// Atomic ingest of month snapshot + papers + best clustering (Step 1–2).
     /// Split into two transactions: Tx A (ingest) and Tx B (clusters).
     /// Returns a HashMap mapping cluster_index to pk_hash.
+    /// WARNING: Cluster rerun behavior and cascade effects
+    /// 
+    /// When rerunning clusters for the same snapshot+embed_config+cluster_config:
+    /// 1. Sets selected_best=0 for all cluster_runs with same snapshot+role, then sets selected_best=1 for this run
+    /// 2. Deletes existing clusters for this run, which CASCADE deletes:
+    ///    - cluster_member (paper-cluster relationships)
+    ///    - cluster_observation (LLM enrichment results)
+    ///    - topic_cluster_link (topic-cluster links)
+    ///    - report_job (report generation jobs)
+    /// 3. Sets report.cluster_pk_hash to NULL (reports are preserved but lose cluster reference)
+    /// 4. Recreates clusters and members with new data
+    /// 
+    /// Note: cluster_run.updated_at is updated in upsert_cluster_run() on both insert and conflict.
     pub fn fresh_paper(&self, req: &FreshPaperRequest) -> Result<HashMap<i64, String>> {
         let now = Utc::now().to_rfc3339();
         let role = req.role.clone().unwrap_or_else(|| "hf_batch".to_string());
@@ -99,13 +113,6 @@ impl<'a> Store<'a> {
                 params![req.source, req.period_start, req.period_end, req.embed_config.embed_config_id, req.cluster_config.cluster_config_id, role],
             )?;
             // cluster_member is cascaded by cluster delete.
-
-            // Update cluster_updated_at timestamp when clusters are regenerated
-            let cluster_update_time = Utc::now().to_rfc3339();
-            tx_b.execute(
-                "UPDATE cluster_run SET updated_at=?1 WHERE source=?2 AND period_start=?3 AND period_end=?4 AND embed_config_id=?5 AND cluster_config_id=?6 AND role=?7",
-                params![cluster_update_time, req.source, req.period_start, req.period_end, req.embed_config.embed_config_id, req.cluster_config.cluster_config_id, role],
-            )?;
 
             // Insert clusters + members
             for c in &req.clusters {
@@ -339,7 +346,8 @@ impl<'a> Store<'a> {
             "INSERT INTO cluster_run(source, period_start, period_end, embed_config_id, cluster_config_id, role, selected_best, created_at, updated_at)
              VALUES(?1, ?2, ?3, ?4, ?5, ?6, 1, ?7, ?7)
              ON CONFLICT(source, period_start, period_end, embed_config_id, cluster_config_id, role) DO UPDATE SET
-               selected_best=1",
+               selected_best=1,
+               updated_at=?7",
             params![source, period_start, period_end, embed_config_id, cluster_config_id, role, now],
         )?;
         Ok(())
@@ -785,5 +793,161 @@ impl<'a> Store<'a> {
             top_papers_from_new_observation: top_papers,
             history_reports,
         })
+    }
+
+    /// Inject paper chunks into the database.
+    /// Single transaction that upserts config, processes all papers, and inserts chunks.
+    pub fn inject_papers_chunk(&self, req: &InjectPapersChunkRequest) -> Result<()> {
+        let now = Utc::now().to_rfc3339();
+        let paper_count = req.papers.len();
+
+        eprintln!("Progress: Starting transaction: processing {} papers...", paper_count);
+
+        let tx = self.conn.unchecked_transaction()?;
+
+        // 1. Upsert config
+        let json_payload_str = serde_json::to_string(&req.lib_config.json_payload)
+            .context("failed to serialize lib_config json_payload")?;
+        self.upsert_chunk_lib_config(&tx, &req.lib_config.lib_config_id, &json_payload_str, &now)?;
+        eprintln!("Progress: Upserted config: {}", req.lib_config.lib_config_id);
+
+        // 2. Process each paper
+        for (idx, paper_data) in req.papers.iter().enumerate() {
+            // Log every 10 papers or at milestones
+            if idx % 10 == 0 || idx == 0 || idx == paper_count - 1 {
+                let start = idx + 1;
+                let end = std::cmp::min(idx + 10, paper_count);
+                if idx == paper_count - 1 {
+                    eprintln!("Progress: Processing paper {} of {}...", idx + 1, paper_count);
+                } else {
+                    eprintln!("Progress: Processing papers {}-{} of {}...", start, end, paper_count);
+                }
+            }
+
+            // 2.1: Set is_latest=0 for all paper_run_map rows with same paper_id
+            tx.execute(
+                "UPDATE paper_run_map SET is_latest=0 WHERE paper_id=?1",
+                params![paper_data.paper_id],
+            )?;
+
+            // 2.2: Upsert paper_run_map, get run_id
+            let run_id = self.upsert_paper_run_map(
+                &tx,
+                &paper_data.paper_id,
+                &req.lib_config.lib_config_id,
+                &paper_data.status,
+                &now,
+            )?;
+
+            // 2.3: Delete old chunk_text rows (CASCADE deletes paper_chunk_map and selector_texts_score)
+            // Always execute, even for error status (chunks will be empty vec)
+            tx.execute(
+                "DELETE FROM chunk_text WHERE run_id=?1",
+                params![run_id],
+            )?;
+
+            // 2.4: Insert new chunks
+            let paper_chunks = paper_data.chunks.len();
+            for chunk in &paper_data.chunks {
+                // Resolve selector_id
+                let selector_id = self.resolve_selector_id(&tx, &chunk.selector_id)?;
+
+                // Insert chunk_text
+                let char_count = chunk.text.chars().count() as i64;
+                tx.execute(
+                    "INSERT INTO chunk_text(run_id, text_id, text, char_count, created_at)
+                     VALUES(?1, ?2, ?3, ?4, ?5)",
+                    params![run_id, chunk.text_id, chunk.text, char_count, now],
+                )?;
+
+                // Insert paper_chunk_map and get map_id
+                tx.execute(
+                    "INSERT INTO paper_chunk_map(run_id, selector_id, text_id, created_at)
+                     VALUES(?1, ?2, ?3, ?4)",
+                    params![run_id, selector_id, chunk.text_id, now],
+                )?;
+                let map_id = tx.last_insert_rowid();
+
+                // Insert selector_texts_score
+                tx.execute(
+                    "INSERT INTO selector_texts_score(map_id, score, created_at)
+                     VALUES(?1, ?2, ?3)",
+                    params![map_id, chunk.score, now],
+                )?;
+            }
+
+            if paper_chunks > 0 {
+                eprintln!("Progress: Inserted {} chunks for {}", paper_chunks, paper_data.paper_id);
+            }
+        }
+
+        eprintln!("Progress: Committing transaction...");
+        tx.commit()?;
+        eprintln!("Progress: Transaction committed successfully: {} papers processed", paper_count);
+
+        Ok(())
+    }
+
+    // ---------- Paper chunk helpers ----------
+
+    fn resolve_selector_id(&self, tx: &Transaction, name: &str) -> Result<i64> {
+        // Try to get existing selector_id (case-insensitive lookup)
+        let name_lower = name.to_lowercase();
+        let result: Result<i64, rusqlite::Error> = tx.query_row(
+            "SELECT selector_id FROM chunk_selector WHERE LOWER(name) = ?1",
+            params![name_lower],
+            |row| row.get(0),
+        );
+
+        match result {
+            Ok(id) => Ok(id),
+            Err(rusqlite::Error::QueryReturnedNoRows) => {
+                // Insert new selector with lowercase name and return its ID
+                tx.execute(
+                    "INSERT INTO chunk_selector(name, created_at) VALUES(?1, ?2)",
+                    params![name_lower, Utc::now().to_rfc3339()],
+                )?;
+                Ok(tx.last_insert_rowid())
+            }
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    fn upsert_chunk_lib_config(&self, tx: &Transaction, id: &str, json_payload: &str, now: &str) -> Result<()> {
+        tx.execute(
+            "INSERT INTO chunk_lib_config(lib_config_id, json_payload, created_at, updated_at)
+             VALUES(?1, ?2, ?3, ?4)
+             ON CONFLICT(lib_config_id) DO UPDATE SET
+               json_payload=excluded.json_payload,
+               updated_at=excluded.updated_at",
+            params![id, json_payload, now, now],
+        )?;
+        Ok(())
+    }
+
+    fn upsert_paper_run_map(&self, tx: &Transaction, paper_id: &str, lib_config_id: &str, status: &str, now: &str) -> Result<i64> {
+        tx.execute(
+            "INSERT INTO paper_run_map(paper_id, lib_config_id, status, is_latest, created_at, updated_at)
+             VALUES(?1, ?2, ?3, 1, ?4, ?5)
+             ON CONFLICT(paper_id, lib_config_id) DO UPDATE SET
+               status=excluded.status,
+               is_latest=1,
+               updated_at=excluded.updated_at",
+            params![paper_id, lib_config_id, status, now, now],
+        )?;
+
+        // Get the run_id using last_insert_rowid() if it was an insert, otherwise query
+        let run_id = tx.last_insert_rowid();
+        if run_id != 0 {
+            Ok(run_id)
+        } else {
+            // If last_insert_rowid() is 0, it was an UPDATE, so query for the existing run_id
+            let run_id: i64 = tx.query_row(
+                "SELECT run_id FROM paper_run_map WHERE paper_id=?1 AND lib_config_id=?2",
+                params![paper_id, lib_config_id],
+                |row| row.get(0),
+            )?;
+            Ok(run_id)
+        }
     }
 }
