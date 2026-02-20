@@ -837,35 +837,54 @@ impl<'a> Store<'a> {
                 &req.lib_config.lib_config_id,
                 &paper_data.status,
                 &now,
-            )?;
+            )
+            .with_context(|| format!(
+                "Failed to upsert paper_run_map: paper_id={}, lib_config_id={}",
+                paper_data.paper_id, req.lib_config.lib_config_id
+            ))?;
 
             // 2.3: Delete old chunk_text rows (CASCADE deletes paper_chunk_map and selector_texts_score)
             // Always execute, even for error status (chunks will be empty vec)
             tx.execute(
                 "DELETE FROM chunk_text WHERE run_id=?1",
                 params![run_id],
-            )?;
+            )
+            .with_context(|| format!(
+                "Failed to delete old chunk_text rows: paper_id={}, run_id={}",
+                paper_data.paper_id, run_id
+            ))?;
 
             // 2.4: Insert new chunks
             let paper_chunks = paper_data.chunks.len();
             for chunk in &paper_data.chunks {
                 // Resolve selector_id
-                let selector_id = self.resolve_selector_id(&tx, &chunk.selector_id)?;
+                let selector_id = self.resolve_selector_id(&tx, &chunk.selector_id)
+                    .with_context(|| format!("Failed to resolve selector_id for selector '{}'", chunk.selector_id))?;
 
-                // Insert chunk_text
+                // Insert chunk_text using INSERT OR IGNORE to handle duplicates
+                // (due to many-to-many relationship, same text_id can appear with different selector_id)
+                // The PRIMARY KEY(run_id, text_id) constraint will prevent duplicates
                 let char_count = chunk.text.chars().count() as i64;
                 tx.execute(
-                    "INSERT INTO chunk_text(run_id, text_id, text, char_count, created_at)
+                    "INSERT OR IGNORE INTO chunk_text(run_id, text_id, text, char_count, created_at)
                      VALUES(?1, ?2, ?3, ?4, ?5)",
                     params![run_id, chunk.text_id, chunk.text, char_count, now],
-                )?;
+                )
+                .with_context(|| format!(
+                    "Failed to insert into chunk_text: paper_id={}, run_id={}, text_id={} (FK: run_id -> paper_run_map)",
+                    paper_data.paper_id, run_id, chunk.text_id
+                ))?;
 
                 // Insert paper_chunk_map and get map_id
                 tx.execute(
                     "INSERT INTO paper_chunk_map(run_id, selector_id, text_id, created_at)
                      VALUES(?1, ?2, ?3, ?4)",
                     params![run_id, selector_id, chunk.text_id, now],
-                )?;
+                )
+                .with_context(|| format!(
+                    "Failed to insert into paper_chunk_map: paper_id={}, run_id={}, selector_id={}, text_id={} (FKs: run_id -> paper_run_map, selector_id -> chunk_selector, (run_id,text_id) -> chunk_text)",
+                    paper_data.paper_id, run_id, selector_id, chunk.text_id
+                ))?;
                 let map_id = tx.last_insert_rowid();
 
                 // Insert selector_texts_score
@@ -873,7 +892,11 @@ impl<'a> Store<'a> {
                     "INSERT INTO selector_texts_score(map_id, score, created_at)
                      VALUES(?1, ?2, ?3)",
                     params![map_id, chunk.score, now],
-                )?;
+                )
+                .with_context(|| format!(
+                    "Failed to insert into selector_texts_score: paper_id={}, map_id={}, score={} (FK: map_id -> paper_chunk_map)",
+                    paper_data.paper_id, map_id, chunk.score
+                ))?;
             }
 
             if paper_chunks > 0 {
@@ -934,20 +957,27 @@ impl<'a> Store<'a> {
                is_latest=1,
                updated_at=excluded.updated_at",
             params![paper_id, lib_config_id, status, now, now],
-        )?;
+        )
+        .with_context(|| format!(
+            "Failed to INSERT/UPDATE paper_run_map: paper_id={}, lib_config_id={}",
+            paper_id, lib_config_id
+        ))?;
 
-        // Get the run_id using last_insert_rowid() if it was an insert, otherwise query
-        let run_id = tx.last_insert_rowid();
-        if run_id != 0 {
-            Ok(run_id)
-        } else {
-            // If last_insert_rowid() is 0, it was an UPDATE, so query for the existing run_id
-            let run_id: i64 = tx.query_row(
-                "SELECT run_id FROM paper_run_map WHERE paper_id=?1 AND lib_config_id=?2",
-                params![paper_id, lib_config_id],
-                |row| row.get(0),
-            )?;
-            Ok(run_id)
-        }
+        // Always query for run_id after INSERT/UPDATE to ensure we get the correct value.
+        // Note: We cannot use last_insert_rowid() here because:
+        // - For INSERT: last_insert_rowid() works, but querying is more consistent
+        // - For UPDATE (ON CONFLICT): last_insert_rowid() returns 0 or a stale value from a previous insert
+        // This is a known SQLite behavior - last_insert_rowid() only works reliably for pure INSERTs, not UPSERTs
+        let run_id: i64 = tx.query_row(
+            "SELECT run_id FROM paper_run_map WHERE paper_id=?1 AND lib_config_id=?2",
+            params![paper_id, lib_config_id],
+            |row| row.get(0),
+        )
+        .with_context(|| format!(
+            "Failed to query run_id after INSERT/UPDATE: paper_id={}, lib_config_id={}. The INSERT/UPDATE succeeded but we couldn't find the row.",
+            paper_id, lib_config_id
+        ))?;
+        
+        Ok(run_id)
     }
 }

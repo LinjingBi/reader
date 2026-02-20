@@ -55,7 +55,7 @@ async def run_scoring(
         papers,
         concurrency=engine.concurrency,
         timeout_s=engine.timeout_s,
-        prefer=engine.prefer,
+        mode=engine.mode,
     )
 
     debug_events: List[DebugHeadingEvent] = []
@@ -77,7 +77,7 @@ async def run_scoring(
             continue
 
         fetched_ok += 1
-        pr = parse_paper(fr, rules, prefer=engine.prefer)
+        pr = parse_paper(fr, rules, mode=engine.mode)
         if not pr.ok:
             fail_papers += 1
             papers_status[pid] = PaperStatus.error

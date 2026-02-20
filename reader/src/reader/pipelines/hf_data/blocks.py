@@ -5,6 +5,7 @@ import base64
 import json
 import calendar
 import asyncio
+from dataclasses import asdict
 from pathlib import Path
 from typing import Dict, List, Sequence, Optional, Any
 import numpy as np
@@ -18,6 +19,8 @@ from reader.pipelines.hf_data.config.config import (
     HFDataPipeConfig,
     render_best_cluster_text_report_path,
     render_best_cluster_report_path,
+    render_papers_scoring_summary_report_path,
+    render_paper_scoring_debug_heading_events_path,
 )
 from reader.pipelines.hf_data.report import (
     FreshPaperPayload,
@@ -387,8 +390,28 @@ def process_paper_chunks(
     """
     # Convert papers for chunking and run scoring
     papers_dict = _convert_papers_for_chunking(fresh_paper_response)
-    score_output = asyncio.run(run_scoring(papers_dict, cfg.paper_chunk.rules_path))
+    score_output = asyncio.run(run_scoring(papers_dict, cfg.algos.paperchunk.rules_path))
     logger.info(f"Paper chunk scoring completed: total_papers={score_output.summary.total_papers}, scored_ok={score_output.summary.scored_ok}")
+    
+    # Render output file paths
+    month_key = cfg.run.month_key
+    summary_report_path = render_papers_scoring_summary_report_path(cfg, month_key)
+    debug_events_path = render_paper_scoring_debug_heading_events_path(cfg, month_key)
+    
+    # Write paper scoring summary report if path is provided
+    if summary_report_path is not None:
+        summary_dict = asdict(score_output.summary)
+        with open(summary_report_path, 'w', encoding='utf-8') as f:
+            json.dump(summary_dict, f, indent=2, ensure_ascii=False)
+        logger.info(f"Paper scoring summary report saved to {summary_report_path}")
+    
+    # Write paper scoring debug heading events if path is provided
+    if debug_events_path is not None:
+        with open(debug_events_path, 'w', encoding='utf-8') as f:
+            for event in score_output.debug_heading_events:
+                event_dict = asdict(event)
+                f.write(json.dumps(event_dict, ensure_ascii=False) + "\n")
+        logger.info(f"Paper scoring debug heading events saved to {debug_events_path}")
     
     # Extract version and compiled_regex_version from score_output.rules_meta
     lib_config_payload = PaperChunkLibConfigPayload(

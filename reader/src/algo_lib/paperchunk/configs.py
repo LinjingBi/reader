@@ -10,7 +10,9 @@ class EngineConfig:
     concurrency: int = 16
     timeout_s: float = 30.0
 
-    prefer: Literal["html", "pdf", "auto"] = "auto"
+    #TODO: disable pdf mode by default for now.
+    mode: Literal["html", "pdf", "auto"] = "html"
+    # mode: Literal["html", "pdf", "auto"] = "auto"
 
     required_selectors: Tuple[SelectorId, ...] = ("summary", "introduction", "method", "conclusion")
 

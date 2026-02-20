@@ -80,7 +80,8 @@ sub(issue, bug level)
 [x] - [reader] integrate paper-chunk algo-lib into hf_data pipe.  
 [x] - [memo] refactor fresh-paper cmd to return paper cluster details by default.  
 [x] - [memo,reader] new memo cmd to write paper-chunk data/versioning to db. note. new cmd inject-papers-chunk added.      
-[ ] - [memo,reader] integration test paperchunk algo-lib, memo inject-papers-chunk, reader hf_data.  
+[x] - [memo,reader] integration test paperchunk algo-lib, memo inject-papers-chunk, reader hf_data.  
+[ ] - [paperchunk] refactor pdf extractor, it is in poor condition..note. pdf extractor is disbaled now, only html is enabled.     
 
 [ ] - [reader] test call 1 llm report planner(heuristic rules for response?), choose a proper model, update llm config in reader.yaml to per model.    
 [ ] - [paper-chunk] test training mode and remove duplicate code under paper_chunk dir.   

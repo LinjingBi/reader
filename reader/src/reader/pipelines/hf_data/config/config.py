@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field
 class RunConfig(BaseModel):
     """Run configuration"""
     month_key: str = Field(..., description="Month key in format 'month=YYYY-MM'")
-    artifacts_dir: str = Field(default="artifacts", description="Directory for artifacts")
     log_config_path: str = Field(..., description="Path to logging configuration YAML file")
     log_file_path: str = Field(..., description="Path to log file")
 
@@ -39,11 +38,15 @@ class ClusteringConfig(BaseModel):
     k_candidates: List[int] = Field(..., description="K values to try")
     random_seed: int = Field(..., description="Random seed for reproducibility")
 
+class PaperChunkConfig(BaseModel):
+    """Paper chunk configuration"""
+    rules_path: str = Field(..., description="Path to paper chunk rules YAML file")
 
 class AlgosConfig(BaseModel):
     """Algorithms configuration"""
     embedding: EmbeddingConfig
     clustering: ClusteringConfig
+    paperchunk: PaperChunkConfig
 
 
 class OutputsConfig(BaseModel):
@@ -56,6 +59,14 @@ class OutputsConfig(BaseModel):
         default=None,
         description="Template for best cluster JSON report path (use {month_key} placeholder). If not provided, no JSON report will be created."
     )
+    papers_scoring_summary_report: Optional[str] = Field(
+        default=None,
+        description="Template for paper scoring summary report path (use {month_key} placeholder). If not provided, no summary report will be created."
+    )
+    paper_scoring_debug_heading_events: Optional[str] = Field(
+        default=None,
+        description="Template for paper scoring debug heading events JSONL path (use {month_key} placeholder). If not provided, no debug events file will be created."
+    )
 
 
 class MemoConfig(BaseModel):
@@ -66,17 +77,11 @@ class MemoConfig(BaseModel):
     timeout_sec: int = Field(default=60, description="Timeout for memo CLI calls")
 
 
-class PaperChunkConfig(BaseModel):
-    """Paper chunk configuration"""
-    rules_path: str = Field(..., description="Path to paper chunk rules YAML file")
-
-
 class HFDataPipeConfig(BaseModel):
     """HF data pipeline configuration"""
     run: RunConfig
     sources: SourcesConfig
     algos: AlgosConfig
-    paper_chunk: PaperChunkConfig
     outputs: OutputsConfig
     memo: MemoConfig
 
@@ -139,4 +144,36 @@ def render_best_cluster_report_path(cfg: HFDataPipeConfig, month_key: str) -> Op
     if cfg.outputs.best_cluster_report_path_template is None:
         return None
     return cfg.outputs.best_cluster_report_path_template.format(month_key=month_key)
+
+
+def render_papers_scoring_summary_report_path(cfg: HFDataPipeConfig, month_key: str) -> Optional[str]:
+    """
+    Render the paper scoring summary report path template with month_key.
+    
+    Args:
+        cfg: HFDataPipeConfig instance
+        month_key: Month key to substitute (e.g., "month=2025-01")
+        
+    Returns:
+        Rendered path string, or None if template is not configured
+    """
+    if cfg.outputs.papers_scoring_summary_report is None:
+        return None
+    return cfg.outputs.papers_scoring_summary_report.format(month_key=month_key)
+
+
+def render_paper_scoring_debug_heading_events_path(cfg: HFDataPipeConfig, month_key: str) -> Optional[str]:
+    """
+    Render the paper scoring debug heading events JSONL path template with month_key.
+    
+    Args:
+        cfg: HFDataPipeConfig instance
+        month_key: Month key to substitute (e.g., "month=2025-01")
+        
+    Returns:
+        Rendered path string, or None if template is not configured
+    """
+    if cfg.outputs.paper_scoring_debug_heading_events is None:
+        return None
+    return cfg.outputs.paper_scoring_debug_heading_events.format(month_key=month_key)
 

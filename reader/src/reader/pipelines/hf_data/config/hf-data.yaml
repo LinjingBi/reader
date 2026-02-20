@@ -1,8 +1,7 @@
 run:
   month_key: "month=2025-09"                 # keep the exact query key shape
-  artifacts_dir: "artifacts"
   log_config_path: "/Users/bii/reader/reader/src/reader/logging/config.yaml"  # Absolute path to logging config file
-  log_file_path: "artifacts/logs/reader.log"
+  log_file_path: "/Users/bii/reader/reader/src/reader/pipelines/hf_data/artifacts/hf_data.log"
 
 sources:
   hf:
@@ -22,19 +21,21 @@ algos:
     k_candidates: [4, 5]
     random_seed: 42
 
-paper_chunk:
-  rules_path: "/Users/bii/reader/reader/src/reader/pipelines/hf_data/config/paper_chunk_rules.yaml"
+  paperchunk:
+    rules_path: "/Users/bii/reader/reader/src/reader/pipelines/hf_data/config/paper_chunk_rules.yaml"
 
-cluster_summarization:
-
-
+# cluster_summarization:
 
 memo:
   bin: "/Users/bii/reader/memory_cli/target/debug/memo"
-  db_path: "/Users/bii/reader/reader/src/reader/pipelines/hf_data/db/memo.sqlite"  # optional, if not provided, a temporary database will be created
-  db_schema_path: "/Users/bii/reader/reader/src/reader/pipelines/hf_data/db/fresh_paper.sql" # optional, if not provided, no schema will be applied
+  db_path: "/Users/bii/reader/reader/src/reader/pipelines/hf_data/db/memo_chunk.sqlite"  # optional, if not provided, a temporary database will be created
+  # db_path: "/Users/bii/reader/reader/src/reader/pipelines/hf_data/db/memo.sqlite"  # optional, if not provided, a temporary database will be created
+  db_schema_path: "/Users/bii/reader/reader/src/reader/pipelines/hf_data/db/paper_chunk.sql" # optional, if not provided, no schema will be applie
+  # db_schema_path: "/Users/bii/reader/reader/src/reader/pipelines/hf_data/db/fresh_paper.sql" # optional, if not provided, no schema will be applied
   timeout_sec: 60
 
 outputs:
   # best_cluster_text_report_path_template: "best_clustering_md_reports_{month_key}.md"
-  best_cluster_report_path_template: "/Users/bii/reader/paper_chunk/clusters_data/best_clustering_{month_key}.json"
+  # best_cluster_report_path_template: "/Users/bii/reader/paper_chunk/clusters_data/best_clustering_{month_key}.json"
+  papers_scoring_summary_report: "/Users/bii/reader/reader/src/reader/pipelines/hf_data/artifacts/papers_scoring_summary_report_{month_key}.json"
+  paper_scoring_debug_heading_events: "/Users/bii/reader/reader/src/reader/pipelines/hf_data/artifacts/paper_scoring_debug_heading_events_{month_key}.jsonl"

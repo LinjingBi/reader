@@ -333,7 +333,7 @@ async def run_training(
         papers,
         concurrency=engine.concurrency,
         timeout_s=engine.timeout_s,
-        prefer=engine.prefer,
+        mode=engine.mode,
     )
 
     paper_events: List[Dict[str, Any]] = []
@@ -361,7 +361,7 @@ async def run_training(
             continue
 
         fetched_ok += 1
-        pr = parse_paper(fr, rules, prefer=engine.prefer)
+        pr = parse_paper(fr, rules, mode=engine.mode)
         if not pr.ok:
             paper_events.append({
                 "paper": {"paper_id": pid, "abs_url": fr.url or urls["abs_url"], "html_url": urls["html_url"], "pdf_url": urls["pdf_url"]},

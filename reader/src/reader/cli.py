@@ -27,7 +27,7 @@ def main():
     
     args = parser.parse_args()
     
-    # Load config first to get artifacts_dir
+    # Load config
     try:
         config = load_config(args.config)
     except FileNotFoundError as e:

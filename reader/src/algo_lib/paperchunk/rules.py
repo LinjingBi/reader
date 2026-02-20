@@ -10,9 +10,13 @@ import yaml
 def normalize_heading_key(s: str) -> str:
     s = re.sub(r"\s+", " ", s).strip()
     # Strip leading numbering like "1.", "2.3", "III.", "A.1" (best-effort)
-    s = re.sub(r"^\s*([IVXLC]+|\d+)([\.\)]\s*|\s+)", "", s)
-    s = re.sub(r"^\s*([A-Z]\.)\s*", "", s)
-    return s.lower().strip()
+    s = re.sub(r"^\s*([IVXLC]+|\d+)([\.\)]\s*|\s+)", "", s, flags=re.I)
+    s = re.sub(r"^\s*\d+(\.\d+)*\s*[\.\)]?\s*", "", s)
+    s = s.strip().lower()
+    # remove wrapping punctuation
+    s = s.strip(":-–—. ")
+    s = re.sub(r"\s+", " ", s)
+    return s
 
 def compile_alias_regex(alias: str) -> re.Pattern:
     """
@@ -93,6 +97,7 @@ class Rules:
                 - Multi-line strings: ✓ Works (normalized by parser)
                 - Comments: ✓ Ignored by parser
                 - Nested structures: ✓ Handled recursively
+                - Map node value formats: ✓ Handles both flat list and tuple list formats
                 
                 Edge cases NOT fully handled:
                 - YAML anchors/aliases: May not detect duplicates if keys use aliases
@@ -105,20 +110,49 @@ class Rules:
                   If nested differently, duplicates might be missed
                 """
                 if node.tag == "tag:yaml.org,2002:map":
-                    for i in range(0, len(node.value), 2):
-                        key_node = node.value[i]
-                        value_node = node.value[i + 1] if i + 1 < len(node.value) else None
-                        # Edge case: key_node.value assumes scalar node; may fail for complex keys
-                        if key_node.value == "selectors" and value_node:
-                            # Found selectors section, collect all keys
-                            if value_node.tag == "tag:yaml.org,2002:map":
-                                for j in range(0, len(value_node.value), 2):
-                                    sel_key_node = value_node.value[j]
-                                    # Edge case: sel_key_node.value may not resolve correctly for anchors/aliases
-                                    selector_keys.append(sel_key_node.value)
-                            find_selectors(value_node)
-                        elif value_node:
-                            find_selectors(value_node)
+                    # Handle both formats: flat list [k1, v1, k2, v2] or tuple list [(k1, v1), (k2, v2)]
+                    if node.value and isinstance(node.value[0], tuple):
+                        # Format: list of tuples [(key_node, value_node), ...]
+                        for key_node, value_node in node.value:
+                            # Edge case: key_node.value assumes scalar node; may fail for complex keys
+                            if hasattr(key_node, 'value') and key_node.value == "selectors" and value_node:
+                                # Found selectors section, collect all keys
+                                if value_node.tag == "tag:yaml.org,2002:map":
+                                    # Handle nested map - check if it's tuple format too
+                                    if value_node.value and isinstance(value_node.value[0], tuple):
+                                        for sel_key_node, _ in value_node.value:
+                                            if hasattr(sel_key_node, 'value'):
+                                                selector_keys.append(sel_key_node.value)
+                                    else:
+                                        for j in range(0, len(value_node.value), 2):
+                                            sel_key_node = value_node.value[j]
+                                            if hasattr(sel_key_node, 'value'):
+                                                selector_keys.append(sel_key_node.value)
+                                find_selectors(value_node)
+                            elif value_node:
+                                find_selectors(value_node)
+                    else:
+                        # Format: flat list [key_node1, value_node1, key_node2, value_node2, ...]
+                        for i in range(0, len(node.value), 2):
+                            key_node = node.value[i]
+                            value_node = node.value[i + 1] if i + 1 < len(node.value) else None
+                            # Edge case: key_node.value assumes scalar node; may fail for complex keys
+                            if hasattr(key_node, 'value') and key_node.value == "selectors" and value_node:
+                                # Found selectors section, collect all keys
+                                if value_node.tag == "tag:yaml.org,2002:map":
+                                    # Handle nested map - check if it's tuple format
+                                    if value_node.value and isinstance(value_node.value[0], tuple):
+                                        for sel_key_node, _ in value_node.value:
+                                            if hasattr(sel_key_node, 'value'):
+                                                selector_keys.append(sel_key_node.value)
+                                    else:
+                                        for j in range(0, len(value_node.value), 2):
+                                            sel_key_node = value_node.value[j]
+                                            if hasattr(sel_key_node, 'value'):
+                                                selector_keys.append(sel_key_node.value)
+                                find_selectors(value_node)
+                            elif value_node:
+                                find_selectors(value_node)
                 elif node.tag == "tag:yaml.org,2002:seq":
                     for item in node.value:
                         find_selectors(item)

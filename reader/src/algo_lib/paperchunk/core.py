@@ -19,12 +19,19 @@ from .rules import Rules, normalize_heading_key
 
 CAPTION_PAT = re.compile(r"^\s*(figure|fig\.|table)\s*\d+[:\.\s]", re.I)
 
-def arxiv_urls(paper_id: str) -> Dict[str, str]:
-    pid = paper_id.replace("arxiv:", "").strip()
+def arxiv_urls(paper_id: str, url: str) -> Dict[str, str]:
+    if ":" in paper_id:
+        pid_paper = paper_id.split(":")[1]
+        pid_url = url.rstrip("/").split("/")[-1]
+        if pid_paper != pid_url:
+            raise ValueError(f"cannot fully recover arxiv paper id for paper {paper_id} {url}: extracted id '{pid_paper}' from paper_id does not match id '{pid_url}' from url")
+        pid = pid_paper
+    else:
+        pid = paper_id
     return {
         "abs_url": f"https://arxiv.org/abs/{pid}",
         "html_url": f"https://arxiv.org/html/{pid}",
-        "pdf_url": f"https://arxiv.org/pdf/{pid}.pdf",
+        "pdf_url": f"https://arxiv.org/pdf/{pid}",
     }
 
 def normalize_whitespace(s: str) -> str:
@@ -198,7 +205,7 @@ async def fetch_papers_async(
     *,
     concurrency: int = 16,
     timeout_s: float = 30.0,
-    prefer: str = "auto",
+    mode: str = "auto",
 ) -> Dict[PaperId, FetchResult]:
     sem = asyncio.Semaphore(max(1, concurrency))
     results: Dict[PaperId, FetchResult] = {}
@@ -207,7 +214,7 @@ async def fetch_papers_async(
     async with httpx.AsyncClient(follow_redirects=True, timeout=timeout_s, headers=headers) as client:
         async def fetch_one(pid: PaperId, url_hint: Url) -> None:
             async with sem:
-                urls = arxiv_urls(pid)
+                urls = arxiv_urls(pid, url_hint)
                 html = None
                 pdfb = None
                 fetched_html = False
@@ -216,22 +223,40 @@ async def fetch_papers_async(
                 err = None
 
                 try:
-                    if prefer in ("auto", "html"):
+                    if mode == "html":
                         r = await client.get(urls["html_url"])
                         status_code = r.status_code
                         if r.status_code == 200 and r.content and (b"<html" in r.content[:2000].lower() or b"<!doctype" in r.content[:2000].lower()):
                             html = r.content.decode("utf-8", errors="ignore")
                             fetched_html = True
-                        elif prefer == "html":
+                        else:
                             err = f"HTML unavailable (status={r.status_code})"
-                    if (not fetched_html) and prefer in ("auto", "pdf"):
+                    elif mode == "pdf":
                         r = await client.get(urls["pdf_url"])
                         status_code = r.status_code
                         if r.status_code == 200 and r.content[:4] == b"%PDF":
                             pdfb = bytes(r.content)
                             fetched_pdf = True
                         else:
-                            err = err or f"PDF unavailable (status={r.status_code})"
+                            err = f"PDF unavailable (status={r.status_code})"
+                    elif mode == "auto":
+                        # Try HTML first
+                        r_html = await client.get(urls["html_url"])
+                        html_status = r_html.status_code
+                        if html_status == 200 and r_html.content and (b"<html" in r_html.content[:2000].lower() or b"<!doctype" in r_html.content[:2000].lower()):
+                            html = r_html.content.decode("utf-8", errors="ignore")
+                            fetched_html = True
+                            status_code = html_status
+                        else:
+                            # HTML failed, try PDF
+                            r_pdf = await client.get(urls["pdf_url"])
+                            pdf_status = r_pdf.status_code
+                            status_code = pdf_status
+                            if pdf_status == 200 and r_pdf.content[:4] == b"%PDF":
+                                pdfb = bytes(r_pdf.content)
+                                fetched_pdf = True
+                            else:
+                                err = f"HTML unavailable (status={html_status}); PDF unavailable (status={pdf_status})"
                 except Exception as e:
                     err = str(e)
 
@@ -255,7 +280,7 @@ def parse_paper(
     fetch: FetchResult,
     rules: Rules,
     *,
-    prefer: str = "auto",
+    mode: str = "auto",
     executor: Optional[ThreadPoolExecutor] = None,
 ) -> ParseResult:
     if not fetch.ok:
@@ -265,10 +290,10 @@ def parse_paper(
     warnings: List[str] = []
     blocks_dict: List[Dict[str, Any]] = []
 
-    if prefer == "pdf" and fetch.pdf_bytes:
+    if mode == "pdf" and fetch.pdf_bytes:
         source_used = "pdf"
         blocks_dict, warnings = pdf_extract_heading_blocks(fetch.pdf_bytes, rules)
-    elif prefer == "html" and fetch.html:
+    elif mode == "html" and fetch.html:
         source_used = "html"
         blocks_dict, warnings = html_extract_heading_blocks(fetch.html.encode("utf-8", errors="ignore"), rules)
     else:
