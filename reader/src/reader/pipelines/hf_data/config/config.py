@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Dict, List, Optional
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 
 class RunConfig(BaseModel):
@@ -77,6 +77,50 @@ class MemoConfig(BaseModel):
     timeout_sec: int = Field(default=60, description="Timeout for memo CLI calls")
 
 
+class LLMGeminiConfig(BaseModel):
+    """Gemini LLM API configuration"""
+    model: str = Field(..., description="Gemini model name")
+    temperature: float = Field(..., description="Temperature parameter")
+    max_tokens: int = Field(..., description="Maximum tokens to generate")
+    api_key_env: str = Field(..., description="Environment variable name for API key")
+    gemini_rpm_limit: int = Field(default=15, description="Requests per minute limit")
+    gemini_tpm_limit: int = Field(default=250000, description="Tokens per minute limit")
+
+
+class ClusterSummarizationConfig(BaseModel):
+    """Cluster summarization configuration"""
+    llm_gemini: LLMGeminiConfig = Field(..., description="LLM Gemini configuration")
+    prompt_template: str = Field(..., description="Path to prompt template file (relative to hf_data/prompts directory)")
+    
+    @computed_field
+    @property
+    def prompt_template_path(self) -> Path:
+        """
+        Resolve and validate prompt template path.
+        
+        Returns:
+            Resolved Path to prompt template file
+            
+        Raises:
+            FileNotFoundError: If template file doesn't exist
+        """
+        # Resolve template path relative to hf_data/prompts/
+        # This assumes config.py is at hf_data/config/config.py
+        config_file = Path(__file__)
+        # Go up from config/ to hf_data/, then into prompts/
+        hf_data_dir = config_file.parent.parent
+        prompts_dir = hf_data_dir / "prompts"
+        template_path = prompts_dir / self.prompt_template
+        
+        if not template_path.exists():
+            raise FileNotFoundError(
+                f"Prompt template not found: {template_path}. "
+                f"Expected location: {prompts_dir}/"
+            )
+        
+        return template_path
+
+
 class HFDataPipeConfig(BaseModel):
     """HF data pipeline configuration"""
     run: RunConfig
@@ -84,6 +128,7 @@ class HFDataPipeConfig(BaseModel):
     algos: AlgosConfig
     outputs: OutputsConfig
     memo: MemoConfig
+    cluster_summarization: ClusterSummarizationConfig
 
 
 def load_config(path: str) -> HFDataPipeConfig:

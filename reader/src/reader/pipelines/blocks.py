@@ -2,33 +2,21 @@
 
 import json
 import os
-import hashlib
-import base64
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import asdict
-from pathlib import Path
-from typing import Dict, List, Sequence, Optional, Any, Tuple
-import numpy as np
+from typing import Optional, Tuple
 
-from algo_lib.clustering import get_best_clustering
-from algo_lib.typing import PaperLike
 from algo_lib.topic_resolver.models import TopicInput, ClusterInput as TopicResolverClusterInput
 from algo_lib.topic_resolver.resolver import resolve_topic
 from algo_lib.topic_resolver.errors import TopicResolverError
 
 from reader.config import ReaderConfig
 from reader.adapters import memo
-from reader.adapters.memo import GetBestRunResponse, ClusterCard, PaperCard, StartReportJobResponse, GetReportPlannerMetadataResponse
+from reader.adapters.memo import PaperCard, StartReportJobResponse, GetReportPlannerMetadataResponse
 from reader.adapters.llm import LLMClient, TokenBucket, LLMGenerationError
 from pydantic import ValidationError
 from reader.pipelines.report import (
-    ClusterReport,
     LLMConfigInput,
-    ClusterObservation,
-    InjectClustersObservationInput,
     LLMReportPlannerOutput,
 )
-from reader.pipelines.metrics import judge_output, JudgeOutput
 from reader.logging.logging_setup import get_logger
 from reader.prompts.report_planner.build import UserIntent, get_intent_spec
 from reader.prompts.report_planner.build import build_baseline_planner_prompt
@@ -36,45 +24,8 @@ from reader.prompts.report_planner.build import build_baseline_planner_prompt
 logger = get_logger()
 
 # ============================================================================
-# LLM clusters summarization/enrichment blocks
+# LLM client initialization (used by report generation)
 # ============================================================================
-
-# ============================================================================
-# LLM clusters summarization/enrichment blocks
-# ============================================================================
-
-def load_template(template_path: Path) -> str:
-    """
-    Load prompt template from file.
-    
-    Args:
-        template_path: Path to template file
-    
-    Returns:
-        Template content as string
-    """
-    with open(template_path, 'r', encoding='utf-8') as f:
-        return f.read()
-
-
-def render_template_per_cluster(template_content: str, cluster_data: dict) -> str:
-    """
-    Render template for a single cluster by replacing {{CLUSTER_JSON}} placeholder.
-    
-    Args:
-        template_content: Template string with {{CLUSTER_JSON}} placeholder
-        cluster_data: Single cluster dict with papers array
-    
-    Returns:
-        Rendered prompt string
-    """
-    rendered = template_content.replace(
-        "{{CLUSTER_JSON}}",
-        json.dumps(cluster_data, indent=2, ensure_ascii=False)
-    )
-    
-    return rendered
-
 
 def _initialize_llm_client(cfg: ReaderConfig, model: str) -> LLMClient:
     """
@@ -118,269 +69,6 @@ def _initialize_llm_client(cfg: ReaderConfig, model: str) -> LLMClient:
     
     logger.info(f"Initialized LLM client with model: {model}")
     return llm_client
-
-
-def _convert_cluster_card_to_dict(cluster_card: ClusterCard) -> Dict[str, Any]:
-    """
-    Convert ClusterCard to dict format expected by template.
-    
-    Args:
-        cluster_card: ClusterCard instance with PaperCard papers
-    
-    Returns:
-        Dictionary with papers array in format expected by template
-    """
-    papers_list = []
-    for paper_card in cluster_card.papers:
-        papers_list.append({
-            "paper_id": paper_card.paper_id,
-            "title": paper_card.title,
-            "summary": paper_card.summary,
-            "keywords": paper_card.keywords,
-            "url": paper_card.url,
-            "rank_in_cluster": paper_card.rank_in_cluster,
-            "sim_to_centroid": paper_card.sim_to_centroid,
-        })
-    
-    result = {
-        "papers": papers_list,
-        "size": cluster_card.size,
-    }
-    if cluster_card.cohesion is not None:
-        result["cohesion"] = cluster_card.cohesion
-    
-    return result
-
-
-def summarize_clusters_parallel(
-    cfg: ReaderConfig,
-    best_run_response: GetBestRunResponse
-) -> Dict[str, Tuple[Optional[ClusterReport], JudgeOutput]]:
-    """
-    Process all clusters in parallel and generate ClusterReport summaries.
-    
-    Args:
-        cfg: ReaderConfig instance
-        best_run_response: GetBestRunResponse from memo adapter
-    
-    Returns:
-        List of tuples (Optional[ClusterReport], JudgeOutput):
-        - Each tuple contains (cluster_report_or_none, judge_output_or_failed_judge)
-        - One tuple per cluster in the same order as input clusters
-    """
-     # Validate config exists
-    if not cfg.cluster_summarization or not cfg.cluster_summarization.enable:
-        logger.debug("Cluster summarization is disabled, returning empty list")
-        return []
-    
-    # Load prompt template using resolved path from config
-    template_path = cfg.cluster_summarization.prompt_template_path
-    template_content = load_template(template_path)
-    logger.info(f"Loaded prompt template from {template_path}")
-    
-    # Initialize LLM client
-    llm_client = _initialize_llm_client(cfg, cfg.cluster_summarization.llm_model)
-    
-    # Process clusters in parallel
-
-    def process_single_cluster(cluster_card: ClusterCard, cluster_idx: int) -> Tuple[Optional[ClusterReport], JudgeOutput]:
-        """
-        Process a single cluster and return ClusterReport and JudgeOutput.
-        
-        Args:
-            cluster_card: ClusterCard instance
-            cluster_idx: Cluster index
-        
-        Returns:
-            Tuple of (Optional[ClusterReport], JudgeOutput):
-            - ClusterReport: Parsed cluster report if successful, None otherwise
-            - JudgeOutput: Contains validation scores and reasons (or failed_judge on error)
-        """
-
-        # Convert ClusterCard to dict format
-        cluster_dict = _convert_cluster_card_to_dict(cluster_card)
-        
-        # Render template with cluster data
-        prompt = render_template_per_cluster(template_content, cluster_dict)
-        
-        # Call LLM with structured output (returns parsed ClusterReport)
-        cluster_report = llm_client.call_structured_raw(
-            prompt=prompt,
-            response_model=ClusterReport,
-            temperature=cfg.llm_gemini.temperature,
-            max_tokens=cfg.llm_gemini.max_tokens
-        )
-        
-        # Use judge_output to validate response
-        # cluster_dict is used for citation validation
-        judge_result = judge_output(cluster_report, cluster_dict)
-        
-        logger.info(f"Successfully processed cluster {cluster_idx} (overall score: {judge_result.overall})")
-        return cluster_report, judge_result
-            
-    
-    # Process clusters in parallel using ThreadPoolExecutor
-    clusters = best_run_response.clusters
-    passed_clusters = 0
-    logger.info(f"Processing {len(clusters)} clusters in parallel")
-    
-    with ThreadPoolExecutor(max_workers=len(clusters)) as executor:
-        # Submit all tasks and create mapping from future to pk_hash
-        future_to_pk_hash = {}
-        for i, cluster_card in enumerate(clusters):
-            cluster_index = cluster_card.cluster_index
-            pk_hash = cluster_card.pk_hash
-            future = executor.submit(process_single_cluster, cluster_card, cluster_index)
-            future_to_pk_hash[future] = pk_hash
-        
-        # Collect results as they complete (more efficient than waiting in order)
-        # Store results in dict to maintain order
-        results_dict = {}
-        for future in as_completed(future_to_pk_hash):
-            cluster_report, judge_result = None, None
-            pk_hash = future_to_pk_hash[future]
-            try:
-                cluster_report, judge_result = future.result()
-                results_dict[pk_hash] = (cluster_report, judge_result)
-                if cluster_report is None:
-                    logger.warning(f"Cluster with pk_hash {pk_hash} returned None (processing failed, overall score: {judge_result.overall})")
-                else:
-                    passed_clusters += 1
-            except LLMGenerationError as e:
-                logger.error(f"LLM generation error collecting cluster with pk_hash {pk_hash} result: {str(e)}", exc_info=True)
-                # Add a failed judge output with None for cluster_report
-                failed_judge = JudgeOutput(
-                    sub_scores=None,
-                    overall=0.0,
-                    reasons={"llm_generation_error": str(e)}
-                )
-                results_dict[pk_hash] = (None, failed_judge)
-            except ValidationError as e:
-                logger.error(f"Validation error collecting cluster with pk_hash {pk_hash} result (after retries exhausted): {str(e)}", exc_info=True)
-                # Add a failed judge output with None for cluster_report
-                failed_judge = JudgeOutput(
-                    sub_scores=None,
-                    overall=0.0,
-                    reasons={"validation_error": str(e)}
-                )
-                results_dict[pk_hash] = (None, failed_judge)
-            except Exception as e:
-                logger.error(f"Error collecting cluster with pk_hash {pk_hash} result: {str(e)}", exc_info=True)
-                # Add a failed judge output with None for cluster_report
-                failed_judge = JudgeOutput(
-                    sub_scores=None,
-                    overall=0.0,
-                    reasons={"internal_error": f"Exception: {str(e)}"}
-                )
-                results_dict[pk_hash] = (None, failed_judge)
-        
-        logger.info(f"Successfully processed {passed_clusters}/{len(clusters)} clusters")
-    return results_dict
-
-
-def serialize_cluster_reports(
-    cluster_reports: Dict[str, Tuple[Optional[ClusterReport], JudgeOutput]],
-    output_path: str
-) -> None:
-    """
-    Serialize cluster reports dictionary to JSON file.
-    
-    Handles Pydantic objects (ClusterReport) and dataclass objects (JudgeOutput)
-    by converting them to dictionaries before JSON serialization.
-    
-    Args:
-        cluster_reports: Dictionary mapping pk_hash to tuple of 
-                        (Optional[ClusterReport], JudgeOutput)
-        output_path: Path to output JSON file
-    """
-    # Convert the dict to a JSON-serializable format
-    serializable_dict = {}
-    for pk_hash, (cluster_report, judge_output) in cluster_reports.items():
-        # Convert ClusterReport (Pydantic) to dict if present
-        cluster_report_dict = None
-        if cluster_report is not None:
-            cluster_report_dict = cluster_report.model_dump()
-        
-        # Convert JudgeOutput (dataclass) to dict
-        judge_output_dict = asdict(judge_output)
-        
-        serializable_dict[pk_hash] = {
-            "cluster_report": cluster_report_dict,
-            "judge_output": judge_output_dict
-        }
-    
-    # Write to JSON file
-    logger.info(f"Serializing cluster reports to {output_path}")
-    with open(output_path, 'w', encoding='utf-8') as f:
-        json.dump(serializable_dict, f, indent=2, ensure_ascii=False)
-    logger.info(f"Successfully serialized cluster reports to {output_path}")
-
-
-def convert_cluster_reports_to_memo_payload(
-    cluster_reports: Dict[str, Tuple[Optional[ClusterReport], JudgeOutput]],
-    cfg: ReaderConfig
-) -> InjectClustersObservationInput:
-    """
-    Convert cluster reports from summarize_clusters_parallel to memo inject_clusters_observation payload format.
-    
-    Args:
-        cluster_reports: Dictionary mapping pk_hash to tuple of (Optional[ClusterReport], JudgeOutput)
-        cfg: ReaderConfig instance
-    
-    Returns:
-        InjectClustersObservationInput dict mapping pk_hash to ClusterObservation
-    """
-    # Load template content to compute prompt_hash
-    template_path = cfg.cluster_summarization.prompt_template_path
-    template_content = load_template(template_path)
-    
-    # Compute prompt_hash: SHA256 hash of template_content
-    prompt_hash_hex = hashlib.sha256(template_content.encode('utf-8')).hexdigest()
-    prompt_hash = f"sha256:{prompt_hash_hex}"
-    
-    # Build LLM config
-    llm_config_id = f"{cfg.cluster_summarization.llm_model}|{prompt_hash}"
-    llm_config_json_payload = {
-        "provider": "google",
-        "model": cfg.cluster_summarization.llm_model,
-        "temperature": cfg.llm_gemini.temperature,
-        "max_tokens": cfg.llm_gemini.max_tokens,
-    }
-    llm_config = LLMConfigInput(
-        llm_config_id=llm_config_id,
-        json_payload=llm_config_json_payload
-    )
-    
-    # Build payload
-    payload: InjectClustersObservationInput = {}
-    
-    for pk_hash, (cluster_report, _) in cluster_reports.items():
-        # Skip if cluster_report is None (failed clusters)
-        if cluster_report is None:
-            logger.debug(f"Skipping failed cluster with pk_hash {pk_hash}")
-            continue
-        
-        # Use ClusterReport.model_dump() as payload_json
-        payload_json = cluster_report.model_dump()
-        
-        # Extract fields from ClusterReport
-        title = cluster_report.title
-        summary = cluster_report.what_this_topic_is_about + "\n" + cluster_report.why_it_matters
-        keywords_json = cluster_report.keyword_list
-        
-        # Create ClusterObservation
-        observation = ClusterObservation(
-            llm_config=llm_config,
-            payload_json=payload_json,
-            summary=summary,
-            title=title,
-            keywords_json=keywords_json
-        )
-        
-        payload[pk_hash] = observation
-    
-    logger.info(f"Converted {len(payload)} cluster reports to memo payload format")
-    return payload
 
 
 # ============================================================================

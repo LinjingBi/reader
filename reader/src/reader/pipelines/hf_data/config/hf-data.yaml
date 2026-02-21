@@ -24,7 +24,16 @@ algos:
   paperchunk:
     rules_path: "/Users/bii/reader/reader/src/reader/pipelines/hf_data/config/paper_chunk_rules.yaml"
 
-# cluster_summarization:
+cluster_summarization:
+  llm_gemini:
+    model: "models/gemini-2.5-flash-lite"
+    temperature: 0.2
+    max_tokens: 2500
+    api_key_env: "GEMINI_API_KEY"
+    gemini_rpm_limit: 15
+    gemini_tpm_limit: 250000
+
+  prompt_template: "enrich_p0_per_cluster_gemini.txt"  # Relative to hf_data/prompts/
 
 memo:
   bin: "/Users/bii/reader/memory_cli/target/debug/memo"

@@ -17,3 +17,4 @@ Generate one report that is compact and decision-oriented.
 INPUT (JSON)
 
 {{CLUSTER_JSON}}
+

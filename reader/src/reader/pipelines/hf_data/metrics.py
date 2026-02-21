@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Callable, Dict, Optional, Sequence, Set, Tuple
 
 
-from reader.pipelines.report import (
+from reader.pipelines.hf_data.report import (
     ClusterReport,
     TITLE_MAX_WORDS,
     ONE_LINER_MAX_WORDS,

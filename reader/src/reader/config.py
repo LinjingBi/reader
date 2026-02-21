@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Dict, List, Optional
 import yaml
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field
 
 
 class RunConfig(BaseModel):
@@ -28,39 +28,6 @@ class LLMGeminiConfig(BaseModel):
     api_key_env: str = Field(..., description="Environment variable name for API key")
     gemini_rpm_limit: int = Field(default=15, description="Requests per minute limit")
     gemini_tpm_limit: int = Field(default=250000, description="Tokens per minute limit")
-
-
-class ClusterSummarizationConfig(BaseModel):
-    """Cluster summarization configuration"""
-    enable: bool = Field(default=False, description="Whether to enable cluster summarization")
-    llm_model: str = Field(..., description="Model name (must exist in llm_gemini.models list)")
-    prompt_template: str = Field(..., description="Path to prompt template file (relative to prompts directory)")
-    
-    @computed_field
-    @property
-    def prompt_template_path(self) -> Path:
-        """
-        Resolve and validate prompt template path.
-        
-        Returns:
-            Resolved Path to prompt template file
-            
-        Raises:
-            FileNotFoundError: If template file doesn't exist
-        """
-        # Resolve template path relative to reader/src/reader/prompts/
-        # This assumes config.py is at reader/src/reader/config.py
-        config_file = Path(__file__)
-        prompts_dir = config_file.parent / "prompts"
-        template_path = prompts_dir / self.prompt_template
-        
-        if not template_path.exists():
-            raise FileNotFoundError(
-                f"Prompt template not found: {template_path}. "
-                f"Expected location: {prompts_dir}/"
-            )
-        
-        return template_path
 
 
 class ReportGenerationConfig(BaseModel):
