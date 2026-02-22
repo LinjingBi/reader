@@ -1,9 +1,10 @@
 """Configuration loader for HF data pipeline"""
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Dict, List, Optional
 import yaml
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field, PrivateAttr, computed_field
 
 
 class RunConfig(BaseModel):
@@ -41,6 +42,20 @@ class ClusteringConfig(BaseModel):
 class PaperChunkConfig(BaseModel):
     """Paper chunk configuration"""
     rules_path: str = Field(..., description="Path to paper chunk rules YAML file")
+    paper_parser_max_workers: Optional[int] = Field(default=None, description="Number of worker threads for paper parsing executor")
+    _paper_parser_executor: Optional[ThreadPoolExecutor] = PrivateAttr(default=None)
+    
+    def model_post_init(self, __context):
+        """Initialize executor if max_workers is specified"""
+        if self.paper_parser_max_workers is not None:
+            self._paper_parser_executor = ThreadPoolExecutor(max_workers=self.paper_parser_max_workers)
+        else:
+            self._paper_parser_executor = None
+    
+    @property
+    def paper_parser_executor(self) -> Optional[ThreadPoolExecutor]:
+        """Get the paper parser executor"""
+        return self._paper_parser_executor
 
 class AlgosConfig(BaseModel):
     """Algorithms configuration"""
@@ -85,6 +100,20 @@ class LLMGeminiConfig(BaseModel):
     api_key_env: str = Field(..., description="Environment variable name for API key")
     gemini_rpm_limit: int = Field(default=15, description="Requests per minute limit")
     gemini_tpm_limit: int = Field(default=250000, description="Tokens per minute limit")
+    gemini_call_max_workers: Optional[int] = Field(default=None, description="Number of worker threads for LLM call executor")
+    _gemini_call_executor: Optional[ThreadPoolExecutor] = PrivateAttr(default=None)
+    
+    def model_post_init(self, __context):
+        """Initialize executor if max_workers is specified"""
+        if self.gemini_call_max_workers is not None:
+            self._gemini_call_executor = ThreadPoolExecutor(max_workers=self.gemini_call_max_workers)
+        else:
+            self._gemini_call_executor = None
+    
+    @property
+    def gemini_call_executor(self) -> Optional[ThreadPoolExecutor]:
+        """Get the LLM call executor"""
+        return self._gemini_call_executor
 
 
 class ClusterSummarizationConfig(BaseModel):

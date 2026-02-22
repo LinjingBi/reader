@@ -16,6 +16,7 @@ main(feature level)
 [...] - [lab] consider make lab an independent repo so we can have version control over all its ingredients via git commit hash.  
 [ ] - [reader] make "selectors" used in call1/call2 load/generate dynamically from memo, this should be a prod-level feature.   
 [ ] - [?] a vibe-coding like structure to derive pydantic model from prompt spec, so no need to validate these two using validate.py. "spec" holds the high-level design, "prompt"(semantic meanings) and "structure"(code model) should be derived from it.  
+[ ] - [reader] add new pipe/workflow for re-run missing cluster observation due to llm call 429 RESOURCE_EXHAUSTED error.  
 
 sub(issue, bug level)  
 [x] - [chat] finalize the reader_algos package skeleton with chat.  
@@ -82,6 +83,7 @@ sub(issue, bug level)
 [x] - [memo,reader] new memo cmd to write paper-chunk data/versioning to db. note. new cmd inject-papers-chunk added.      
 [x] - [memo,reader] integration test paperchunk algo-lib, memo inject-papers-chunk, reader hf_data.  
 [x] - [reader] port cluster summarization step from monthly pipe to hf_data.  
+[x] - [reader] refactor hf_data pipe to async.  
 
 [ ] - [reader] run hf_data pipe to prepare data for call 1.  
 [ ] - [reader] test call 1 llm report planner(heuristic rules for response?), choose a proper model, update llm config in reader.yaml to per model.    

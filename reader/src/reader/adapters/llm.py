@@ -1,11 +1,13 @@
 """LLM adapter for Gemini API"""
 
+import asyncio
 import logging
 import time
 import threading
+from concurrent.futures import ThreadPoolExecutor
+from typing import Optional, TypeVar, Type
 
 from google import genai
-from typing import TypeVar, Type
 from pydantic import BaseModel, ValidationError
 from tenacity import (
     retry,
@@ -143,7 +145,7 @@ class TokenBucket:
 class LLMClient:
     """Client for calling Gemini LLM API"""
     
-    def __init__(self, model: str, api_key: str, rpm_bucket: TokenBucket, tpm_bucket: TokenBucket):
+    def __init__(self, model: str, api_key: str, rpm_bucket: TokenBucket, tpm_bucket: TokenBucket, executor: Optional[ThreadPoolExecutor] = None):
         """
         Initialize Gemini LLM client.
         
@@ -152,11 +154,13 @@ class LLMClient:
             api_key: Gemini API key
             rpm_bucket: TokenBucket for requests per minute rate limiting
             tpm_bucket: TokenBucket for tokens per minute rate limiting
+            executor: Optional thread pool executor for async calls. If None, calls are synchronous.
         """
         self.model = model
         self.rpm_bucket = rpm_bucket
         self.tpm_bucket = tpm_bucket
         self.api_key = api_key
+        self.executor = executor
         self.client = genai.Client(api_key=api_key)
             
     def estimate_tokens(self, prompt: str, expected_output_tokens: int) -> int:
@@ -288,3 +292,41 @@ class LLMClient:
             # Wrap the exception in LLMGenerationError with clear error message
             error_message = f"LLM generation API error: {str(e)}"
             raise LLMGenerationError(error_message, e) from e
+    
+    async def call_structured_raw_async(self, prompt: str, response_model: Type[T], temperature: float, max_tokens: int) -> T:
+        """
+        Async wrapper for call_structured_raw that uses executor if provided.
+        
+        Args:
+            prompt: Full prompt string
+            response_model: Pydantic model class for response schema
+            temperature: Temperature parameter
+            max_tokens: Maximum tokens to generate
+            
+        Returns:
+            Parsed Pydantic model instance of type T
+            
+        Raises:
+            ValidationError: If JSON parsing/validation fails after all retries
+            Exception: If API call fails after all retries
+        """
+        if self.executor is not None:
+            # Use executor to run synchronous call in thread pool
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(
+                self.executor,
+                self.call_structured_raw,
+                prompt,
+                response_model,
+                temperature,
+                max_tokens
+            )
+        else:
+            # No executor provided, use default thread pool to avoid blocking event loop
+            return await asyncio.to_thread(
+                self.call_structured_raw,
+                prompt,
+                response_model,
+                temperature,
+                max_tokens
+            )

@@ -1,5 +1,6 @@
 """Memo CLI adapter"""
 
+import asyncio
 import json
 import subprocess
 from datetime import datetime
@@ -229,7 +230,7 @@ class InjectPapersChunkResponse(BaseModel):
     meta: InjectPapersChunkMeta
 
 
-def fresh_paper(payload: FreshPaperPayload, config: MemoConfig, no_details: bool = False) -> FreshPaperResponseWithDetails:
+async def fresh_paper(payload: FreshPaperPayload, config: MemoConfig, no_details: bool = False) -> FreshPaperResponseWithDetails:
     """
     Call memo CLI fresh-paper command to ingest papers and clustering.
     
@@ -263,31 +264,43 @@ def fresh_paper(payload: FreshPaperPayload, config: MemoConfig, no_details: bool
         if no_details:
             cmd.append('--no-details')
         
-        # Run memo CLI with stdin input
-        result = subprocess.run(
-            cmd,
-            input=payload_json,
-            capture_output=True,
-            text=True,
-            timeout=config.timeout_sec,
-            check=True,
+        # Run memo CLI with stdin input using async subprocess
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
         
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(input=payload_json.encode('utf-8')),
+                timeout=config.timeout_sec
+            )
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            logger.warning(f"memo fresh-paper timed out after {config.timeout_sec}s")
+            raise MemoFreshPaperError(f"memo fresh-paper timed out after {config.timeout_sec}s")
+        
+        stdout_text = stdout.decode('utf-8')
+        stderr_text = stderr.decode('utf-8')
+        
+        if process.returncode != 0:
+            logger.error(f"Error calling memo fresh-paper: {stderr_text}")
+            raise MemoFreshPaperError(f"Error calling memo fresh-paper: {stderr_text}")
+        
         # Parse JSON output and create Pydantic model
-        response = FreshPaperResponseWithDetails.model_validate_json(result.stdout)
+        response = FreshPaperResponseWithDetails.model_validate_json(stdout_text)
         
         # Validate success field
         if not response.success:
-            raise MemoFreshPaperError(f"memo fresh-paper returned success=false: {result.stdout}")
+            raise MemoFreshPaperError(f"memo fresh-paper returned success=false: {stdout_text}")
         
         return response
             
-    except subprocess.TimeoutExpired as e:
-        logger.warning(f"memo fresh-paper timed out after {config.timeout_sec}s")
-        raise MemoFreshPaperError(f"memo fresh-paper timed out after {config.timeout_sec}s") from e
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Error calling memo fresh-paper: {e.stderr}")
-        raise MemoFreshPaperError(f"Error calling memo fresh-paper: {e.stderr}") from e
+    except MemoFreshPaperError:
+        raise
     except pydantic.ValidationError as e:
         logger.error(f"Error validating memo output: {e}")
         raise MemoFreshPaperError(f"Error validating memo output: {e}") from e
@@ -296,7 +309,7 @@ def fresh_paper(payload: FreshPaperPayload, config: MemoConfig, no_details: bool
         raise MemoFreshPaperError(f"Unexpected error in memo fresh-paper: {e}") from e
 
 
-def get_best_clustering(
+async def get_best_clustering(
     source: str,
     period_start: str,
     period_end: str,
@@ -332,24 +345,36 @@ def get_best_clustering(
             cmd.append(config.db_schema_path)
         cmd.extend(['get-best-run', '--source', source, '--period-start', period_start, '--period-end', period_end, '--top-n', str(top_n)])
         
-        # Run memo CLI
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=config.timeout_sec,
-            check=True,
+        # Run memo CLI using async subprocess
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
         
-        # Parse JSON output and create Pydantic model
-        return GetBestRunResponse.model_validate_json(result.stdout)
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(),
+                timeout=config.timeout_sec
+            )
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            logger.warning(f"memo get-best-run timed out after {config.timeout_sec}s")
+            raise MemoGetBestRunError(f"memo get-best-run timed out after {config.timeout_sec}s")
         
-    except subprocess.TimeoutExpired as e:
-        logger.warning(f"memo get-best-run timed out after {config.timeout_sec}s")
-        raise MemoGetBestRunError(f"memo get-best-run timed out after {config.timeout_sec}s") from e
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Error calling memo get-best-run: {e.stderr}")
-        raise MemoGetBestRunError(f"Error calling memo get-best-run: {e.stderr}") from e
+        stdout_text = stdout.decode('utf-8')
+        stderr_text = stderr.decode('utf-8')
+        
+        if process.returncode != 0:
+            logger.error(f"Error calling memo get-best-run: {stderr_text}")
+            raise MemoGetBestRunError(f"Error calling memo get-best-run: {stderr_text}")
+        
+        # Parse JSON output and create Pydantic model
+        return GetBestRunResponse.model_validate_json(stdout_text)
+        
+    except MemoGetBestRunError:
+        raise
     except pydantic.ValidationError as e:
         logger.error(f"Error validating memo output: {e}")
         raise MemoGetBestRunError(f"Error validating memo output: {e}") from e
@@ -358,7 +383,7 @@ def get_best_clustering(
         raise MemoGetBestRunError(f"Unexpected error in memo get-best-run: {e}") from e
 
 
-def inject_clusters_observation(payload: InjectClustersObservationInput, config: MemoConfig) -> None:
+async def inject_clusters_observation(payload: InjectClustersObservationInput, config: MemoConfig) -> None:
     """
     Call memo CLI inject-clusters-observation command to inject cluster observations.
     
@@ -392,24 +417,35 @@ def inject_clusters_observation(payload: InjectClustersObservationInput, config:
             cmd.append(config.db_schema_path)
         cmd.extend(['inject-clusters-observation', '--input', '-'])
         
-        # Run memo CLI with stdin input
-        subprocess.run(
-            cmd,
-            input=payload_json,
-            capture_output=True,
-            text=True,
-            timeout=config.timeout_sec,
-            check=True,
+        # Run memo CLI with stdin input using async subprocess
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
+        
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(input=payload_json.encode('utf-8')),
+                timeout=config.timeout_sec
+            )
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            logger.warning(f"memo inject-clusters-observation timed out after {config.timeout_sec}s")
+            raise MemoInjectClustersObservationError(f"memo inject-clusters-observation timed out after {config.timeout_sec}s")
+        
+        stderr_text = stderr.decode('utf-8')
+        
+        if process.returncode != 0:
+            logger.error(f"Error calling memo inject-clusters-observation: {stderr_text}")
+            raise MemoInjectClustersObservationError(f"Error calling memo inject-clusters-observation: {stderr_text}")
         
         return None
         
-    except subprocess.TimeoutExpired as e:
-        logger.warning(f"memo inject-clusters-observation timed out after {config.timeout_sec}s")
-        raise MemoInjectClustersObservationError(f"memo inject-clusters-observation timed out after {config.timeout_sec}s") from e
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Error calling memo inject-clusters-observation: {e.stderr}")
-        raise MemoInjectClustersObservationError(f"Error calling memo inject-clusters-observation: {e.stderr}") from e
+    except MemoInjectClustersObservationError:
+        raise
     except pydantic.ValidationError as e:
         logger.error(f"Error validating memo output: {e}")
         raise MemoInjectClustersObservationError(f"Error validating memo output: {e}") from e
@@ -655,7 +691,7 @@ def get_report_planner_metadata(
         raise MemoGetReportPlannerMetadataError(f"Unexpected error in memo get-report-planner-metadata: {e}") from e
 
 
-def inject_papers_chunk(
+async def inject_papers_chunk(
     payload: InjectPapersChunkPayload,
     config: MemoConfig,
 ) -> InjectPapersChunkResponse:
@@ -688,31 +724,43 @@ def inject_papers_chunk(
             cmd.append(config.db_schema_path)
         cmd.extend(['inject-papers-chunk', '--input', '-'])
         
-        # Run memo CLI with stdin input
-        result = subprocess.run(
-            cmd,
-            input=payload_json,
-            capture_output=True,
-            text=True,
-            timeout=config.timeout_sec,
-            check=True,
+        # Run memo CLI with stdin input using async subprocess
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
         
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(input=payload_json.encode('utf-8')),
+                timeout=config.timeout_sec
+            )
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            logger.warning(f"memo inject-papers-chunk timed out after {config.timeout_sec}s")
+            raise MemoInjectPapersChunkError(f"memo inject-papers-chunk timed out after {config.timeout_sec}s")
+        
+        stdout_text = stdout.decode('utf-8')
+        stderr_text = stderr.decode('utf-8')
+        
+        if process.returncode != 0:
+            logger.error(f"Error calling memo inject-papers-chunk: {stderr_text}")
+            raise MemoInjectPapersChunkError(f"Error calling memo inject-papers-chunk: {stderr_text}")
+        
         # Parse JSON output and create Pydantic model
-        response = InjectPapersChunkResponse.model_validate_json(result.stdout)
+        response = InjectPapersChunkResponse.model_validate_json(stdout_text)
         
         # Validate success field
         if not response.success:
-            raise MemoInjectPapersChunkError(f"memo inject-papers-chunk returned success=false: {result.stdout}")
+            raise MemoInjectPapersChunkError(f"memo inject-papers-chunk returned success=false: {stdout_text}")
         
         return response
             
-    except subprocess.TimeoutExpired as e:
-        logger.warning(f"memo inject-papers-chunk timed out after {config.timeout_sec}s")
-        raise MemoInjectPapersChunkError(f"memo inject-papers-chunk timed out after {config.timeout_sec}s") from e
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Error calling memo inject-papers-chunk: {e.stderr}")
-        raise MemoInjectPapersChunkError(f"Error calling memo inject-papers-chunk: {e.stderr}") from e
+    except MemoInjectPapersChunkError:
+        raise
     except pydantic.ValidationError as e:
         logger.error(f"Error validating memo output: {e}")
         raise MemoInjectPapersChunkError(f"Error validating memo output: {e}") from e

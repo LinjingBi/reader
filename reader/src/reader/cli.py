@@ -1,6 +1,7 @@
 """CLI entry point for reader package"""
 
 import argparse
+import asyncio
 import sys
 
 
@@ -41,7 +42,7 @@ def main():
     
     # Run pipeline
     try:
-        run_hf_data(config)
+        asyncio.run(run_hf_data(config))
     except Exception as e:
         logger.error(f"Error running pipeline: {e}", exc_info=True)
         sys.exit(1)

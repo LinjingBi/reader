@@ -1,5 +1,5 @@
 run:
-  month_key: "month=2025-09"                 # keep the exact query key shape
+  month_key: "month=2025-04"                 # keep the exact query key shape
   log_config_path: "/Users/bii/reader/reader/src/reader/logging/config.yaml"  # Absolute path to logging config file
   log_file_path: "/Users/bii/reader/reader/src/reader/pipelines/hf_data/artifacts/hf_data.log"
 
@@ -23,6 +23,7 @@ algos:
 
   paperchunk:
     rules_path: "/Users/bii/reader/reader/src/reader/pipelines/hf_data/config/paper_chunk_rules.yaml"
+    paper_parser_max_workers: 8  # Number of worker threads for paper parsing executor
 
 cluster_summarization:
   llm_gemini:
@@ -32,6 +33,7 @@ cluster_summarization:
     api_key_env: "GEMINI_API_KEY"
     gemini_rpm_limit: 15
     gemini_tpm_limit: 250000
+    gemini_call_max_workers: 5  # Number of worker threads for cluster summarization LLM call executor, better match the average cluster number per run
 
   prompt_template: "enrich_p0_per_cluster_gemini.txt"  # Relative to hf_data/prompts/
 

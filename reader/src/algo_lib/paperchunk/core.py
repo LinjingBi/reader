@@ -281,8 +281,11 @@ def parse_paper(
     rules: Rules,
     *,
     mode: str = "auto",
-    executor: Optional[ThreadPoolExecutor] = None,
 ) -> ParseResult:
+    """
+    Parse a paper synchronously. Intended to be called from within a thread pool executor.
+    The executor parameter is kept for API compatibility but not used (extraction runs directly).
+    """
     if not fetch.ok:
         return ParseResult(paper_id=fetch.paper_id, url=fetch.url, ok=False, error=fetch.error, blocks=[])
 
@@ -295,11 +298,13 @@ def parse_paper(
         blocks_dict, warnings = pdf_extract_heading_blocks(fetch.pdf_bytes, rules)
     elif mode == "html" and fetch.html:
         source_used = "html"
-        blocks_dict, warnings = html_extract_heading_blocks(fetch.html.encode("utf-8", errors="ignore"), rules)
+        html_bytes = fetch.html.encode("utf-8", errors="ignore")
+        blocks_dict, warnings = html_extract_heading_blocks(html_bytes, rules)
     else:
         if fetch.html:
             source_used = "html"
-            blocks_dict, warnings = html_extract_heading_blocks(fetch.html.encode("utf-8", errors="ignore"), rules)
+            html_bytes = fetch.html.encode("utf-8", errors="ignore")
+            blocks_dict, warnings = html_extract_heading_blocks(html_bytes, rules)
         elif fetch.pdf_bytes:
             source_used = "pdf"
             blocks_dict, warnings = pdf_extract_heading_blocks(fetch.pdf_bytes, rules)

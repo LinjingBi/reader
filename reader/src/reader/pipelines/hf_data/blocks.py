@@ -6,7 +6,7 @@ import json
 import calendar
 import asyncio
 import hashlib
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 from pathlib import Path
 from typing import Dict, List, Sequence, Optional, Any, Tuple
@@ -386,7 +386,7 @@ def _convert_papers_for_chunking(fresh_paper_response: FreshPaperResponseWithDet
     return papers_dict
 
 
-def process_paper_chunks(
+async def process_paper_chunks(
     cfg: HFDataPipeConfig,
     fresh_paper_response: FreshPaperResponseWithDetails,
 ) -> InjectPapersChunkPayload:
@@ -402,7 +402,8 @@ def process_paper_chunks(
     """
     # Convert papers for chunking and run scoring
     papers_dict = _convert_papers_for_chunking(fresh_paper_response)
-    score_output = asyncio.run(run_scoring(papers_dict, cfg.algos.paperchunk.rules_path))
+    executor = cfg.algos.paperchunk.paper_parser_executor
+    score_output = await run_scoring(papers_dict, cfg.algos.paperchunk.rules_path, executor=executor)
     logger.info(f"Paper chunk scoring completed: total_papers={score_output.summary.total_papers}, scored_ok={score_output.summary.scored_ok}")
     
     # Render output file paths
@@ -536,12 +537,16 @@ def _initialize_llm_client(llm_gemini_config: LLMGeminiConfig) -> LLMClient:
         name="gemini_tpm"
     )
     
+    # Get executor from config
+    executor = llm_gemini_config.gemini_call_executor
+    
     # Create LLMClient instance
     llm_client = LLMClient(
         model=llm_gemini_config.model,
         api_key=api_key,
         rpm_bucket=rpm_bucket,
-        tpm_bucket=tpm_bucket
+        tpm_bucket=tpm_bucket,
+        executor=executor
     )
     
     logger.info(f"Initialized LLM client with model: {llm_gemini_config.model}")
@@ -580,7 +585,7 @@ def _convert_cluster_card_to_dict(cluster_card: ClusterCard) -> Dict[str, Any]:
     return result
 
 
-def summarize_clusters_parallel(
+async def summarize_clusters_parallel(
     cfg: HFDataPipeConfig,
     best_run_response: GetBestRunResponse
 ) -> Dict[str, Tuple[Optional[ClusterReport], JudgeOutput]]:
@@ -605,7 +610,7 @@ def summarize_clusters_parallel(
     
     # Process clusters in parallel
 
-    def process_single_cluster(cluster_card: ClusterCard, cluster_idx: int) -> Tuple[Optional[ClusterReport], JudgeOutput]:
+    async def process_single_cluster(cluster_card: ClusterCard, cluster_idx: int) -> Tuple[Optional[ClusterReport], JudgeOutput]:
         """
         Process a single cluster and return ClusterReport and JudgeOutput.
         
@@ -625,8 +630,8 @@ def summarize_clusters_parallel(
         # Render template with cluster data
         prompt = render_template_per_cluster(template_content, cluster_dict)
         
-        # Call LLM with structured output (returns parsed ClusterReport)
-        cluster_report = llm_client.call_structured_raw(
+        # Call LLM with structured output (returns parsed ClusterReport) using async method
+        cluster_report = await llm_client.call_structured_raw_async(
             prompt=prompt,
             response_model=ClusterReport,
             temperature=cfg.cluster_summarization.llm_gemini.temperature,
@@ -641,62 +646,62 @@ def summarize_clusters_parallel(
         return cluster_report, judge_result
             
     
-    # Process clusters in parallel using ThreadPoolExecutor
+    # Process clusters in parallel using asyncio.gather
     clusters = best_run_response.clusters
     passed_clusters = 0
     logger.info(f"Processing {len(clusters)} clusters in parallel")
     
-    with ThreadPoolExecutor(max_workers=len(clusters)) as executor:
-        # Submit all tasks and create mapping from future to pk_hash
-        future_to_pk_hash = {}
-        for i, cluster_card in enumerate(clusters):
-            cluster_index = cluster_card.cluster_index
-            pk_hash = cluster_card.pk_hash
-            future = executor.submit(process_single_cluster, cluster_card, cluster_index)
-            future_to_pk_hash[future] = pk_hash
-        
-        # Collect results as they complete (more efficient than waiting in order)
-        # Store results in dict to maintain order
-        results_dict = {}
-        for future in as_completed(future_to_pk_hash):
-            cluster_report, judge_result = None, None
-            pk_hash = future_to_pk_hash[future]
-            try:
-                cluster_report, judge_result = future.result()
-                results_dict[pk_hash] = (cluster_report, judge_result)
-                if cluster_report is None:
-                    logger.warning(f"Cluster with pk_hash {pk_hash} returned None (processing failed, overall score: {judge_result.overall})")
-                else:
-                    passed_clusters += 1
-            except LLMGenerationError as e:
-                logger.error(f"LLM generation error collecting cluster with pk_hash {pk_hash} result: {str(e)}", exc_info=True)
-                # Add a failed judge output with None for cluster_report
+    # Create tasks for all clusters
+    tasks = []
+    pk_hash_list = []
+    for cluster_card in clusters:
+        cluster_index = cluster_card.cluster_index
+        pk_hash = cluster_card.pk_hash
+        tasks.append(process_single_cluster(cluster_card, cluster_index))
+        pk_hash_list.append(pk_hash)
+    
+    # Execute all tasks concurrently
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    # Process results and build results_dict
+    results_dict = {}
+    for pk_hash, result in zip(pk_hash_list, results):
+        if isinstance(result, Exception):
+            # Handle exceptions
+            if isinstance(result, LLMGenerationError):
+                logger.error(f"LLM generation error collecting cluster with pk_hash {pk_hash} result: {str(result)}", exc_info=True)
                 failed_judge = JudgeOutput(
                     sub_scores=None,
                     overall=0.0,
-                    reasons={"llm_generation_error": str(e)}
+                    reasons={"llm_generation_error": str(result)}
                 )
                 results_dict[pk_hash] = (None, failed_judge)
-            except ValidationError as e:
-                logger.error(f"Validation error collecting cluster with pk_hash {pk_hash} result (after retries exhausted): {str(e)}", exc_info=True)
-                # Add a failed judge output with None for cluster_report
+            elif isinstance(result, ValidationError):
+                logger.error(f"Validation error collecting cluster with pk_hash {pk_hash} result (after retries exhausted): {str(result)}", exc_info=True)
                 failed_judge = JudgeOutput(
                     sub_scores=None,
                     overall=0.0,
-                    reasons={"validation_error": str(e)}
+                    reasons={"validation_error": str(result)}
                 )
                 results_dict[pk_hash] = (None, failed_judge)
-            except Exception as e:
-                logger.error(f"Error collecting cluster with pk_hash {pk_hash} result: {str(e)}", exc_info=True)
-                # Add a failed judge output with None for cluster_report
+            else:
+                logger.error(f"Error collecting cluster with pk_hash {pk_hash} result: {str(result)}", exc_info=True)
                 failed_judge = JudgeOutput(
                     sub_scores=None,
                     overall=0.0,
-                    reasons={"internal_error": f"Exception: {str(e)}"}
+                    reasons={"internal_error": f"Exception: {str(result)}"}
                 )
                 results_dict[pk_hash] = (None, failed_judge)
-        
-        logger.info(f"Successfully processed {passed_clusters}/{len(clusters)} clusters")
+        else:
+            # Success case
+            cluster_report, judge_result = result
+            results_dict[pk_hash] = (cluster_report, judge_result)
+            if cluster_report is None:
+                logger.warning(f"Cluster with pk_hash {pk_hash} returned None (processing failed, overall score: {judge_result.overall})")
+            else:
+                passed_clusters += 1
+    
+    logger.info(f"Successfully processed {passed_clusters}/{len(clusters)} clusters")
     return results_dict
 
 

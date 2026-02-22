@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import asyncio
 import math
-from typing import Any, Dict, List, Tuple
+import os
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Dict, List, Optional, Tuple
 
 from .types import PaperId, Url, DebugHeadingEvent, TrainOutput, TrainSummary
 from .configs import EngineConfig, TrainConfig
 from .rules import Rules
-from .core import fetch_papers_async, parse_paper, arxiv_urls
+from .core import fetch_papers_async, parse_paper, arxiv_urls, FetchResult
 from .clean import clean_v1
 
 def selectors_from_rules(rules: Rules) -> List[str]:
@@ -317,6 +320,134 @@ def aggregate_report(run_id: str, rules: Rules, paper_events: List[Dict[str, Any
     unmapped_candidates = {"top_unmapped_headings": top_unmapped, "combined_heading_candidates": combined_list[:top_k]}
     return report, proposals, unmapped_candidates
 
+def process_one_paper_training(
+    pid: PaperId,
+    fr: FetchResult,
+    rules: Rules,
+    engine: EngineConfig,
+    train: TrainConfig,
+    selectors: List[str],
+    run_id: str,
+) -> Tuple[
+    int,  # fetched_ok
+    int,  # parsed_ok
+    int,  # used_html
+    int,  # used_pdf
+    Dict[str, Any],  # paper_event
+    List[Dict[str, Any]],  # heading_events
+    List[DebugHeadingEvent],  # debug_events
+]:
+    """Process a single paper synchronously. Intended to be called from within a thread pool executor."""
+    urls = arxiv_urls(pid)
+    debug_events: List[DebugHeadingEvent] = []
+    heading_events: List[Dict[str, Any]] = []
+    
+    fetched_ok = parsed_ok = used_html = used_pdf = 0
+
+    if not fr.ok:
+        paper_event = {
+            "paper": {"paper_id": pid, "abs_url": fr.url or urls["abs_url"], "html_url": urls["html_url"], "pdf_url": urls["pdf_url"]},
+            "status": "error",
+            "source_used": "none",
+            "warnings": [fr.error or "fetch failed"],
+            "metrics": {"total_chars_extracted": 0},
+            "selector_coverage": {s: {"found": False, "char_count": 0} for s in selectors},
+        }
+        debug_events.append(DebugHeadingEvent(
+            paper_id=pid, url=fr.url or urls["abs_url"], source_used=None, block_index=None,
+            heading_raw=None, heading_key=None, status="fetch_fail", note=fr.error
+        ))
+        return (fetched_ok, parsed_ok, used_html, used_pdf, paper_event, heading_events, debug_events)
+
+    fetched_ok += 1
+    pr = parse_paper(fr, rules, mode=engine.mode)
+    if not pr.ok:
+        paper_event = {
+            "paper": {"paper_id": pid, "abs_url": fr.url or urls["abs_url"], "html_url": urls["html_url"], "pdf_url": urls["pdf_url"]},
+            "status": "error",
+            "source_used": pr.source_used or "none",
+            "warnings": [pr.error or "parse failed"],
+            "metrics": {"total_chars_extracted": 0},
+            "selector_coverage": {s: {"found": False, "char_count": 0} for s in selectors},
+        }
+        debug_events.append(DebugHeadingEvent(
+            paper_id=pid, url=fr.url or urls["abs_url"], source_used=pr.source_used, block_index=None,
+            heading_raw=None, heading_key=None, status="parse_fail", note=pr.error
+        ))
+        return (fetched_ok, parsed_ok, used_html, used_pdf, paper_event, heading_events, debug_events)
+
+    parsed_ok += 1
+    used_html += 1 if pr.used_html else 0
+    used_pdf += 1 if pr.used_pdf else 0
+
+    selector_text: Dict[str, str] = {s: "" for s in selectors}
+    total_chars = 0
+    source_used = pr.source_used or "none"
+    warnings: List[str] = [pr.error] if pr.error else []
+
+    for b in pr.blocks or []:
+        matched_sels, matched_aliases = rules.match_selectors(b.heading_raw)
+        is_comb = rules.is_combined_heading(b.heading_raw)
+
+        snippet = (b.text_raw or "")[:240].replace("\n", " ").strip()
+        hev = {
+            "run_id": run_id,
+            "rules_version": rules.version,
+            "paper": {"paper_id": pid, "abs_url": fr.url or urls["abs_url"], "html_url": urls["html_url"], "pdf_url": urls["pdf_url"]},
+            "source_used": source_used,
+            "heading": {"raw": b.heading_raw, "key": b.heading_key, "index": b.block_index},
+            "match": {
+                "phase1_rule_matched": bool(matched_sels),
+                "matched_selectors": matched_sels,
+                "matched_aliases": matched_aliases,
+                "is_combined_heading": bool(is_comb),
+            },
+            "content_preview": {"snippet": snippet},
+        }
+
+        if not matched_sels:
+            if train.enable_unmapped_candidates:
+                hev["auto_suggest"] = {"candidates": suggest_candidates(b.heading_key, snippet, b.block_index)}
+            heading_events.append(hev)
+            debug_events.append(DebugHeadingEvent(
+                paper_id=pid, url=fr.url or urls["abs_url"], source_used=pr.source_used, block_index=b.block_index,
+                heading_raw=b.heading_raw, heading_key=b.heading_key, status="unmapped_heading"
+            ))
+            continue
+
+        heading_events.append(hev)
+        debug_events.append(DebugHeadingEvent(
+            paper_id=pid, url=fr.url or urls["abs_url"], source_used=pr.source_used, block_index=b.block_index,
+            heading_raw=b.heading_raw, heading_key=b.heading_key,
+            matched_selectors=tuple(matched_sels),
+            matched_aliases=tuple(matched_aliases),
+            status="mapped_combined_heading" if is_comb else "mapped_heading"
+        ))
+
+        cleaned = clean_v1(b.text_raw)
+        for sel in matched_sels:
+            selector_text[sel] += ("\n\n" if selector_text[sel] else "") + cleaned
+            total_chars += len(cleaned)
+
+    coverage = {}
+    for sel in selectors:
+        cc = len(selector_text[sel])
+        coverage[sel] = {"found": cc > 0, "char_count": cc}
+
+    status = "ok" if all(selector_text[s].strip() for s in engine.required_selectors) else "partial"
+
+    paper_event = {
+        "paper": {"paper_id": pid, "abs_url": fr.url or urls["abs_url"], "html_url": urls["html_url"], "pdf_url": urls["pdf_url"]},
+        "status": status,
+        "source_used": source_used,
+        "warnings": warnings,
+        "metrics": {"total_chars_extracted": total_chars},
+        "selector_coverage": coverage,
+    }
+
+    return (fetched_ok, parsed_ok, used_html, used_pdf, paper_event, heading_events, debug_events)
+
+
 async def run_training(
     papers: Dict[PaperId, Url],
     rules_path: str,
@@ -325,6 +456,7 @@ async def run_training(
     *,
     top_k: int = 50,
     run_id: str = "train",
+    executor: Optional[ThreadPoolExecutor] = None,
 ) -> TrainOutput:
     rules = Rules.load(rules_path)
     selectors = selectors_from_rules(rules)
@@ -342,109 +474,37 @@ async def run_training(
 
     fetched_ok = parsed_ok = used_html = used_pdf = 0
 
-    for pid, fr in fetch_map.items():
-        urls = arxiv_urls(pid)
+    # Use provided executor or create new one for CPU-bound parsing
+    loop = asyncio.get_event_loop()
+    use_provided_executor = executor is not None
+    
+    if use_provided_executor:
+        # Use provided executor
+        futures = [
+            loop.run_in_executor(executor, process_one_paper_training, pid, fr, rules, engine, train, selectors, run_id)
+            for pid, fr in fetch_map.items()
+        ]
+        results = await asyncio.gather(*futures)
+    else:
+        # Create new executor with CPU count as default
+        max_workers = os.cpu_count() or 4
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Process all papers concurrently using thread pool
+            futures = [
+                loop.run_in_executor(executor, process_one_paper_training, pid, fr, rules, engine, train, selectors, run_id)
+                for pid, fr in fetch_map.items()
+            ]
+            results = await asyncio.gather(*futures)
 
-        if not fr.ok:
-            paper_events.append({
-                "paper": {"paper_id": pid, "abs_url": fr.url or urls["abs_url"], "html_url": urls["html_url"], "pdf_url": urls["pdf_url"]},
-                "status": "error",
-                "source_used": "none",
-                "warnings": [fr.error or "fetch failed"],
-                "metrics": {"total_chars_extracted": 0},
-                "selector_coverage": {s: {"found": False, "char_count": 0} for s in selectors},
-            })
-            debug_events.append(DebugHeadingEvent(
-                paper_id=pid, url=fr.url or urls["abs_url"], source_used=None, block_index=None,
-                heading_raw=None, heading_key=None, status="fetch_fail", note=fr.error
-            ))
-            continue
-
-        fetched_ok += 1
-        pr = parse_paper(fr, rules, mode=engine.mode)
-        if not pr.ok:
-            paper_events.append({
-                "paper": {"paper_id": pid, "abs_url": fr.url or urls["abs_url"], "html_url": urls["html_url"], "pdf_url": urls["pdf_url"]},
-                "status": "error",
-                "source_used": pr.source_used or "none",
-                "warnings": [pr.error or "parse failed"],
-                "metrics": {"total_chars_extracted": 0},
-                "selector_coverage": {s: {"found": False, "char_count": 0} for s in selectors},
-            })
-            debug_events.append(DebugHeadingEvent(
-                paper_id=pid, url=fr.url or urls["abs_url"], source_used=pr.source_used, block_index=None,
-                heading_raw=None, heading_key=None, status="parse_fail", note=pr.error
-            ))
-            continue
-
-        parsed_ok += 1
-        used_html += 1 if pr.used_html else 0
-        used_pdf += 1 if pr.used_pdf else 0
-
-        selector_text: Dict[str, str] = {s: "" for s in selectors}
-        total_chars = 0
-        source_used = pr.source_used or "none"
-        warnings: List[str] = [pr.error] if pr.error else []
-
-        for b in pr.blocks or []:
-            matched_sels, matched_aliases = rules.match_selectors(b.heading_raw)
-            is_comb = rules.is_combined_heading(b.heading_raw)
-
-            snippet = (b.text_raw or "")[:240].replace("\n", " ").strip()
-            hev = {
-                "run_id": run_id,
-                "rules_version": rules.version,
-                "paper": {"paper_id": pid, "abs_url": fr.url or urls["abs_url"], "html_url": urls["html_url"], "pdf_url": urls["pdf_url"]},
-                "source_used": source_used,
-                "heading": {"raw": b.heading_raw, "key": b.heading_key, "index": b.block_index},
-                "match": {
-                    "phase1_rule_matched": bool(matched_sels),
-                    "matched_selectors": matched_sels,
-                    "matched_aliases": matched_aliases,
-                    "is_combined_heading": bool(is_comb),
-                },
-                "content_preview": {"snippet": snippet},
-            }
-
-            if not matched_sels:
-                if train.enable_unmapped_candidates:
-                    hev["auto_suggest"] = {"candidates": suggest_candidates(b.heading_key, snippet, b.block_index)}
-                heading_events_all.append(hev)
-                debug_events.append(DebugHeadingEvent(
-                    paper_id=pid, url=fr.url or urls["abs_url"], source_used=pr.source_used, block_index=b.block_index,
-                    heading_raw=b.heading_raw, heading_key=b.heading_key, status="unmapped_heading"
-                ))
-                continue
-
-            heading_events_all.append(hev)
-            debug_events.append(DebugHeadingEvent(
-                paper_id=pid, url=fr.url or urls["abs_url"], source_used=pr.source_used, block_index=b.block_index,
-                heading_raw=b.heading_raw, heading_key=b.heading_key,
-                matched_selectors=tuple(matched_sels),
-                matched_aliases=tuple(matched_aliases),
-                status="mapped_combined_heading" if is_comb else "mapped_heading"
-            ))
-
-            cleaned = clean_v1(b.text_raw)
-            for sel in matched_sels:
-                selector_text[sel] += ("\n\n" if selector_text[sel] else "") + cleaned
-                total_chars += len(cleaned)
-
-        coverage = {}
-        for sel in selectors:
-            cc = len(selector_text[sel])
-            coverage[sel] = {"found": cc > 0, "char_count": cc}
-
-        status = "ok" if all(selector_text[s].strip() for s in engine.required_selectors) else "partial"
-
-        paper_events.append({
-            "paper": {"paper_id": pid, "abs_url": fr.url or urls["abs_url"], "html_url": urls["html_url"], "pdf_url": urls["pdf_url"]},
-            "status": status,
-            "source_used": source_used,
-            "warnings": warnings,
-            "metrics": {"total_chars_extracted": total_chars},
-            "selector_coverage": coverage,
-        })
+    # Aggregate results from all papers
+    for (f_ok, p_ok, u_html, u_pdf, paper_event, heading_evs, debug_evs) in results:
+        fetched_ok += f_ok
+        parsed_ok += p_ok
+        used_html += u_html
+        used_pdf += u_pdf
+        paper_events.append(paper_event)
+        heading_events_all.extend(heading_evs)
+        debug_events.extend(debug_evs)
 
     report, proposals, unmapped_candidates = aggregate_report(run_id, rules, paper_events, heading_events_all, top_k=top_k)
 
