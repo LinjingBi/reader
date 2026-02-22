@@ -12,25 +12,36 @@ from reader.pipelines.hf_data.blocks import (
 from reader.logging.logging_setup import get_logger
 
 logger = get_logger()
-def run_hf_data(cfg: HFDataPipeConfig) -> None:
+
+
+def _ingest_fresh_papers(cfg: HFDataPipeConfig):
     """
-    Run the HF data pipeline for the configured month.
+    Get paper metadata from HF API, embedding and clustering, write to memo db.
     
     Args:
         cfg: HFDataPipeConfig instance
+        
+    Returns:
+        Tuple of (fresh_paper_response, fresh_paper_payload, period_start, period_end)
     """
-    # Get paper metadata from HF API or cached file
     papers, period_start, period_end = get_hf_paper_metadata(cfg)
-    
-    # dump hf metadata(paper, cluster, embed config) to memo db
-    # Generate monthly clustering reports and payload
     fresh_paper_payload = generate_clustering_reports(cfg, papers, period_start, period_end)
-    
     logger.info(f"Memo fresh-paper ingest started: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
     fresh_paper_response = memo.fresh_paper(fresh_paper_payload, cfg.memo)
     logger.info(f"Memo fresh-paper ingest successful: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
+    return fresh_paper_response, fresh_paper_payload, period_start, period_end
+
+
+def _enrich_clusters(cfg: HFDataPipeConfig, fresh_paper_payload, period_start, period_end):
+    """
+    Enrich monthly clusters with LLM and dump to memo db.
     
-    # Enrich monthly clusters with LLM and dump to memo db
+    Args:
+        cfg: HFDataPipeConfig instance
+        fresh_paper_payload: Fresh paper payload from previous step
+        period_start: Period start timestamp
+        period_end: Period end timestamp
+    """
     logger.info(f"Memo get-best-run started: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
     best_cluster_run = memo.get_best_clustering(
         fresh_paper_payload.source,
@@ -39,21 +50,37 @@ def run_hf_data(cfg: HFDataPipeConfig) -> None:
         cfg.memo
     )
     logger.info(f"Memo get-best-run successful: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
-    
     logger.info(f"Summarizing clusters started: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
     cluster_reports = summarize_clusters_parallel(cfg, best_cluster_run)
     logger.info(f"Summarizing clusters successful: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
-    
     inject_clusters_observation_payload = convert_cluster_reports_to_memo_payload(cluster_reports, cfg)
     logger.info(f"Memo inject-clusters-observation started: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
     memo.inject_clusters_observation(inject_clusters_observation_payload, cfg.memo)
     logger.info(f"Memo inject-clusters-observation successful: snapshot_id={fresh_paper_payload.source}|{fresh_paper_payload.period_start}|{fresh_paper_payload.period_end}")
+
+
+def _process_paper_chunks(cfg: HFDataPipeConfig, fresh_paper_response):
+    """
+    Process paper chunks and write to memo db.
     
-    # Process paper chunks: convert papers, run scoring, and convert to payload
+    Args:
+        cfg: HFDataPipeConfig instance
+        fresh_paper_response: Fresh paper response from previous step
+    """
     inject_payload = process_paper_chunks(cfg, fresh_paper_response)
-    
-    # Call memo inject-papers-chunk and log output
     logger.info(f"Memo inject-papers-chunk ingest started")
     inject_response = memo.inject_papers_chunk(inject_payload, cfg.memo)
     logger.info(f"Memo inject-papers-chunk completed: total_papers={inject_response.meta.total_papers_count}, total_chunks={inject_response.meta.total_chunks_count}")
+
+
+def run_hf_data(cfg: HFDataPipeConfig) -> None:
+    """
+    Run the HF data pipeline for the configured month.
+    
+    Args:
+        cfg: HFDataPipeConfig instance
+    """
+    fresh_paper_response, fresh_paper_payload, period_start, period_end = _ingest_fresh_papers(cfg)
+    _enrich_clusters(cfg, fresh_paper_payload, period_start, period_end)
+    _process_paper_chunks(cfg, fresh_paper_response)
 
