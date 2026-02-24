@@ -158,6 +158,8 @@ CREATE TABLE IF NOT EXISTS cluster_observation (
   summary           TEXT NOT NULL,
   title             TEXT NOT NULL,
   keywords_json     TEXT NOT NULL,
+  score             REAL NOT NULL,  -- Judge output overall score
+
 
   -- Consumption tracking
   consumed          INTEGER NOT NULL DEFAULT 0,  -- 0 = false, 1 = true

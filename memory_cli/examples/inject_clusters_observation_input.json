@@ -10,6 +10,10 @@
         "endpoint": null
       }
     },
+    "summary": "This topic covers recent research on training large language models more efficiently. Papers explore techniques like gradient checkpointing, mixed precision training, and novel optimization algorithms that reduce computational costs while maintaining model quality. The research addresses the growing need for more accessible LLM training given the increasing model sizes.\nEfficient training methods make LLM development more accessible to researchers and organizations with limited computational resources. These advances could democratize access to state-of-the-art language models and enable faster iteration cycles in research.",
+    "title": "Large Language Model Training",
+    "keywords_json": ["llm", "training", "optimization", "efficiency"],
+    "score": 1.5,
     "payload_json": {
       "cluster_key": "cluster_index:0",
       "topic_name": "Large Language Model Training",
@@ -56,6 +60,10 @@
         "endpoint": null
       }
     },
+    "summary": "This topic explores learning-based control systems for robotic manipulation. Papers investigate reinforcement learning, imitation learning, and hybrid approaches that enable robots to perform complex manipulation tasks. The research focuses on improving sample efficiency and generalization to new environments.\nAdvancements in robotic control are crucial for deploying robots in real-world applications like manufacturing, healthcare, and domestic assistance. Learning-based methods offer promise for handling the complexity and variability of real environments.",
+    "title": "Robotic Control Systems",
+    "keywords_json": ["robotics", "control", "manipulation", "learning"],
+    "score": 1.2,
     "payload_json": {
       "cluster_key": "cluster_index:1",
       "topic_name": "Robotic Control Systems",

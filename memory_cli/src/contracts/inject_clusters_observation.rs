@@ -14,6 +14,7 @@ pub struct ClusterObservation {
     pub summary: String,
     pub title: String,
     pub keywords_json: serde_json::Value,
+    pub score: f64,
 }
 
 /// LLM config input matching the llm_config table structure.

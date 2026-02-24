@@ -66,9 +66,13 @@ EXAMPLES:
         /// Period end date (YYYY-MM-DD).
         #[arg(long)]
         period_end: String,
-        /// Max papers per cluster to include.
-        #[arg(long, default_value_t = 10)]
-        top_n: usize,
+        /// Max papers per cluster to include. If omitted, returns all papers.
+        #[arg(long)]
+        top_n: Option<usize>,
+        /// Only return clusters that have no cluster_observation (checking via pk_hash).
+        /// When false (default), returns all clusters matching the period and source.
+        #[arg(long)]
+        empty_cluster_observation_only: bool,
     },
 
     /// Get cluster observations for clusters within a period range.

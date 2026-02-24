@@ -230,14 +230,15 @@ class InjectPapersChunkResponse(BaseModel):
     meta: InjectPapersChunkMeta
 
 
-async def fresh_paper(payload: FreshPaperPayload, config: MemoConfig, no_details: bool = False) -> FreshPaperResponseWithDetails:
+async def fresh_paper(payload: FreshPaperPayload, config: MemoConfig, no_details: bool = True) -> FreshPaperResponseWithDetails:
     """
     Call memo CLI fresh-paper command to ingest papers and clustering.
-    
+
     Args:
         payload: FreshPaperPayload instance.
         config: MemoConfig instance
-        no_details: If True, skip querying paper details (faster, smaller output)
+        no_details: If True (default), skip querying paper details (faster, smaller output).
+            Pass False to include paper details in the response.
         
     Returns:
         FreshPaperResponseWithDetails instance
@@ -282,6 +283,10 @@ async def fresh_paper(payload: FreshPaperPayload, config: MemoConfig, no_details
             await process.wait()
             logger.warning(f"memo fresh-paper timed out after {config.timeout_sec}s")
             raise MemoFreshPaperError(f"memo fresh-paper timed out after {config.timeout_sec}s")
+        except asyncio.CancelledError:
+            process.kill()
+            await process.wait()
+            raise
         
         stdout_text = stdout.decode('utf-8')
         stderr_text = stderr.decode('utf-8')
@@ -314,7 +319,8 @@ async def get_best_clustering(
     period_start: str,
     period_end: str,
     config: MemoConfig,
-    top_n: int = 10,
+    top_n: int | None = None,
+    empty_cluster_observation_only: bool = False,
 ) -> GetBestRunResponse:
     """
     Call memo CLI get-best-run command to retrieve best clustering.
@@ -324,7 +330,9 @@ async def get_best_clustering(
         period_start: Period start date (YYYY-MM-DD)
         period_end: Period end date (YYYY-MM-DD)
         config: MemoConfig instance
-        top_n: Maximum papers per cluster to include (default: 10)
+        top_n: Maximum papers per cluster to include. If None, returns all papers per cluster.
+        empty_cluster_observation_only: If True, only return clusters that have no cluster_observation
+            (checking via pk_hash). Default: False (returns all clusters matching period and source)
         
     Returns:
         GetBestRunResponse instance
@@ -343,7 +351,11 @@ async def get_best_clustering(
         if config.db_schema_path:
             cmd.append('--schema')
             cmd.append(config.db_schema_path)
-        cmd.extend(['get-best-run', '--source', source, '--period-start', period_start, '--period-end', period_end, '--top-n', str(top_n)])
+        cmd.extend(['get-best-run', '--source', source, '--period-start', period_start, '--period-end', period_end])
+        if top_n is not None:
+            cmd.extend(['--top-n', str(top_n)])
+        if empty_cluster_observation_only:
+            cmd.append('--empty-cluster-observation-only')
         
         # Run memo CLI using async subprocess
         process = await asyncio.create_subprocess_exec(
@@ -362,6 +374,10 @@ async def get_best_clustering(
             await process.wait()
             logger.warning(f"memo get-best-run timed out after {config.timeout_sec}s")
             raise MemoGetBestRunError(f"memo get-best-run timed out after {config.timeout_sec}s")
+        except asyncio.CancelledError:
+            process.kill()
+            await process.wait()
+            raise
         
         stdout_text = stdout.decode('utf-8')
         stderr_text = stderr.decode('utf-8')
@@ -435,6 +451,10 @@ async def inject_clusters_observation(payload: InjectClustersObservationInput, c
             await process.wait()
             logger.warning(f"memo inject-clusters-observation timed out after {config.timeout_sec}s")
             raise MemoInjectClustersObservationError(f"memo inject-clusters-observation timed out after {config.timeout_sec}s")
+        except asyncio.CancelledError:
+            process.kill()
+            await process.wait()
+            raise
         
         stderr_text = stderr.decode('utf-8')
         
@@ -742,6 +762,10 @@ async def inject_papers_chunk(
             await process.wait()
             logger.warning(f"memo inject-papers-chunk timed out after {config.timeout_sec}s")
             raise MemoInjectPapersChunkError(f"memo inject-papers-chunk timed out after {config.timeout_sec}s")
+        except asyncio.CancelledError:
+            process.kill()
+            await process.wait()
+            raise
         
         stdout_text = stdout.decode('utf-8')
         stderr_text = stderr.decode('utf-8')

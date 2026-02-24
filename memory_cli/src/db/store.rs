@@ -53,7 +53,7 @@ impl<'a> Store<'a> {
     /// 1. Sets selected_best=0 for all cluster_runs with same snapshot+role, then sets selected_best=1 for this run
     /// 2. Deletes existing clusters for this run, which CASCADE deletes:
     ///    - cluster_member (paper-cluster relationships)
-    ///    - cluster_observation (LLM enrichment results)
+    ///    - cluster_observation (LLM enrichment results) - will be deleted even if pk_hash is reused
     ///    - topic_cluster_link (topic-cluster links)
     ///    - report_job (report generation jobs)
     /// 3. Sets report.cluster_pk_hash to NULL (reports are preserved but lose cluster reference)
@@ -156,7 +156,7 @@ impl<'a> Store<'a> {
     }
 
     /// Read the selected best run for a snapshot period.
-    pub fn get_best_run(&self, source: &str, period_start: &str, period_end: &str, top_n: usize) -> Result<GetBestRunResponse> {
+    pub fn get_best_run(&self, source: &str, period_start: &str, period_end: &str, top_n: Option<usize>, empty_cluster_observation_only: bool) -> Result<GetBestRunResponse> {
         let (embed_config_id, cluster_config_id) = self.conn.query_row(
             "SELECT embed_config_id, cluster_config_id
              FROM cluster_run
@@ -168,12 +168,22 @@ impl<'a> Store<'a> {
         ).with_context(|| format!("no selected best run found for source={source}, period_start={period_start}, period_end={period_end}"))?;
 
         // Load clusters
-        let mut stmt = self.conn.prepare(
+        // When empty_cluster_observation_only is true, only return clusters without cluster_observation
+        let query = if empty_cluster_observation_only {
+            "SELECT c.cluster_index, c.pk_hash, c.size, c.cohesion
+             FROM cluster c
+             LEFT JOIN cluster_observation co ON c.pk_hash = co.pk_hash
+             WHERE c.source=?1 AND c.period_start=?2 AND c.period_end=?3 AND c.embed_config_id=?4 AND c.cluster_config_id=?5 AND c.role='hf_batch'
+               AND co.pk_hash IS NULL
+             ORDER BY c.cluster_index ASC"
+        } else {
             "SELECT cluster_index, pk_hash, size, cohesion
              FROM cluster
              WHERE source=?1 AND period_start=?2 AND period_end=?3 AND embed_config_id=?4 AND cluster_config_id=?5 AND role='hf_batch'
              ORDER BY cluster_index ASC"
-        )?;
+        };
+
+        let mut stmt = self.conn.prepare(query)?;
 
         let clusters_iter = stmt.query_map(params![source, period_start, period_end, embed_config_id, cluster_config_id], |row| {
             Ok((
@@ -201,7 +211,9 @@ impl<'a> Store<'a> {
         })
     }
 
-    fn get_cluster_papers(&self, source: &str, period_start: &str, period_end: &str, embed_config_id: &str, cluster_config_id: &str, cluster_index: i64, top_n: usize) -> Result<Vec<PaperCard>> {
+    fn get_cluster_papers(&self, source: &str, period_start: &str, period_end: &str, embed_config_id: &str, cluster_config_id: &str, cluster_index: i64, top_n: Option<usize>) -> Result<Vec<PaperCard>> {
+        // SQLite: LIMIT -1 means no limit
+        let limit: i64 = top_n.map(|n| n as i64).unwrap_or(-1);
         let mut stmt = self.conn.prepare(
             "SELECT p.paper_id, p.title, p.summary, p.keywords_json, p.url, cm.rank_in_cluster, cm.sim_to_centroid
              FROM cluster_member cm
@@ -211,7 +223,7 @@ impl<'a> Store<'a> {
              LIMIT ?7"
         )?;
 
-        let iter = stmt.query_map(params![source, period_start, period_end, embed_config_id, cluster_config_id, cluster_index, top_n as i64], |row| {
+        let iter = stmt.query_map(params![source, period_start, period_end, embed_config_id, cluster_config_id, cluster_index, limit], |row| {
             let kw_json: String = row.get(3)?;
             let keywords: Vec<String> = serde_json::from_str(&kw_json).unwrap_or_default();
             Ok(PaperCard {
@@ -404,16 +416,16 @@ impl<'a> Store<'a> {
 
             // Upsert cluster_observation
             tx.execute(
-                "INSERT INTO cluster_observation(pk_hash, created_at, llm_config_id, payload_json, summary, title, keywords_json)
-                 VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                "INSERT INTO cluster_observation(pk_hash, created_at, llm_config_id, payload_json, summary, title, keywords_json, score)
+                 VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
                  ON CONFLICT(pk_hash) DO UPDATE SET
-                   created_at=excluded.created_at,
                    llm_config_id=excluded.llm_config_id,
                    payload_json=excluded.payload_json,
                    summary=excluded.summary,
                    title=excluded.title,
-                   keywords_json=excluded.keywords_json",
-                params![pk_hash, now, observation.llm_config.llm_config_id, payload_json_str, observation.summary, observation.title, keywords_json_str],
+                   keywords_json=excluded.keywords_json,
+                   score=excluded.score",
+                params![pk_hash, now, observation.llm_config.llm_config_id, payload_json_str, observation.summary, observation.title, keywords_json_str, observation.score],
             )?;
         }
 

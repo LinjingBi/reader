@@ -80,7 +80,11 @@ class OutputsConfig(BaseModel):
     )
     paper_scoring_debug_heading_events: Optional[str] = Field(
         default=None,
-        description="Template for paper scoring debug heading events JSONL path (use {month_key} placeholder). If not provided, no debug events file will be created."
+        description="Template for paper scoring debug heading events JSONL path (use {month_key} placeholder). Events are appended to the file if it exists. If not provided, no debug events file will be created."
+    )
+    cluster_summarization_events: Optional[str] = Field(
+        default=None,
+        description="Template for cluster summarization events JSONL path (use {month_key} placeholder). Events are appended to the file if it exists. If not provided, no events file will be created."
     )
 
 
@@ -90,6 +94,13 @@ class MemoConfig(BaseModel):
     db_path: str = Field(default=None, description="Path to memo database")
     db_schema_path: str = Field(default=None, description="Path to memo database schema")
     timeout_sec: int = Field(default=60, description="Timeout for memo CLI calls")
+
+
+class TaskConfig(BaseModel):
+    """Task configuration - which pipeline steps to run"""
+    fetch_hf_data: bool = Field(..., description="Whether to fetch HF data and run clustering")
+    cluster_summarization: bool = Field(..., description="Whether to run cluster summarization")
+    paper_chunk: bool = Field(..., description="Whether to run paper chunking")
 
 
 class LLMGeminiConfig(BaseModel):
@@ -118,6 +129,7 @@ class LLMGeminiConfig(BaseModel):
 
 class ClusterSummarizationConfig(BaseModel):
     """Cluster summarization configuration"""
+    top_n: int | None = Field(default=10, description="Max papers per cluster to include in LLM summarization prompt. If None, include all papers.")
     llm_gemini: LLMGeminiConfig = Field(..., description="LLM Gemini configuration")
     prompt_template: str = Field(..., description="Path to prompt template file (relative to hf_data/prompts directory)")
     
@@ -157,6 +169,7 @@ class HFDataPipeConfig(BaseModel):
     algos: AlgosConfig
     outputs: OutputsConfig
     memo: MemoConfig
+    task: TaskConfig
     cluster_summarization: ClusterSummarizationConfig
 
 
@@ -250,4 +263,20 @@ def render_paper_scoring_debug_heading_events_path(cfg: HFDataPipeConfig, month_
     if cfg.outputs.paper_scoring_debug_heading_events is None:
         return None
     return cfg.outputs.paper_scoring_debug_heading_events.format(month_key=month_key)
+
+
+def render_cluster_summarization_events_path(cfg: HFDataPipeConfig, month_key: str) -> Optional[str]:
+    """
+    Render the cluster summarization events JSONL path template with month_key.
+    
+    Args:
+        cfg: HFDataPipeConfig instance
+        month_key: Month key to substitute (e.g., "month=2025-01")
+        
+    Returns:
+        Rendered path string, or None if template is not configured
+    """
+    if cfg.outputs.cluster_summarization_events is None:
+        return None
+    return cfg.outputs.cluster_summarization_events.format(month_key=month_key)
 

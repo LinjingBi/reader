@@ -46,7 +46,7 @@ fn validate_get_best_run(period_start: &str, period_end: &str, db_path: &str, sc
     validation
 }
 
-pub fn handle(dry_run: bool, db_path: &str, schema_path: Option<&str>, source: &str, period_start: &str, period_end: &str, top_n: usize) -> Result<()> {
+pub fn handle(dry_run: bool, db_path: &str, schema_path: Option<&str>, source: &str, period_start: &str, period_end: &str, top_n: Option<usize>, empty_cluster_observation_only: bool) -> Result<()> {
     let validation = validate_get_best_run(period_start, period_end, db_path, schema_path);
 
     if !validation.is_all_passed() {
@@ -64,7 +64,7 @@ pub fn handle(dry_run: bool, db_path: &str, schema_path: Option<&str>, source: &
     }
 
     let store = db::store::Store::new(&conn);
-    let resp = store.get_best_run(source, period_start, period_end, top_n)?;
+    let resp = store.get_best_run(source, period_start, period_end, top_n, empty_cluster_observation_only)?;
     
     // Output JSON to stdout (compact format for machine parsing)
     let out = serde_json::to_string(&resp)?;

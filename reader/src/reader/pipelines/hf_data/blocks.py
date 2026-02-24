@@ -3,7 +3,6 @@
 import os
 import base64
 import json
-import calendar
 import asyncio
 import hashlib
 from concurrent.futures import ThreadPoolExecutor
@@ -25,6 +24,7 @@ from reader.pipelines.hf_data.config.config import (
     render_best_cluster_report_path,
     render_papers_scoring_summary_report_path,
     render_paper_scoring_debug_heading_events_path,
+    render_cluster_summarization_events_path,
 )
 from reader.pipelines.hf_data.report import (
     FreshPaperPayload,
@@ -42,13 +42,14 @@ from reader.pipelines.hf_data.report import (
     PaperChunkData,
 )
 from reader.adapters.hf import get_monthly_report, parse_papers, save_papers_to_file
-from reader.adapters.memo import FreshPaperResponseWithDetails, GetBestRunResponse, ClusterCard
+from reader.adapters.memo import GetBestRunResponse, ClusterCard
 from reader.adapters.llm import LLMClient, TokenBucket, LLMGenerationError
 from reader.pipelines.hf_data.report import (
     ClusterReport,
     ClusterObservation,
     InjectClustersObservationInput,
     LLMConfigInput,
+    ClusterObservationRow,
 )
 from reader.pipelines.hf_data.metrics import judge_output, JudgeOutput
 from reader.logging.logging_setup import get_logger
@@ -56,76 +57,55 @@ from reader.logging.logging_setup import get_logger
 logger = get_logger()
 
 
-def _extract_period_dates(month_key: str) -> tuple[str, str]:
-    """
-    Extract period_start and period_end from month key.
-    
-    Args:
-        month_key: Format "month=YYYY-MM" (e.g., "month=2025-01")
-    
-    Returns:
-        Tuple of (period_start, period_end) in YYYY-MM-DD format
-    """
-    # Parse "month=2025-01" to get year and month
-    parts = month_key.split('=')
-    if len(parts) != 2 or not parts[1]:
-        raise ValueError(f"Invalid month key format: {month_key}")
-    
-    year_month = parts[1]
-    year, month = map(int, year_month.split('-'))
-    
-    # First day of month
-    period_start = f"{year:04d}-{month:02d}-01"
-    
-    # Last day of month
-    last_day = calendar.monthrange(year, month)[1]
-    period_end = f"{year:04d}-{month:02d}-{last_day:02d}"
-    
-    return period_start, period_end
-
-
-def get_hf_paper_metadata(cfg: HFDataPipeConfig) -> tuple[list, str, str]:
+def get_hf_paper_metadata(
+    cfg: HFDataPipeConfig,
+    source: str,
+    period_start: str,
+    period_end: str,
+) -> list:
     """
     Get paper metadata from HF API or cached file.
-    
+
     Args:
         cfg: HFDataPipeConfig instance
-    
+        source: Data source identifier
+        period_start: Period start date (YYYY-MM-DD)
+        period_end: Period end date (YYYY-MM-DD)
+
     Returns:
-        Tuple of (papers, period_start, period_end)
+        List of Paper objects
     """
     import asyncio
-    
+
     month_key = cfg.run.month_key
     papers_report_file = cfg.sources.hf.output_json
-    
+
     # Check if papers_report.json exists, generate if missing
     if not Path(papers_report_file).exists():
         logger.info(f"{papers_report_file} not found, generating from HF API...")
         results = asyncio.run(get_monthly_report(cfg))
         save_papers_to_file(results, cfg)
         logger.info(f"Generated {papers_report_file}")
-    
+
     # Load papers_report_file
     with open(papers_report_file, "r") as f:
         data = json.load(f)
-    papers_data = data['papers']
-    
+    papers_data = data["papers"]
+
     # Process single month
     if month_key not in papers_data:
-        raise ValueError(f"Month {month_key} not found in papers_data. Available months: {list(papers_data.keys())}")
-    
+        raise ValueError(
+            f"Month {month_key} not found in papers_data. Available months: {list(papers_data.keys())}"
+        )
+
     papers_list = papers_data[month_key]
     logger.info(f"Processing {month_key}")
-    
-    # Extract period dates from month key
-    period_start, period_end = _extract_period_dates(month_key)
     logger.info(f"Period: {period_start} to {period_end}")
-    
+
     # Create Paper objects from JSON data
     papers = parse_papers(papers_list, cfg)
-    
-    return papers, period_start, period_end
+
+    return papers
 
 
 def write_best_clustering_text_report(
@@ -180,6 +160,7 @@ def generate_fresh_paper_payload(
     member_similarities: Dict[int, Dict[int, float]],
     cluster_cohesion_dict: Dict[int, float],
     cluster_centroids: Dict[int, np.ndarray],
+    source: str,
     period_start: str,
     period_end: str,
     embed_model_name: str,
@@ -199,6 +180,7 @@ def generate_fresh_paper_payload(
         member_similarities: Dict[cluster_id] -> Dict[paper_idx] -> similarity to centroid
         cluster_cohesion_dict: Dict[cluster_id] -> average cohesion
         cluster_centroids: Dict[cluster_id] -> centroid vector (normalized numpy array)
+        source: Data source identifier
         period_start: Start date in YYYY-MM-DD format
         period_end: End date in YYYY-MM-DD format
         embed_model_name: Embedding model name
@@ -281,7 +263,7 @@ def generate_fresh_paper_payload(
     
     # Build complete payload
     payload = FreshPaperPayload(
-        source="hf_monthly",
+        source=source,
         period_start=period_start,
         period_end=period_end,
         raw_json=raw_json,
@@ -303,6 +285,7 @@ def generate_fresh_paper_payload(
 def generate_clustering_reports(
     cfg: HFDataPipeConfig,
     papers: list,
+    source: str,
     period_start: str,
     period_end: str,
 ) -> FreshPaperPayload:
@@ -312,9 +295,10 @@ def generate_clustering_reports(
     Args:
         cfg: HFDataPipeConfig instance
         papers: List of Paper objects
+        source: Data source identifier
         period_start: Start date in YYYY-MM-DD format
         period_end: End date in YYYY-MM-DD format
-    
+
     Returns:
         FreshPaperPayload instance
     """
@@ -338,6 +322,7 @@ def generate_clustering_reports(
         member_similarities=result.cluster_members_similarities,
         cluster_cohesion_dict=result.cluster_cohesion,
         cluster_centroids=result.cluster_centroids,
+        source=source,
         period_start=period_start,
         period_end=period_end,
         embed_model_name=cfg.algos.embedding.model,
@@ -368,40 +353,39 @@ def generate_clustering_reports(
     return fresh_paper_payload
 
 
-def _convert_papers_for_chunking(fresh_paper_response: FreshPaperResponseWithDetails) -> Dict[PaperId, Url]:
+def _convert_papers_for_chunking(best_run_response: GetBestRunResponse) -> Dict[PaperId, Url]:
     """
-    Convert papers from fresh_paper_response to the format expected by run_scoring.
-    
+    Convert papers from get-best-run response to the format expected by run_scoring.
+
     Args:
-        fresh_paper_response: FreshPaperResponseWithDetails instance containing paper details
-    
+        best_run_response: GetBestRunResponse instance containing cluster papers
+
     Returns:
         Dictionary mapping PaperId to Url
     """
     papers_dict: Dict[PaperId, Url] = {}
-    if fresh_paper_response.details:
-        for pk_hash, paper_list in fresh_paper_response.details.items():
-            for paper_output in paper_list:
-                papers_dict[paper_output.paper_id] = paper_output.paper_url
+    for cluster in best_run_response.clusters:
+        for paper in cluster.papers:
+            papers_dict[paper.paper_id] = paper.url
     return papers_dict
 
 
 async def process_paper_chunks(
     cfg: HFDataPipeConfig,
-    fresh_paper_response: FreshPaperResponseWithDetails,
+    best_run_response: GetBestRunResponse,
 ) -> InjectPapersChunkPayload:
     """
     Process paper chunks: convert papers, run scoring, and convert ScoreOutput to InjectPapersChunkPayload.
-    
+
     Args:
         cfg: HFDataPipeConfig instance
-        fresh_paper_response: FreshPaperResponseWithDetails instance containing paper details
-    
+        best_run_response: GetBestRunResponse instance containing cluster papers
+
     Returns:
         InjectPapersChunkPayload instance ready for memo injection
     """
     # Convert papers for chunking and run scoring
-    papers_dict = _convert_papers_for_chunking(fresh_paper_response)
+    papers_dict = _convert_papers_for_chunking(best_run_response)
     executor = cfg.algos.paperchunk.paper_parser_executor
     score_output = await run_scoring(papers_dict, cfg.algos.paperchunk.rules_path, executor=executor)
     logger.info(f"Paper chunk scoring completed: total_papers={score_output.summary.total_papers}, scored_ok={score_output.summary.scored_ok}")
@@ -420,7 +404,7 @@ async def process_paper_chunks(
     
     # Write paper scoring debug heading events if path is provided
     if debug_events_path is not None:
-        with open(debug_events_path, 'w', encoding='utf-8') as f:
+        with open(debug_events_path, 'a', encoding='utf-8') as f:
             for event in score_output.debug_heading_events:
                 event_dict = asdict(event)
                 f.write(json.dumps(event_dict, ensure_ascii=False) + "\n")
@@ -553,18 +537,20 @@ def _initialize_llm_client(llm_gemini_config: LLMGeminiConfig) -> LLMClient:
     return llm_client
 
 
-def _convert_cluster_card_to_dict(cluster_card: ClusterCard) -> Dict[str, Any]:
+def _convert_cluster_card_to_dict(cluster_card: ClusterCard, top_n: int | None = None) -> Dict[str, Any]:
     """
     Convert ClusterCard to dict format expected by template.
     
     Args:
         cluster_card: ClusterCard instance with PaperCard papers
+        top_n: Max papers to include. If None, include all papers.
     
     Returns:
         Dictionary with papers array in format expected by template
     """
+    papers_iter = cluster_card.papers if top_n is None else cluster_card.papers[:top_n]
     papers_list = []
-    for paper_card in cluster_card.papers:
+    for paper_card in papers_iter:
         papers_list.append({
             "paper_id": paper_card.paper_id,
             "title": paper_card.title,
@@ -583,6 +569,36 @@ def _convert_cluster_card_to_dict(cluster_card: ClusterCard) -> Dict[str, Any]:
         result["cohesion"] = cluster_card.cohesion
     
     return result
+
+
+def _save_cluster_summarization_events(
+    cfg: HFDataPipeConfig,
+    results_dict: Dict[str, Tuple[Optional[ClusterReport], JudgeOutput]]
+) -> None:
+    """
+    Save cluster summarization events to JSONL file.
+    
+    Args:
+        cfg: HFDataPipeConfig instance
+        results_dict: Dictionary mapping pk_hash to tuple of (Optional[ClusterReport], JudgeOutput)
+    """
+    month_key = cfg.run.month_key
+    events_path = render_cluster_summarization_events_path(cfg, month_key)
+    if events_path is not None:
+        with open(events_path, 'a', encoding='utf-8') as f:
+            for pk_hash, (cluster_report, judge_result) in results_dict.items():
+                # Convert JudgeOutput dataclass to dict for serialization
+                judge_result_dict = asdict(judge_result)
+                # Create ClusterObservationRow
+                row = ClusterObservationRow(
+                    cluster_pk_hash=pk_hash,
+                    cluster_report=cluster_report,
+                    judge_result=judge_result_dict
+                )
+                # Write as JSON line
+                row_dict = row.model_dump(mode='json')
+                f.write(json.dumps(row_dict, ensure_ascii=False) + "\n")
+        logger.info(f"Cluster summarization events saved to {events_path}")
 
 
 async def summarize_clusters_parallel(
@@ -610,40 +626,68 @@ async def summarize_clusters_parallel(
     
     # Process clusters in parallel
 
-    async def process_single_cluster(cluster_card: ClusterCard, cluster_idx: int) -> Tuple[Optional[ClusterReport], JudgeOutput]:
+    async def process_single_cluster(cluster_card: ClusterCard, top_n_paper: int | None = None) -> Tuple[Optional[ClusterReport], JudgeOutput]:
         """
         Process a single cluster and return ClusterReport and JudgeOutput.
+        Retries up to 3 times if overall score is 0.0.
         
         Args:
             cluster_card: ClusterCard instance
-            cluster_idx: Cluster index
+            top_n_paper: Max papers to include in prompt. If None, include all papers.
         
         Returns:
             Tuple of (Optional[ClusterReport], JudgeOutput):
             - ClusterReport: Parsed cluster report if successful, None otherwise
             - JudgeOutput: Contains validation scores and reasons (or failed_judge on error)
         """
-
+        pk_hash = cluster_card.pk_hash
+        
         # Convert ClusterCard to dict format
-        cluster_dict = _convert_cluster_card_to_dict(cluster_card)
+        cluster_dict = _convert_cluster_card_to_dict(cluster_card, top_n=top_n_paper)
         
         # Render template with cluster data
         prompt = render_template_per_cluster(template_content, cluster_dict)
         
-        # Call LLM with structured output (returns parsed ClusterReport) using async method
-        cluster_report = await llm_client.call_structured_raw_async(
-            prompt=prompt,
-            response_model=ClusterReport,
-            temperature=cfg.cluster_summarization.llm_gemini.temperature,
-            max_tokens=cfg.cluster_summarization.llm_gemini.max_tokens
-        )
+        # Retry logic: up to 3 retries if score is 0.0
+        max_retries = 3
+        retry_threshold = 0.0
+        best_cluster_report = None
+        best_judge_result = None
+        best_score = float('-inf')
         
-        # Use judge_output to validate response
-        # cluster_dict is used for citation validation
-        judge_result = judge_output(cluster_report, cluster_dict)
+        for attempt in range(max_retries + 1):  # Initial attempt + 3 retries = 4 total
+            # Call LLM with structured output (returns parsed ClusterReport) using async method
+            cluster_report = await llm_client.call_structured_raw_async(
+                prompt=prompt,
+                response_model=ClusterReport,
+                temperature=cfg.cluster_summarization.llm_gemini.temperature,
+                max_tokens=cfg.cluster_summarization.llm_gemini.max_tokens
+            )
+            
+            # Use judge_output to validate response
+            # cluster_dict is used for citation validation
+            judge_result = judge_output(cluster_report, cluster_dict)
+            
+            # Track best score across all attempts
+            if judge_result.overall > best_score:
+                best_score = judge_result.overall
+                best_cluster_report = cluster_report
+                best_judge_result = judge_result
+            
+            # If score is positive, success - stop retrying
+            if judge_result.overall > retry_threshold:
+                logger.info(f"Successfully processed cluster {pk_hash} (overall score: {judge_result.overall})")
+                return cluster_report, judge_result
+            
+            # Score is at or below threshold - check if we should retry
+            if attempt < max_retries:
+                logger.warning(f"Successfully llm call for cluster {pk_hash}, but overall score is below {retry_threshold}, judge result: {judge_result}. retry is on the way(attempt {attempt}/{max_retries})")
+            else:
+                # All retries exhausted - return best score from retry history
+                logger.warning(f"Successfully llm call for cluster {pk_hash}, but overall score is still below {retry_threshold}, retries exhausted. Returning best score {best_score}, judge result: {best_judge_result}")
         
-        logger.info(f"Successfully processed cluster {cluster_idx} (overall score: {judge_result.overall})")
-        return cluster_report, judge_result
+        # Return the best attempt result (score is still at or below threshold)
+        return best_cluster_report, best_judge_result
             
     
     # Process clusters in parallel using asyncio.gather
@@ -652,12 +696,12 @@ async def summarize_clusters_parallel(
     logger.info(f"Processing {len(clusters)} clusters in parallel")
     
     # Create tasks for all clusters
+    top_n_paper = cfg.cluster_summarization.top_n
     tasks = []
     pk_hash_list = []
     for cluster_card in clusters:
-        cluster_index = cluster_card.cluster_index
         pk_hash = cluster_card.pk_hash
-        tasks.append(process_single_cluster(cluster_card, cluster_index))
+        tasks.append(process_single_cluster(cluster_card, top_n_paper=top_n_paper))
         pk_hash_list.append(pk_hash)
     
     # Execute all tasks concurrently
@@ -702,6 +746,10 @@ async def summarize_clusters_parallel(
                 passed_clusters += 1
     
     logger.info(f"Successfully processed {passed_clusters}/{len(clusters)} clusters")
+    
+    # Write cluster summarization events if path is provided
+    _save_cluster_summarization_events(cfg, results_dict)
+    
     return results_dict
 
 
@@ -743,10 +791,12 @@ def convert_cluster_reports_to_memo_payload(
     # Build payload
     payload: InjectClustersObservationInput = {}
     
-    for pk_hash, (cluster_report, _) in cluster_reports.items():
+    for pk_hash, (cluster_report, judge_result) in cluster_reports.items():
         # Skip if cluster_report is None (failed clusters)
+        # Note: Empty cluster reports from LLM (where cluster_report is None) are NOT injected
+        # into memo DB. Only clusters with valid ClusterReport objects are included in the payload.
         if cluster_report is None:
-            logger.debug(f"Skipping failed cluster with pk_hash {pk_hash}")
+            logger.warning(f"Skipping failed cluster with pk_hash {pk_hash}")
             continue
         
         # Use ClusterReport.model_dump() as payload_json
@@ -757,13 +807,17 @@ def convert_cluster_reports_to_memo_payload(
         summary = cluster_report.what_this_topic_is_about + "\n" + cluster_report.why_it_matters
         keywords_json = cluster_report.keyword_list
         
+        # Extract score from judge_result
+        score = judge_result.overall
+        
         # Create ClusterObservation
         observation = ClusterObservation(
             llm_config=llm_config,
             payload_json=payload_json,
             summary=summary,
             title=title,
-            keywords_json=keywords_json
+            keywords_json=keywords_json,
+            score=score
         )
         
         payload[pk_hash] = observation

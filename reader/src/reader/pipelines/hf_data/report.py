@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Literal, Dict, Any
+from typing import List, Literal, Dict, Any, Optional
 from pydantic import BaseModel, Field, computed_field, conlist
 
 # ----------------------------
@@ -153,10 +153,22 @@ class ClusterObservation(BaseModel):
     summary: str = Field(..., description="Cluster summary")
     title: str = Field(..., description="Cluster title")
     keywords_json: List[str] = Field(..., description="Keywords as JSON list")
+    score: float = Field(..., description="Judge output overall score")
 
 
 # Type alias for inject-clusters-observation input (map of pk_hash -> ClusterObservation)
 InjectClustersObservationInput = Dict[str, ClusterObservation]
+
+
+class ClusterObservationRow(BaseModel):
+    """Row representing a single cluster observation result."""
+    cluster_pk_hash: str = Field(..., description="Cluster primary key hash")
+    cluster_report: Optional[ClusterReport] = Field(default=None, description="Cluster report (None for failed clusters)")
+    judge_result: Dict[str, Any] = Field(..., description="Judge output with scores and reasons (serialized from JudgeOutput dataclass)")
+
+
+# Rebuild model to resolve forward references
+ClusterObservationRow.model_rebuild()
 
 
 # ----------------------------
@@ -246,7 +258,7 @@ class ClusterInput(BaseModel):
 
 class FreshPaperPayload(BaseModel):
     """Fresh paper payload report class."""
-    source: str = Field(default="hf_monthly", description="Data source")
+    source: str = Field(..., description="Data source")
     period_start: str = Field(..., description="Period start date (YYYY-MM-DD)")
     period_end: str = Field(..., description="Period end date (YYYY-MM-DD)")
     raw_json: str = Field(default="", description="Optional raw JSON string")
