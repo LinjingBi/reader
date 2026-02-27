@@ -1,6 +1,6 @@
 SYSTEM:
 You are a technical research analyst. You will be given ONE group of ML papers as JSON.
-Each paper has: paper_id, title, summary, keywords, url, sim_to_centroid, rank_in_cluster.
+Each paper has: paper_id, title, summary, keywords, url, sim_to_centroid, rank_in_group.
 
 Hard rules:
 

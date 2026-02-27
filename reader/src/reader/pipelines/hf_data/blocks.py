@@ -490,6 +490,58 @@ def render_template_per_cluster(template_content: str, cluster_data: dict) -> st
     return rendered
 
 
+def _count_judge_warnings(judge_output: JudgeOutput) -> int:
+    """
+    Count unique rule clarifications from judge_output.reasons.
+
+    Args:
+        judge_output: JudgeOutput from judge_output()
+
+    Returns:
+        Number of unique rule declarations (deduplicated while preserving order)
+    """
+    seen: set[str] = set()
+    count = 0
+    for rule_list in judge_output.reasons.values():
+        for rule_clarification, _ in rule_list:
+            if rule_clarification not in seen:
+                seen.add(rule_clarification)
+                count += 1
+    return count
+
+
+def inject_judge_warnings_into_prompt(prompt_base: str, judge_output: JudgeOutput) -> tuple[str, int]:
+    """
+    Append a WARNING section with failed rule declarations to the base prompt.
+
+    The warning list is regenerated from judge_output.reasons each call.
+    Use prompt_base (warning-free) so each retry attaches a fresh warning list.
+
+    Args:
+        prompt_base: Warning-free prompt from first render
+        judge_output: JudgeOutput containing reasons from failed validation
+
+    Returns:
+        Tuple of (prompt_base + warning_block, num_warnings)
+    """
+    seen: set[str] = set()
+    rule_declarations: list[str] = []
+    for rule_list in judge_output.reasons.values():
+        for rule_clarification, _ in rule_list:
+            if rule_clarification not in seen:
+                seen.add(rule_clarification)
+                rule_declarations.append(rule_clarification)
+
+    if not rule_declarations:
+        return (prompt_base, 0)
+
+    lines = ["\n\nWARNING:"]
+    for rule in rule_declarations:
+        lines.append(f"- {rule}")
+    warning_block = "\n".join(lines)
+    return (prompt_base + warning_block, len(rule_declarations))
+
+
 def _initialize_llm_client(llm_gemini_config: LLMGeminiConfig) -> LLMClient:
     """
     Initialize LLM client with rate limiting buckets.
@@ -557,7 +609,7 @@ def _convert_cluster_card_to_dict(cluster_card: ClusterCard, top_n: int | None =
             "summary": paper_card.summary,
             "keywords": paper_card.keywords,
             "url": paper_card.url,
-            "rank_in_cluster": paper_card.rank_in_cluster,
+            "rank_in_group": paper_card.rank_in_cluster,
             "sim_to_centroid": paper_card.sim_to_centroid,
         })
     
@@ -645,48 +697,77 @@ async def summarize_clusters_parallel(
         # Convert ClusterCard to dict format
         cluster_dict = _convert_cluster_card_to_dict(cluster_card, top_n=top_n_paper)
         
-        # Render template with cluster data
-        prompt = render_template_per_cluster(template_content, cluster_dict)
-        
+        # Render template with cluster data (keep warning-free base for retry injection)
+        prompt_base = render_template_per_cluster(template_content, cluster_dict)
+        prompt = prompt_base
+
         # Retry logic: up to 3 retries if score is 0.0
         max_retries = 3
-        retry_threshold = 0.0
+        retry_threshold = 1.87
         best_cluster_report = None
         best_judge_result = None
         best_score = float('-inf')
         
         for attempt in range(max_retries + 1):  # Initial attempt + 3 retries = 4 total
-            # Call LLM with structured output (returns parsed ClusterReport) using async method
-            cluster_report = await llm_client.call_structured_raw_async(
-                prompt=prompt,
-                response_model=ClusterReport,
-                temperature=cfg.cluster_summarization.llm_gemini.temperature,
-                max_tokens=cfg.cluster_summarization.llm_gemini.max_tokens
-            )
-            
-            # Use judge_output to validate response
-            # cluster_dict is used for citation validation
-            judge_result = judge_output(cluster_report, cluster_dict)
-            
-            # Track best score across all attempts
-            if judge_result.overall > best_score:
-                best_score = judge_result.overall
-                best_cluster_report = cluster_report
-                best_judge_result = judge_result
-            
-            # If score is positive, success - stop retrying
-            if judge_result.overall > retry_threshold:
-                logger.info(f"Successfully processed cluster {pk_hash} (overall score: {judge_result.overall})")
-                return cluster_report, judge_result
-            
-            # Score is at or below threshold - check if we should retry
-            if attempt < max_retries:
-                logger.warning(f"Successfully llm call for cluster {pk_hash}, but overall score is below {retry_threshold}, judge result: {judge_result}. retry is on the way(attempt {attempt}/{max_retries})")
-            else:
-                # All retries exhausted - return best score from retry history
-                logger.warning(f"Successfully llm call for cluster {pk_hash}, but overall score is still below {retry_threshold}, retries exhausted. Returning best score {best_score}, judge result: {best_judge_result}")
-        
-        # Return the best attempt result (score is still at or below threshold)
+            try:
+                # Call LLM with structured output (returns parsed ClusterReport) using async method
+                cluster_report = await llm_client.call_structured_raw_async(
+                    prompt=prompt,
+                    response_model=ClusterReport,
+                    temperature=cfg.cluster_summarization.llm_gemini.temperature,
+                    max_tokens=cfg.cluster_summarization.llm_gemini.max_tokens
+                )
+                # Use judge_output to validate response
+                # cluster_dict is used for citation validation
+                judge_result = judge_output(cluster_report, cluster_dict)
+
+                # Track best score across all attempts
+                if judge_result.overall > best_score:
+                    best_score = judge_result.overall
+                    best_cluster_report = cluster_report
+                    best_judge_result = judge_result
+
+                # If score is positive, success - stop retrying
+                if judge_result.overall > retry_threshold:
+                    logger.info(
+                        f"cluster {pk_hash} attempt {attempt+1}/{max_retries+1}: cluster_report overall score {best_score:.2f} > {retry_threshold}, accepted"
+                    )
+                    return best_cluster_report, best_judge_result
+
+                # Score is at or below threshold - judge retry (inject warnings, re-call LLM)
+                if attempt < max_retries:
+                    prompt, num_warnings = inject_judge_warnings_into_prompt(prompt_base, judge_result)
+                    logger.warning(
+                        f"cluster {pk_hash} attempt {attempt+1}/{max_retries+1}: cluster_report overall score {judge_result.overall:.2f} <= {retry_threshold}, "
+                        f"injecting {num_warnings} warning(s), retrying"
+                    )
+                else:
+                    num_warnings = _count_judge_warnings(judge_result)
+                    logger.warning(
+                        f"cluster {pk_hash} attempt {attempt+1}/{max_retries+1}: cluster_report overall score {judge_result.overall:.2f} <= {retry_threshold}, "
+                        f"{num_warnings} warning(s) (last judge retry, returning best)"
+                    )
+
+            except (LLMGenerationError, ValidationError) as e:
+                logger.warning(f"cluster {pk_hash} attempt {attempt+1}/{max_retries+1}: llm call failed: {e}")
+                if not best_cluster_report:
+                    if isinstance(e, LLMGenerationError):
+                        reasons = {"llm_generation_error": [("llm api call must succeed to return cluster report", str(e))]}
+                    else:
+                        reasons = {"validation_error": [("llm structured output must be valid json matching cluster report schema", str(e))]}
+                    failed_judge = JudgeOutput(
+                        sub_scores=None,
+                        overall=0.0,
+                        reasons=reasons,
+                    )
+                    best_score = float('-inf')  # "-inf" means a failed llm call is even worser than below the retry threshold.
+                    best_judge_result = failed_judge
+                continue
+
+        # All judge retries exhausted - return best result from retry history
+        logger.warning(
+            f"cluster {pk_hash} attempt {max_retries+1}/{max_retries+1}: judge retries exhausted, returning best cluster_report (overall score: {best_score:.2f})"
+        )
         return best_cluster_report, best_judge_result
             
     
@@ -711,33 +792,15 @@ async def summarize_clusters_parallel(
     results_dict = {}
     for pk_hash, result in zip(pk_hash_list, results):
         if isinstance(result, Exception):
-            # Handle exceptions
-            if isinstance(result, LLMGenerationError):
-                logger.error(f"LLM generation error collecting cluster with pk_hash {pk_hash} result: {str(result)}", exc_info=True)
-                failed_judge = JudgeOutput(
-                    sub_scores=None,
-                    overall=0.0,
-                    reasons={"llm_generation_error": str(result)}
-                )
-                results_dict[pk_hash] = (None, failed_judge)
-            elif isinstance(result, ValidationError):
-                logger.error(f"Validation error collecting cluster with pk_hash {pk_hash} result (after retries exhausted): {str(result)}", exc_info=True)
-                failed_judge = JudgeOutput(
-                    sub_scores=None,
-                    overall=0.0,
-                    reasons={"validation_error": str(result)}
-                )
-                results_dict[pk_hash] = (None, failed_judge)
-            else:
-                logger.error(f"Error collecting cluster with pk_hash {pk_hash} result: {str(result)}", exc_info=True)
-                failed_judge = JudgeOutput(
-                    sub_scores=None,
-                    overall=0.0,
-                    reasons={"internal_error": f"Exception: {str(result)}"}
-                )
-                results_dict[pk_hash] = (None, failed_judge)
+            # Handle unexpected exceptions (LLM/Validation errors are caught inside retry loop)
+            logger.error(f"Unexpected error collecting cluster with pk_hash {pk_hash}: {result}", exc_info=True)
+            failed_judge = JudgeOutput(
+                sub_scores=None,
+                overall=0.0,
+                reasons={"internal_error": [("single cluster processing must not raise unexpected exceptions", f"Exception: {str(result)}")]},
+            )
+            results_dict[pk_hash] = (None, failed_judge)
         else:
-            # Success case
             cluster_report, judge_result = result
             results_dict[pk_hash] = (cluster_report, judge_result)
             if cluster_report is None:
@@ -745,7 +808,7 @@ async def summarize_clusters_parallel(
             else:
                 passed_clusters += 1
     
-    logger.info(f"Successfully processed {passed_clusters}/{len(clusters)} clusters")
+    logger.info(f"cluster summarization is finished, got {passed_clusters}/{len(clusters)} non empty cluster report(s)")
     
     # Write cluster summarization events if path is provided
     _save_cluster_summarization_events(cfg, results_dict)

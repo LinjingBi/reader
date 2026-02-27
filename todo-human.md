@@ -87,7 +87,7 @@ sub(issue, bug level)
 
 [...] - [reader] run hf_data pipe to prepare data for call 1.  
 [x] - [reader] refine hf_data for better error shooting and multi-purpose configuratons and add retry for overall_score is 0's llm summarization calls.  
-[ ] - [reader] attach suggestions based on hard valid errors in llm prompt during retry.  
+[x] - [reader] attach suggestions based on judge valid errors in llm prompt during retry.  
 [ ] - [reader] test call 1 llm report planner(heuristic rules for response?), choose a proper model, update llm config in reader.yaml to per model.    
 
 [ ] - [paper-chunk] test training mode and remove duplicate code under paper_chunk dir.  
