@@ -156,9 +156,9 @@ class EvidenceGap(BaseModel):
     @property
     def has_valid_selectors(self) -> bool:
         if self.target_kind == "paper":
-            return len(self.selectors) > 0 and len(self.history_selectors) == 0
+            return len(self.paper_selectors) > 0 and len(self.history_selectors) == 0
         if self.target_kind == "history":
-            return len(self.history_selectors) > 0 and len(self.selectors) == 0
+            return len(self.history_selectors) > 0 and len(self.paper_selectors) == 0
         return False
 
 class LLMReportPlannerOutput(BaseModel):

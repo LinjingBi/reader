@@ -2,14 +2,13 @@
 
 import asyncio
 import json
-import subprocess
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import pydantic
 from pydantic import BaseModel, RootModel
 
-from reader.config import MemoConfig
+from reader.pipelines.report_generation.config.config import MemoConfig
 from reader.pipelines.hf_data.report import FreshPaperPayload, InjectPapersChunkPayload, InjectClustersObservationInput
 from reader.logging.logging_setup import get_logger
 
@@ -474,7 +473,7 @@ async def inject_clusters_observation(payload: InjectClustersObservationInput, c
         raise MemoInjectClustersObservationError(f"Unexpected error in memo inject-clusters-observation: {e}") from e
 
 
-def get_clusters_observation(
+async def get_clusters_observation(
     source: str,
     period_start: str,
     period_end: str,
@@ -482,21 +481,20 @@ def get_clusters_observation(
 ) -> Dict[str, ClusterObservationData]:
     """
     Call memo CLI get-clusters-observation command to retrieve cluster observations.
-    
+
     Args:
         source: Snapshot source (e.g., 'hf_monthly')
         period_start: Period start date (YYYY-MM-DD)
         period_end: Period end date (YYYY-MM-DD)
         config: MemoConfig instance
-        
+
     Returns:
         Dict mapping pk_hash to ClusterObservationData
-        
+
     Raises:
         MemoGetClustersObservationError: If the subcommand execution fails
     """
     try:
-        # Build command
         cmd = [
             config.bin,
         ]
@@ -507,25 +505,39 @@ def get_clusters_observation(
             cmd.append('--schema')
             cmd.append(config.db_schema_path)
         cmd.extend(['get-clusters-observation', '--source', source, '--period-start', period_start, '--period-end', period_end])
-        
-        # Run memo CLI
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=config.timeout_sec,
-            check=True,
+
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
-        
-        # Parse JSON output and create Pydantic model, then return the dict
-        return GetClusterObservationResponse.model_validate_json(result.stdout).root
-        
-    except subprocess.TimeoutExpired as e:
-        logger.warning(f"memo get-clusters-observation timed out after {config.timeout_sec}s")
-        raise MemoGetClustersObservationError(f"memo get-clusters-observation timed out after {config.timeout_sec}s") from e
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Error calling memo get-clusters-observation: {e.stderr}")
-        raise MemoGetClustersObservationError(f"Error calling memo get-clusters-observation: {e.stderr}") from e
+
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(),
+                timeout=config.timeout_sec
+            )
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            logger.warning(f"memo get-clusters-observation timed out after {config.timeout_sec}s")
+            raise MemoGetClustersObservationError(f"memo get-clusters-observation timed out after {config.timeout_sec}s")
+        except asyncio.CancelledError:
+            process.kill()
+            await process.wait()
+            raise
+
+        stdout_text = stdout.decode('utf-8')
+        stderr_text = stderr.decode('utf-8')
+
+        if process.returncode != 0:
+            logger.error(f"Error calling memo get-clusters-observation: {stderr_text}")
+            raise MemoGetClustersObservationError(f"Error calling memo get-clusters-observation: {stderr_text}")
+
+        return GetClusterObservationResponse.model_validate_json(stdout_text).root
+
+    except MemoGetClustersObservationError:
+        raise
     except pydantic.ValidationError as e:
         logger.error(f"Error validating memo output: {e}")
         raise MemoGetClustersObservationError(f"Error validating memo output: {e}") from e
@@ -534,25 +546,24 @@ def get_clusters_observation(
         raise MemoGetClustersObservationError(f"Unexpected error in memo get-clusters-observation: {e}") from e
 
 
-def start_report_job(
+async def start_report_job(
     cluster_pk_hash: str,
     config: MemoConfig,
 ) -> StartReportJobResponse:
     """
     Call memo CLI start-report-job command to start a report generation job for a cluster.
-    
+
     Args:
         cluster_pk_hash: Cluster pk_hash (primary key hash from cluster table)
         config: MemoConfig instance
-        
+
     Returns:
         StartReportJobResponse instance
-        
+
     Raises:
         MemoStartReportJobError: If the subcommand execution fails
     """
     try:
-        # Build command
         cmd = [
             config.bin,
         ]
@@ -563,25 +574,39 @@ def start_report_job(
             cmd.append('--schema')
             cmd.append(config.db_schema_path)
         cmd.extend(['start-report-job', '--cluster-pk-hash', cluster_pk_hash])
-        
-        # Run memo CLI
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=config.timeout_sec,
-            check=True,
+
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
-        
-        # Parse JSON output and create Pydantic model
-        return StartReportJobResponse.model_validate_json(result.stdout)
-        
-    except subprocess.TimeoutExpired as e:
-        logger.warning(f"memo start-report-job timed out after {config.timeout_sec}s")
-        raise MemoStartReportJobError(f"memo start-report-job timed out after {config.timeout_sec}s") from e
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Error calling memo start-report-job: {e.stderr}")
-        raise MemoStartReportJobError(f"Error calling memo start-report-job: {e.stderr}") from e
+
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(),
+                timeout=config.timeout_sec
+            )
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            logger.warning(f"memo start-report-job timed out after {config.timeout_sec}s")
+            raise MemoStartReportJobError(f"memo start-report-job timed out after {config.timeout_sec}s")
+        except asyncio.CancelledError:
+            process.kill()
+            await process.wait()
+            raise
+
+        stdout_text = stdout.decode('utf-8')
+        stderr_text = stderr.decode('utf-8')
+
+        if process.returncode != 0:
+            logger.error(f"Error calling memo start-report-job: {stderr_text}")
+            raise MemoStartReportJobError(f"Error calling memo start-report-job: {stderr_text}")
+
+        return StartReportJobResponse.model_validate_json(stdout_text)
+
+    except MemoStartReportJobError:
+        raise
     except pydantic.ValidationError as e:
         logger.error(f"Error validating memo output: {e}")
         raise MemoStartReportJobError(f"Error validating memo output: {e}") from e
@@ -590,25 +615,24 @@ def start_report_job(
         raise MemoStartReportJobError(f"Unexpected error in memo start-report-job: {e}") from e
 
 
-def get_topic_resolver_metadata(
+async def get_topic_resolver_metadata(
     cluster_pk_hash: str,
     config: MemoConfig,
 ) -> GetTopicResolverMetadataResponse:
     """
     Call memo CLI get-topic-resolver-metadata command to retrieve topic resolver metadata.
-    
+
     Args:
         cluster_pk_hash: Cluster pk_hash (primary key hash from cluster table)
         config: MemoConfig instance
-        
+
     Returns:
         GetTopicResolverMetadataResponse instance
-        
+
     Raises:
         MemoGetTopicResolverMetadataError: If the subcommand execution fails
     """
     try:
-        # Build command
         cmd = [
             config.bin,
         ]
@@ -619,25 +643,39 @@ def get_topic_resolver_metadata(
             cmd.append('--schema')
             cmd.append(config.db_schema_path)
         cmd.extend(['get-topic-resolver-metadata', '--cluster-pk-hash', cluster_pk_hash])
-        
-        # Run memo CLI
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=config.timeout_sec,
-            check=True,
+
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
-        
-        # Parse JSON output and create Pydantic model
-        return GetTopicResolverMetadataResponse.model_validate_json(result.stdout)
-        
-    except subprocess.TimeoutExpired as e:
-        logger.warning(f"memo get-topic-resolver-metadata timed out after {config.timeout_sec}s")
-        raise MemoGetTopicResolverMetadataError(f"memo get-topic-resolver-metadata timed out after {config.timeout_sec}s") from e
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Error calling memo get-topic-resolver-metadata: {e.stderr}")
-        raise MemoGetTopicResolverMetadataError(f"Error calling memo get-topic-resolver-metadata: {e.stderr}") from e
+
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(),
+                timeout=config.timeout_sec
+            )
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            logger.warning(f"memo get-topic-resolver-metadata timed out after {config.timeout_sec}s")
+            raise MemoGetTopicResolverMetadataError(f"memo get-topic-resolver-metadata timed out after {config.timeout_sec}s")
+        except asyncio.CancelledError:
+            process.kill()
+            await process.wait()
+            raise
+
+        stdout_text = stdout.decode('utf-8')
+        stderr_text = stderr.decode('utf-8')
+
+        if process.returncode != 0:
+            logger.error(f"Error calling memo get-topic-resolver-metadata: {stderr_text}")
+            raise MemoGetTopicResolverMetadataError(f"Error calling memo get-topic-resolver-metadata: {stderr_text}")
+
+        return GetTopicResolverMetadataResponse.model_validate_json(stdout_text)
+
+    except MemoGetTopicResolverMetadataError:
+        raise
     except pydantic.ValidationError as e:
         logger.error(f"Error validating memo output: {e}")
         raise MemoGetTopicResolverMetadataError(f"Error validating memo output: {e}") from e
@@ -646,7 +684,7 @@ def get_topic_resolver_metadata(
         raise MemoGetTopicResolverMetadataError(f"Unexpected error in memo get-topic-resolver-metadata: {e}") from e
 
 
-def get_report_planner_metadata(
+async def get_report_planner_metadata(
     cluster_pk_hash: str,
     config: MemoConfig,
     topic_id: Optional[str] = None,
@@ -654,21 +692,20 @@ def get_report_planner_metadata(
 ) -> GetReportPlannerMetadataResponse:
     """
     Call memo CLI get-report-planner-metadata command to retrieve report planner metadata.
-    
+
     Args:
         cluster_pk_hash: Cluster pk_hash (primary key hash from cluster table)
         config: MemoConfig instance
         topic_id: Optional topic_id (as string) to include top ≤3 reports for that topic
         add_top_papers: Whether to include Top-K papers (K≤5) for the cluster
-        
+
     Returns:
         GetReportPlannerMetadataResponse instance
-        
+
     Raises:
         MemoGetReportPlannerMetadataError: If the subcommand execution fails
     """
     try:
-        # Build command
         cmd = [
             config.bin,
         ]
@@ -679,30 +716,44 @@ def get_report_planner_metadata(
             cmd.append('--schema')
             cmd.append(config.db_schema_path)
         cmd.extend(['get-report-planner-metadata', '--cluster-pk-hash', cluster_pk_hash])
-        
+
         if topic_id is not None:
             cmd.extend(['--add-topic-reports', str(topic_id)])
         if add_top_papers:
             cmd.append('--add-top-papers')
-        
-        # Run memo CLI
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=config.timeout_sec,
-            check=True,
+
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
-        
-        # Parse JSON output and create Pydantic model
-        return GetReportPlannerMetadataResponse.model_validate_json(result.stdout)
-        
-    except subprocess.TimeoutExpired as e:
-        logger.warning(f"memo get-report-planner-metadata timed out after {config.timeout_sec}s")
-        raise MemoGetReportPlannerMetadataError(f"memo get-report-planner-metadata timed out after {config.timeout_sec}s") from e
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Error calling memo get-report-planner-metadata: {e.stderr}")
-        raise MemoGetReportPlannerMetadataError(f"Error calling memo get-report-planner-metadata: {e.stderr}") from e
+
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(),
+                timeout=config.timeout_sec
+            )
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            logger.warning(f"memo get-report-planner-metadata timed out after {config.timeout_sec}s")
+            raise MemoGetReportPlannerMetadataError(f"memo get-report-planner-metadata timed out after {config.timeout_sec}s")
+        except asyncio.CancelledError:
+            process.kill()
+            await process.wait()
+            raise
+
+        stdout_text = stdout.decode('utf-8')
+        stderr_text = stderr.decode('utf-8')
+
+        if process.returncode != 0:
+            logger.error(f"Error calling memo get-report-planner-metadata: {stderr_text}")
+            raise MemoGetReportPlannerMetadataError(f"Error calling memo get-report-planner-metadata: {stderr_text}")
+
+        return GetReportPlannerMetadataResponse.model_validate_json(stdout_text)
+
+    except MemoGetReportPlannerMetadataError:
+        raise
     except pydantic.ValidationError as e:
         logger.error(f"Error validating memo output: {e}")
         raise MemoGetReportPlannerMetadataError(f"Error validating memo output: {e}") from e

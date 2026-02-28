@@ -1,6 +1,6 @@
 # for CI/CD validation
-from reader.pipelines.report import LLMReportPlannerPlan
-from reader.prompts.report_planner.spec_baseline import IntentSpec
+from reader.pipelines.report_generation.report import LLMReportPlannerPlan
+from reader.pipelines.report_generation.prompts.planner.spec_baseline import IntentSpec
 
 
 def validate_intent_spec(intent_spec: IntentSpec) -> None:

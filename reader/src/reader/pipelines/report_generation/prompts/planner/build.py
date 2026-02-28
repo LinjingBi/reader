@@ -1,8 +1,8 @@
 import json
 from typing import Dict, List
 from enum import Enum
-from reader.pipelines.report import LLMReportPlannerPlan
-from reader.prompts.report_planner.spec_baseline import (
+from reader.pipelines.report_generation.report import LLMReportPlannerPlan
+from reader.pipelines.report_generation.prompts.planner.spec_baseline import (
     BASE_UNIVERSAL,
     FieldGuidance,
     IntentSpec,
@@ -17,7 +17,7 @@ from reader.adapters.memo import GetReportPlannerMetadataResponse
 def _format_guidance(field_name: str, g: FieldGuidance) -> str:
     use_lines = "\n".join([f"- {x}" for x in g.use])
     decide_lines = "\n".join([f"- {x}" for x in g.decide])
-    
+
     parts = [
         f"### plan.{field_name}",
         "",
@@ -29,7 +29,7 @@ def _format_guidance(field_name: str, g: FieldGuidance) -> str:
         "Decide:",
         decide_lines,
     ]
-    
+
     if g.if_blocked:
         blocked_lines = "\n".join([f"- {x}" for x in g.if_blocked])
         parts.extend([
@@ -37,7 +37,7 @@ def _format_guidance(field_name: str, g: FieldGuidance) -> str:
             "If blocked:",
             blocked_lines,
         ])
-    
+
     if g.if_unblocked:
         unblocked_lines = "\n".join([f"- {x}" for x in g.if_unblocked])
         parts.extend([
@@ -45,7 +45,7 @@ def _format_guidance(field_name: str, g: FieldGuidance) -> str:
             "If unblocked:",
             unblocked_lines,
         ])
-    
+
     return "\n".join(parts)
 
 
@@ -72,15 +72,15 @@ def build_baseline_planner_prompt(intent_spec: IntentSpec, cluster_metadata: Get
 
     # Process evidence pack
     cluster_dict = cluster_metadata.model_dump()
-    
+
     # Remove top_papers_from_new_observation if empty/none
     if not cluster_metadata.top_papers_from_new_observation:
         cluster_dict.pop('top_papers_from_new_observation', None)
-    
+
     # Set history_reports message if empty/none
     if not cluster_metadata.history_reports:
         cluster_dict['history_reports'] = 'no history, observed for the first time.'
-    
+
     evidence_pack = json.dumps(cluster_dict, indent=2, ensure_ascii=False)
 
     # Replace placeholders in BASE_UNIVERSAL
@@ -100,12 +100,12 @@ class UserIntent(str, Enum):
     RESEARCH_BRIEFING = "Research Briefing (Decision-oriented)"
     BRAINSTORM_DIRECTIONS = "Brainstorm Directions (Novelty hunting)"
     IMPLEMENTATION_ANGLE = "Implementation Angle (What to build/test)"
-    
+
     @classmethod
     def get_all_display_strings(cls) -> List[str]:
         """Get all display strings as a list for UI selection"""
         return [intent.value for intent in cls]
-    
+
     @classmethod
     def from_display_string(cls, display_string: str) -> "UserIntent":
         """Get UserIntent enum from display string"""

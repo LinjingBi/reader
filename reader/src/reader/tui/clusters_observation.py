@@ -361,7 +361,7 @@ class UserIntentSelector(App[str]):
                 event.stop()
 
 
-def display_clusters_observation(observations: Dict[str, ClusterObservationData], user_intent_options: Optional[List[str]] = None) -> Tuple[str, Optional[str]]:
+async def display_clusters_observation(observations: Dict[str, ClusterObservationData], user_intent_options: Optional[List[str]] = None) -> Tuple[str, Optional[str]]:
     """
     Main entry point for the TUI browser.
     
@@ -381,8 +381,8 @@ def display_clusters_observation(observations: Dict[str, ClusterObservationData]
         logger.error("Empty observations: no topics to display.")
         raise ClusterObservationError("Empty observations: no topics to display.")
     
-    # Stage 1: Select topic/cluster
-    selected_pk_hash = TopicBrowser(observations).run()
+    # Stage 1: Select topic/cluster (run_async for use within existing event loop)
+    selected_pk_hash = await TopicBrowser(observations).run_async()
     if selected_pk_hash is None:
         logger.info("No topic was selected (user quit without selection).")
         raise ClusterObservationError("No topic was selected (user quit without selection).")
@@ -392,7 +392,7 @@ def display_clusters_observation(observations: Dict[str, ClusterObservationData]
     if not user_intent_options:
         logger.info("No user_intent_options provided, intent selector will be skipped.")
     else:
-        selected_intent = UserIntentSelector(user_intent_options).run()
+        selected_intent = await UserIntentSelector(user_intent_options).run_async()
         
         if selected_intent is None:
             logger.info("No user intent was selected (user quit without selection).")

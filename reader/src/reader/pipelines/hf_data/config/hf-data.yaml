@@ -1,5 +1,5 @@
 run:
-  month_key: "month=2025-04"                 # keep the exact query key shape
+  month_key: "month=2025-06"                 # keep the exact query key shape
   log_config_path: "/Users/bii/reader/reader/src/reader/logging/config.yaml"  # Absolute path to logging config file
   log_file_path: "/Users/bii/reader/reader/src/reader/pipelines/hf_data/artifacts/hf_data.log"
 
