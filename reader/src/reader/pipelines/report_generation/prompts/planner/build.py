@@ -11,6 +11,15 @@ from reader.pipelines.report_generation.prompts.planner.spec_baseline import (
     BRAINSTORM_DIRECTIONS_SPEC,
     IMPLEMENTATION_ANGLE_SPEC,
 )
+from reader.pipelines.report_generation.prompts.planner.spec import (
+    BASE_UNIVERSAL as SPEC_BASE_UNIVERSAL,
+    FieldGuidance as SpecFieldGuidance,
+    IntentSpec as SpecIntentSpec,
+    QUICK_BACKGROUND_SPEC as QUICK_BACKGROUND_SPEC_PROD,
+    RESEARCH_BRIEFING_SPEC as RESEARCH_BRIEFING_SPEC_PROD,
+    BRAINSTORM_DIRECTIONS_SPEC as BRAINSTORM_DIRECTIONS_SPEC_PROD,
+    IMPLEMENTATION_ANGLE_SPEC as IMPLEMENTATION_ANGLE_SPEC_PROD,
+)
 from reader.adapters.memo import GetReportPlannerMetadataResponse
 
 
@@ -47,6 +56,59 @@ def _format_guidance(field_name: str, g: FieldGuidance) -> str:
         ])
 
     return "\n".join(parts)
+
+
+def _format_guidance_planner(field_name: str, g: SpecFieldGuidance) -> str:
+    """Format FieldGuidance for production spec (no if_unblocked)."""
+    use_lines = "\n".join([f"- {x}" for x in g.use])
+    decide_lines = "\n".join([f"- {x}" for x in g.decide])
+
+    parts = [
+        f"### plan.{field_name}",
+        "",
+        f"Q: {g.question}",
+        "",
+        "Use:",
+        use_lines,
+        "",
+        "Decide:",
+        decide_lines,
+    ]
+
+    if g.if_blocked:
+        blocked_lines = "\n".join([f"- {x}" for x in g.if_blocked])
+        parts.extend([
+            "",
+            "If blocked:",
+            blocked_lines,
+        ])
+
+    return "\n".join(parts)
+
+
+def build_planner_prompt(intent_spec: SpecIntentSpec, cluster_metadata: GetReportPlannerMetadataResponse) -> str:
+    """Build planner prompt using production spec (evidence gaps only, no next_step_inputs)."""
+    plan_guidance_parts = [
+        f"Intent mode:\n- {intent_spec.intent_goal}\n",
+    ]
+
+    for field_name in LLMReportPlannerPlan.model_fields.keys():
+        g = intent_spec.plan_field_guidance[field_name]
+        plan_guidance_parts.append(_format_guidance_planner(field_name, g))
+
+    plan_guidance = "\n".join(plan_guidance_parts)
+
+    cluster_dict = cluster_metadata.model_dump()
+    if not cluster_metadata.top_papers_from_new_observation:
+        cluster_dict.pop('top_papers_from_new_observation', None)
+    if not cluster_metadata.history_reports:
+        cluster_dict['history_reports'] = 'no history, observed for the first time.'
+
+    evidence_pack = json.dumps(cluster_dict, indent=2, ensure_ascii=False)
+    prompt = SPEC_BASE_UNIVERSAL.replace('<EVIDENCE_PACK_PLACEHOLDER>', evidence_pack)
+    prompt = prompt.replace('<PLAN_GUIDANCE_PLACEHOLDER>', plan_guidance)
+
+    return prompt
 
 
 def build_baseline_planner_prompt(intent_spec: IntentSpec, cluster_metadata: GetReportPlannerMetadataResponse) -> str:
@@ -128,8 +190,24 @@ USER_INTENT_TO_SPEC: Dict[UserIntent, IntentSpec] = {
 
 
 def get_intent_spec(user_intent: UserIntent) -> IntentSpec:
-    """Get IntentSpec for a given UserIntent"""
+    """Get IntentSpec for a given UserIntent (baseline spec with next_step_inputs)."""
     spec = USER_INTENT_TO_SPEC.get(user_intent)
     if spec is None:
         raise ValueError(f"IntentSpec not found for UserIntent: {user_intent}")
+    return spec
+
+
+USER_INTENT_TO_SPEC_PROD: Dict[UserIntent, SpecIntentSpec] = {
+    UserIntent.QUICK_BACKGROUND: QUICK_BACKGROUND_SPEC_PROD,
+    UserIntent.RESEARCH_BRIEFING: RESEARCH_BRIEFING_SPEC_PROD,
+    UserIntent.BRAINSTORM_DIRECTIONS: BRAINSTORM_DIRECTIONS_SPEC_PROD,
+    UserIntent.IMPLEMENTATION_ANGLE: IMPLEMENTATION_ANGLE_SPEC_PROD,
+}
+
+
+def get_planner_intent_spec(user_intent: UserIntent) -> SpecIntentSpec:
+    """Get SpecIntentSpec for production planner (evidence gaps only, no next_step_inputs)."""
+    spec = USER_INTENT_TO_SPEC_PROD.get(user_intent)
+    if spec is None:
+        raise ValueError(f"SpecIntentSpec not found for UserIntent: {user_intent}")
     return spec

@@ -163,5 +163,5 @@ class EvidenceGap(BaseModel):
 
 class LLMReportPlannerOutput(BaseModel):
     plan: LLMReportPlannerPlan
-    next_step_inputs: List[NextStepInput]
+    # next_step_inputs: List[NextStepInput]
     evidence_gaps: List[EvidenceGap]

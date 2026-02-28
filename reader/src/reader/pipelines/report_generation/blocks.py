@@ -2,7 +2,8 @@
 
 import json
 import os
-from datetime import datetime
+from dataclasses import asdict
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -16,9 +17,14 @@ from reader.adapters.memo import PaperCard, StartReportJobResponse, GetReportPla
 from reader.adapters.llm import LLMClient, TokenBucket, LLMGenerationError
 from pydantic import ValidationError
 from reader.pipelines.report_generation.report import LLMReportPlannerOutput
+from reader.pipelines.report_generation.metrics import (
+    judge_output,
+    JudgeOutput,
+    count_judge_warnings,
+    inject_judge_warnings_into_prompt,
+)
 from reader.logging.logging_setup import get_logger
-from reader.pipelines.report_generation.prompts.planner.build import UserIntent, get_intent_spec
-from reader.pipelines.report_generation.prompts.planner.build import build_baseline_planner_prompt
+from reader.pipelines.report_generation.prompts.planner.build import UserIntent, get_planner_intent_spec, build_planner_prompt
 
 logger = get_logger()
 
@@ -76,33 +82,133 @@ def _initialize_llm_client(llm_config: LLMGeminiConfig, model: str) -> LLMClient
 # Report generation blocks
 # ============================================================================
 
-def _dump_planner_output_to_json(
-    planner_output: LLMReportPlannerOutput,
-    period_start: str,
-    period_end: str,
-    source: str,
-) -> Path:
-    """
-    Dump planner output to a JSON file under report_generation/artifacts.
 
-    Naming template: plan_<period_start>_<period_end>_<source>_<datetime>.json
+def _append_planner_output_to_jsonl(
+    log_path: Optional[str],
+    cluster_pk_hash: str,
+    planner_output: Optional[LLMReportPlannerOutput],
+    judge_output_result: JudgeOutput,
+) -> None:
+    """Append (planner_output, judge_output) to JSONL file. No-op if log_path is None or empty."""
+    if not log_path:
+        return
+    Path(log_path).parent.mkdir(parents=True, exist_ok=True)
+    record = {
+        "cluster_pk_hash": cluster_pk_hash,
+        "date": datetime.now(timezone.utc).isoformat(),
+        "planner_output": planner_output.model_dump() if planner_output is not None else None,
+        "judge_output": asdict(judge_output_result),
+    }
+    with open(log_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    logger.info(f"Successfully appended report planner output for cluster {cluster_pk_hash} to {log_path}")
+
+
+async def _call_planner_with_judge_retry(
+    cluster_pk_hash: str,
+    planner_prompt: str,
+    llm_client: LLMClient,
+    cfg: ReportGenerationConfig,
+) -> Tuple[Optional[LLMReportPlannerOutput], JudgeOutput]:
+    """
+    Call report planner LLM with judge retry logic.
 
     Returns:
-        Path to the written JSON file
+        Tuple of (planner_output, judge_output). planner_output may be None on LLM/validation failure.
     """
-    artifacts_dir = Path(__file__).resolve().parent / "artifacts"
-    artifacts_dir.mkdir(parents=True, exist_ok=True)
-    logger.info(f"Planner artifacts dir: {artifacts_dir}")
+    prompt_base = planner_prompt
+    max_retries = cfg.report_generation.max_judge_retries
+    retry_threshold = cfg.report_generation.judge_retry_threshold
+    llm_cfg = cfg.report_generation.llm_gemini
 
-    dt_str = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
-    filename = f"plan_{period_start}_{period_end}_{source}_{dt_str}.json"
-    out_path = artifacts_dir / filename
+    best_planner_output: Optional[LLMReportPlannerOutput] = None
+    best_judge_result: Optional[JudgeOutput] = None
+    best_score = float("-inf")
 
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(planner_output.model_dump(), f, indent=2, ensure_ascii=False)
+    for attempt in range(max_retries + 1):
+        try:
+            planner_output = await llm_client.call_structured_raw_async(
+                prompt=planner_prompt,
+                response_model=LLMReportPlannerOutput,
+                temperature=llm_cfg.temperature,
+                max_tokens=llm_cfg.max_tokens,
+            )
+            judge_result = judge_output(planner_output)
 
-    logger.info(f"Dumped planner output to {out_path}")
-    return out_path
+            if judge_result.overall > best_score:
+                best_score = judge_result.overall
+                best_planner_output = planner_output
+                best_judge_result = judge_result
+
+            if judge_result.overall > retry_threshold:
+                logger.info(
+                    f"cluster {cluster_pk_hash} attempt {attempt + 1}/{max_retries + 1}: "
+                    f"planner overall score {best_score:.2f} > {retry_threshold}, accepted"
+                )
+                _append_planner_output_to_jsonl(
+                    cfg.report_generation.planner_output_log_path,
+                    cluster_pk_hash,
+                    best_planner_output,
+                    best_judge_result,
+                )
+                return best_planner_output, best_judge_result
+
+            if attempt < max_retries:
+                planner_prompt, num_warnings = inject_judge_warnings_into_prompt(prompt_base, judge_result)
+                logger.warning(
+                    f"cluster {cluster_pk_hash} attempt {attempt + 1}/{max_retries + 1}: "
+                    f"planner overall score {judge_result.overall:.2f} <= {retry_threshold}, "
+                    f"injecting {num_warnings} warning(s), retrying"
+                )
+            else:
+                num_warnings = count_judge_warnings(judge_result)
+                logger.warning(
+                    f"cluster {cluster_pk_hash} attempt {attempt + 1}/{max_retries + 1}: "
+                    f"planner overall score {judge_result.overall:.2f} <= {retry_threshold}, "
+                    f"{num_warnings} warning(s) (last judge retry, returning best)"
+                )
+
+        except (LLMGenerationError, ValidationError) as e:
+            logger.warning(f"cluster {cluster_pk_hash} attempt {attempt + 1}/{max_retries + 1}: llm call failed: {e}")
+            if best_planner_output is None:
+                if isinstance(e, LLMGenerationError):
+                    reasons = {"llm_generation_error": [("llm api call must succeed to return planner output", str(e))]}
+                else:
+                    reasons = {
+                        "validation_error": [
+                            ("llm structured output must be valid json matching LLMReportPlannerOutput schema", str(e))
+                        ]
+                    }
+                failed_judge = JudgeOutput(sub_scores={}, overall=0.0, reasons=reasons)
+                best_judge_result = failed_judge
+            continue
+        except Exception as e:
+            logger.warning(
+                f"cluster {cluster_pk_hash} attempt {attempt + 1}/{max_retries + 1}: unexpected error, breaking retry: {e}",
+                exc_info=True,
+            )
+            if best_planner_output is None:
+                reasons = {"internal_error": [("unexpected error during planner call", str(e))]}
+                best_judge_result = JudgeOutput(sub_scores={}, overall=0.0, reasons=reasons)
+            _append_planner_output_to_jsonl(
+                cfg.report_generation.planner_output_log_path,
+                cluster_pk_hash,
+                best_planner_output,
+                best_judge_result,
+            )
+            return best_planner_output, best_judge_result
+
+    logger.warning(
+        f"cluster {cluster_pk_hash} attempt {max_retries + 1}/{max_retries + 1}: "
+        f"judge retries exhausted, returning best planner_output (overall score: {best_score:.2f})"
+    )
+    _append_planner_output_to_jsonl(
+        cfg.report_generation.planner_output_log_path,
+        cluster_pk_hash,
+        best_planner_output,
+        best_judge_result,
+    )
+    return best_planner_output, best_judge_result
 
 
 async def _resolve_report_job_topic(cluster_pk_hash: str, cfg: ReportGenerationConfig) -> None:
@@ -182,32 +288,27 @@ async def _kick_off_report_job(cluster_pk_hash: str, user_intent: str, cfg: Repo
         )
     planner_prompt = await _generate_planner_prompt(user_intent, cluster_pk_hash, cfg, resolved_topic.merge_to_topic)
 
-    # Initialize LLM client and call report planner (async, non-blocking)
+    # Initialize LLM client 
     llm_cfg = cfg.report_generation.llm_gemini
     llm_client = _initialize_llm_client(llm_cfg, llm_cfg.model)
+    # call 1 to llm report planner with judge retry
+    planner_output, judge_result = await _call_planner_with_judge_retry(
+        cluster_pk_hash, planner_prompt, llm_client, cfg
+    )
+    if planner_output is not None:
+        logger.info(f"Successfully called report planner for cluster {cluster_pk_hash}, overall score: {judge_result.overall:.2f}")
+        # call 2 to llm report writter
+        # organize metadata for db updates and save report to local fs
+    else:
+        logger.warning(f"Report planner call failed for cluster {cluster_pk_hash}")
+        # write to memo with error metadata
+        # need to update the report job status to error
 
-    try:
-        planner_output = await llm_client.call_structured_raw_async(
-            prompt=planner_prompt,
-            response_model=LLMReportPlannerOutput,
-            temperature=llm_cfg.temperature,
-            max_tokens=llm_cfg.max_tokens
-        )
-        _dump_planner_output_to_json(
-            planner_output,
-            period_start=cfg.run.period_start,
-            period_end=cfg.run.period_end,
-            source=cfg.run.source,
-        )
-        logger.info(f"Successfully generated report planner output for cluster {cluster_pk_hash}")
-    except LLMGenerationError as e:
-        logger.error(f"LLM report planner call error for cluster {cluster_pk_hash}: {str(e)}", exc_info=True)
-        raise
-    except ValidationError as e:
-        logger.error(f"Validation error in report planner call for cluster {cluster_pk_hash} (after retries exhausted): {str(e)}", exc_info=True)
-        raise
-    # call 2 to llm report planner
-    # organize metadata for db updates and save report to local fs
+
+
+
+
+    
 
 
 async def create_report_job(cluster_pk_hash: str, user_intent: str, cfg: ReportGenerationConfig) -> Optional[Tuple[str, str]]:
@@ -296,8 +397,8 @@ async def _generate_planner_prompt(
     except ValueError as e:
         raise ValueError(f"Invalid user_intent: {user_intent}") from e
 
-    # Get IntentSpec for the user intent
-    intent_spec = get_intent_spec(intent_enum)
+    # Get IntentSpec for the user intent (production: evidence gaps only)
+    intent_spec = get_planner_intent_spec(intent_enum)
 
     # Determine add_top_papers: False only for QUICK_BACKGROUND, True for all others
     add_top_papers = intent_enum != UserIntent.QUICK_BACKGROUND
@@ -310,8 +411,8 @@ async def _generate_planner_prompt(
         add_top_papers=add_top_papers,
     )
 
-    # Call build_baseline_planner_prompt with intent_spec and cluster_metadata
-    prompt = build_baseline_planner_prompt(intent_spec=intent_spec, cluster_metadata=cluster_metadata)
+    # Call build_planner_prompt with intent_spec and cluster_metadata
+    prompt = build_planner_prompt(intent_spec=intent_spec, cluster_metadata=cluster_metadata)
 
     return prompt
 

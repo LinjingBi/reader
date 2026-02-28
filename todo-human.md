@@ -85,13 +85,25 @@ sub(issue, bug level)
 [x] - [reader] port cluster summarization step from monthly pipe to hf_data.  
 [x] - [reader] refactor hf_data pipe to async.  
 
-[...] - [reader] run hf_data pipe to prepare data for call 1.  
+[x] - [reader] run hf_data pipe to prepare data for call 1.  
 [x] - [reader] refine hf_data for better error shooting and multi-purpose configuratons and add retry for overall_score is 0's llm summarization calls.  
 [x] - [reader] attach suggestions based on judge valid errors in llm prompt during retry.  
-[ ] - [reader] test call 1 llm report planner(heuristic rules for response?), choose a proper model, update llm config in reader.yaml to per model.    
+
+[...] - [reader] test call 1 llm report planner(heuristic rules for response?).  
+[x] - [reader] refactor chosen topic + report generation to an independent async workflow(report-generation) under pipelines.  
+[x] - [reader] add heuristic rules for call 1 and call 1 retry based on heuristic rules overall score  
+[x] - [reader] create call 1 planner production spec, only work on plan evidence completion, remove next step input.  
+[x] - [reader] refactor the design for report generation into call 1 report plan(with evidence collection iterations) + call 1.5 (report writting evidence collection based on plan's outline and other fields) + call 2 (pure writing with outline and call 1.5 evidence). 
+[ ] - [reader] implement call 1 stop line.  
+[ ] - [reader] implement call 1.5.  
+[ ] - [reader] implement call 2.  
+[ ] - [reader,memo] rework get report planner evidence cmd to support evidence selectors.
+[ ] - [reader,memo] design the report generation db update workflow.   
+ 
 
 [ ] - [paper-chunk] test training mode and remove duplicate code under paper_chunk dir.  
 [ ] - [paperchunk] refactor pdf extractor, it is in poor condition..note. pdf extractor is disbaled now, only html is enabled.      
+[ ] - [reader] draft code agent integration for auto-scheduled rerun wrt rerun helper.  
 [ ] - [hf-data] collect pipeline events as jsonl for performance analysis.  
 
 
