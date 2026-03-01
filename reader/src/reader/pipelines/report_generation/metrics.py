@@ -392,6 +392,23 @@ def check_subthread_name_specific(output: LLMReportPlannerOutput) -> Tuple[bool,
     return True, None
 
 
+def check_evidence_gap_target_id_unique(output: LLMReportPlannerOutput) -> Tuple[bool, Optional[Tuple[str, str]]]:
+    """Each paper_id or history_report_id must appear in evidence_gaps at most once"""
+    id_to_indices: Dict[str, List[int]] = {}
+    for i, eg in enumerate(output.evidence_gaps):
+        target_id = (eg.paper_id or eg.history_report_id or "").strip()
+        if target_id:
+            id_to_indices.setdefault(target_id, []).append(i)
+    duplicates = {tid: idxs for tid, idxs in id_to_indices.items() if len(idxs) > 1}
+    if not duplicates:
+        return True, None
+    dup_ids = sorted(duplicates.keys())
+    return False, (
+        "Each paper_id or history_report_id must appear in evidence_gaps at most once",
+        f"got duplicate: {dup_ids}",
+    )
+
+
 def check_subthread_paper_id_duplication(output: LLMReportPlannerOutput) -> Tuple[bool, Optional[Tuple[str, str]]]:
     """LLMReportPlannerSubthread.paper_ids must not have excessive reuse across subthreads"""
     subthreads = output.plan.subthreads_final
@@ -506,6 +523,7 @@ SOFT_CHECKS: tuple[CheckFn, ...] = (
     check_sufficiency_sufficient_evidence_gaps_minimal,
     check_sufficiency_insufficient_non_empty,
     check_evidence_gap_blocked_fields_known,
+    check_evidence_gap_target_id_unique,
     check_outline_distribution_sanity,
     check_next_targets_distribution_sanity,
 )

@@ -82,38 +82,9 @@
         "programming",
         "benchmarks"
       ],
-      "depth_context_json": {
-        "subthreads": [
-          {
-            "name": "Model Architectures",
-            "paper_ids": ["arxiv:2024.12345", "arxiv:2024.12346"]
-          },
-          {
-            "name": "Training Strategies",
-            "paper_ids": ["arxiv:2024.12347"]
-          }
-        ],
-        "covered_bullets": [
-          "Overview of transformer-based code generation models",
-          "Evaluation on standard benchmarks",
-          "Discussion of code quality metrics"
-        ],
-        "next_targets": [
-          "Investigate multi-language code generation",
-          "Explore integration with IDEs",
-          "Study long-context code generation"
-        ],
-        "skip_or_defer": [
-          "Detailed implementation specifics",
-          "Hardware requirements"
-        ],
-        "evidence_gaps": [
-          "Need more papers on code generation for specific domains",
-          "Limited evaluation on real-world codebases"
-        ],
-        "cohesion_label": "cohesive",
-        "cohesion_confidence": 0.85
-      }
+      "intent_mode": "research_briefing",
+      "declared_level": "intermediate",
+      "depth_mode": "Continue"
     },
     {
       "report_id": 2,
@@ -125,27 +96,9 @@
         "code generation",
         "machine learning"
       ],
-      "depth_context_json": {
-        "subthreads": [
-          {
-            "name": "Architectural Approaches",
-            "paper_ids": ["arxiv:2024.12346"]
-          }
-        ],
-        "covered_bullets": [
-          "Neural architectures for program synthesis",
-          "Training data requirements",
-          "Evaluation methodologies"
-        ],
-        "next_targets": [
-          "Investigate few-shot learning approaches",
-          "Study code generation for specific domains"
-        ],
-        "skip_or_defer": [],
-        "evidence_gaps": [],
-        "cohesion_label": "cohesive",
-        "cohesion_confidence": 0.78
-      }
+      "intent_mode": "research_briefing",
+      "declared_level": "intermediate",
+      "depth_mode": "Onboard"
     }
   ]
 }

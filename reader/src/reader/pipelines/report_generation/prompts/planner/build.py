@@ -1,5 +1,5 @@
 import json
-from typing import Dict, List
+from typing import Any, Dict, List, Optional
 from enum import Enum
 from reader.pipelines.report_generation.report import LLMReportPlannerPlan
 from reader.pipelines.report_generation.prompts.planner.spec_baseline import (
@@ -86,26 +86,34 @@ def _format_guidance_planner(field_name: str, g: SpecFieldGuidance) -> str:
     return "\n".join(parts)
 
 
-def build_planner_prompt(intent_spec: SpecIntentSpec, cluster_metadata: GetReportPlannerMetadataResponse) -> str:
-    """Build planner prompt using production spec (evidence gaps only, no next_step_inputs)."""
+def build_plan_guidance(intent_spec: SpecIntentSpec) -> str:
+    """Build plan guidance string from intent spec. Call once per evidence loop."""
     plan_guidance_parts = [
         f"Intent mode:\n- {intent_spec.intent_goal}\n",
     ]
-
     for field_name in LLMReportPlannerPlan.model_fields.keys():
         g = intent_spec.plan_field_guidance[field_name]
         plan_guidance_parts.append(_format_guidance_planner(field_name, g))
+    return "\n".join(plan_guidance_parts)
 
-    plan_guidance = "\n".join(plan_guidance_parts)
 
-    cluster_dict = cluster_metadata.model_dump()
-    if not cluster_metadata.top_papers_from_new_observation:
+def build_planner_prompt(
+    phase1_metadata: GetReportPlannerMetadataResponse,
+    plan_guidance: str,
+    phase2_supplement: Optional[Dict[str, Any]] = None,
+) -> str:
+    """Build planner prompt using production spec (evidence gaps only, no next_step_inputs)."""
+    cluster_dict = phase1_metadata.model_dump()
+    if not phase1_metadata.top_papers_from_new_observation:
         cluster_dict.pop('top_papers_from_new_observation', None)
-    if not cluster_metadata.history_reports:
+    if not phase1_metadata.history_reports:
         cluster_dict['history_reports'] = 'no history, observed for the first time.'
 
-    evidence_pack = json.dumps(cluster_dict, indent=2, ensure_ascii=False)
-    prompt = SPEC_BASE_UNIVERSAL.replace('<EVIDENCE_PACK_PLACEHOLDER>', evidence_pack)
+    phase1_str = json.dumps(cluster_dict, indent=2, ensure_ascii=False)
+    phase2_str = json.dumps(phase2_supplement, indent=2, ensure_ascii=False) if phase2_supplement else "none"
+
+    prompt = SPEC_BASE_UNIVERSAL.replace('<PHASE1_METADATA_PLACEHOLDER>', phase1_str)
+    prompt = prompt.replace('<PHASE2_SUPPLEMENT_PLACEHOLDER>', phase2_str)
     prompt = prompt.replace('<PLAN_GUIDANCE_PLACEHOLDER>', plan_guidance)
 
     return prompt

@@ -160,7 +160,6 @@ CREATE TABLE IF NOT EXISTS cluster_observation (
   keywords_json     TEXT NOT NULL,
   score             REAL NOT NULL,  -- Judge output overall score
 
-
   -- Consumption tracking
   consumed          INTEGER NOT NULL DEFAULT 0,  -- 0 = false, 1 = true
 
@@ -253,7 +252,15 @@ CREATE TABLE IF NOT EXISTS report (
   title            TEXT NOT NULL,
   summary          TEXT NOT NULL,                    -- 80-120 words target (enforce in app)
   keywords_json    TEXT NOT NULL DEFAULT '[]',        -- JSON list of strings
-  depth_context_json TEXT NOT NULL DEFAULT '[]',      -- JSON object with optional fields: 'subthreads', 'covered_bullets', 'next_targets', 'skip_or_defer', 'evidence_gaps', 'cohesion_label', 'cohesion_confidence'
+  -- Fields from report plan (not actual report content)
+  covered_bullets  TEXT NOT NULL,                      -- JSON array of strings
+  next_targets     TEXT NOT NULL,                      -- JSON array of strings
+  subthreads       TEXT NOT NULL,                      -- JSON array of {name, paper_ids}
+  outline          TEXT NOT NULL,                      -- JSON array of strings
+  evidence_gaps    TEXT NOT NULL,                      -- JSON array
+  plan             TEXT NOT NULL,                      -- JSON object (LLMReportPlannerPlan)
+  depth_mode       TEXT NOT NULL,                      -- Onboard|Continue|Deepen|Restructure
+  sufficiency      TEXT NOT NULL,                      -- sufficient|borderline|insufficient
   cluster_pk_hash  TEXT,                              -- nullable reference to cluster
   FOREIGN KEY (cluster_pk_hash) REFERENCES cluster(pk_hash) ON DELETE SET NULL
 );

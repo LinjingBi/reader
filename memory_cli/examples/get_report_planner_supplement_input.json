@@ -1,0 +1,22 @@
+{
+  "paper_requests": [
+    {
+      "paper_id": "arxiv:2024.12345",
+      "selectors": ["introduction", "method", "results"]
+    },
+    {
+      "paper_id": "arxiv:2024.12346",
+      "selectors": ["related_work", "experiment"]
+    }
+  ],
+  "report_requests": [
+    {
+      "report_id": 1,
+      "selectors": ["outline", "evidence_gaps", "sufficiency"]
+    },
+    {
+      "report_id": 2,
+      "selectors": ["covered_bullets", "next_targets"]
+    }
+  ]
+}

@@ -169,6 +169,20 @@ EXAMPLES:
         #[arg(long)]
         input: String,
     },
+
+    /// Get report planner supplement (paper chunks and history report fields for evidence gaps).
+    #[command(
+        long_about = "Fetch evidence (paper chunks and history report fields) to fill evidence gaps from planner output.
+
+EXAMPLES:
+  memo get-report-planner-supplement --input supplement_request.json
+  echo '{\"paper_requests\":[],\"report_requests\":[]}' | memo get-report-planner-supplement --input -"
+    )]
+    GetReportPlannerSupplement {
+        /// JSON payload path. Use '-' to read from stdin.
+        #[arg(long)]
+        input: String,
+    },
 }
 
 impl Args {

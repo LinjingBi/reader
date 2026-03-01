@@ -1,0 +1,24 @@
+{
+  "paper_supplements": {
+    "arxiv:2024.12345": {
+      "introduction": "We present CodeGen, a family of large language models trained on code. CodeGen models demonstrate strong performance on code generation benchmarks.",
+      "method": "Our method employs a hierarchical checkpointing strategy that selectively stores activations at different granularities.",
+      "results": "Experiments on GPT-2 and BERT models show 35-42% memory reduction with less than 5% training time overhead."
+    },
+    "arxiv:2024.12346": {
+      "related_work": "Prior work on neural program synthesis has focused on template-based approaches and grammar-constrained generation.",
+      "experiment": "We evaluate on the MBPP and HumanEval benchmarks, achieving state-of-the-art results across multiple programming languages."
+    }
+  },
+  "report_supplements": {
+    "1": {
+      "outline": "1. Introduction 2. Related Work 3. Methods 4. Experiments 5. Conclusion",
+      "evidence_gaps": "[{\"target\":\"paper\",\"paper_id\":\"arxiv:2024.12347\",\"selectors\":[\"method\"]}]",
+      "sufficiency": "borderline"
+    },
+    "2": {
+      "covered_bullets": "- Code generation techniques\n- Benchmark evaluation",
+      "next_targets": "- Sim-to-real transfer\n- Multi-language support"
+    }
+  }
+}

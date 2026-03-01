@@ -43,8 +43,12 @@ pub struct HistoryReport {
     pub summary: String,
     /// Report keywords as JSON.
     pub keywords_json: Value,
-    /// Report depth context as JSON.
-    pub depth_context_json: Value,
+    /// Intent mode (quick_background|research_briefing|brainstorm_directions|implementation_angle).
+    pub intent_mode: String,
+    /// Declared level (intro|intermediate|deep-dive).
+    pub declared_level: String,
+    /// Depth mode (Onboard|Continue|Deepen|Restructure).
+    pub depth_mode: String,
 }
 
 /// Response for `get-report-planner-metadata` command.

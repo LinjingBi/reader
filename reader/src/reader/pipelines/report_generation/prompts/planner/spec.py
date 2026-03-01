@@ -21,7 +21,12 @@ HARD RULES (anti-hallucination):
 
 TASK:
 Given the evidence pack below:
-<EVIDENCE_PACK_PLACEHOLDER>
+
+new observation:
+<PHASE1_METADATA_PLACEHOLDER>
+
+supplement:
+<PHASE2_SUPPLEMENT_PLACEHOLDER>
 
 Produce a technical report writing plan. Plan guidance:
 <PLAN_GUIDANCE_PLACEHOLDER>

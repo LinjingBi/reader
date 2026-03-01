@@ -7,6 +7,7 @@ use crate::contracts::{
     GetReportPlannerMetadataResponse, NewObservation, TopPaper, HistoryReport,
     PaperOutput,
     InjectPapersChunkRequest,
+    PaperSupplement, PaperChunk, ReportSupplement,
 };
 use anyhow::{Context, Result};
 use chrono::Utc;
@@ -768,7 +769,7 @@ impl<'a> Store<'a> {
         // Query topic reports if requested
         let history_reports = if let Some(tid) = topic_id {
             let mut stmt_reports = self.conn.prepare(
-                "SELECT r.report_id, r.title, r.summary, r.keywords_json, r.depth_context_json
+                "SELECT r.report_id, r.title, r.summary, r.keywords_json, r.intent_mode, r.declared_level, r.depth_mode
                  FROM report_topic_link rtl
                  JOIN report r ON CAST(rtl.report_id AS INTEGER) = r.report_id
                  WHERE rtl.topic_id = ?1
@@ -781,17 +782,20 @@ impl<'a> Store<'a> {
                 let title: String = row.get(1)?;
                 let summary: String = row.get(2)?;
                 let kw_json_str: String = row.get(3)?;
-                let depth_json_str: String = row.get(4)?;
+                let intent_mode: String = row.get(4)?;
+                let declared_level: String = row.get(5)?;
+                let depth_mode: String = row.get(6)?;
 
                 let keywords_json: serde_json::Value = serde_json::from_str(&kw_json_str).unwrap_or_else(|_| serde_json::json!([]));
-                let depth_context_json: serde_json::Value = serde_json::from_str(&depth_json_str).unwrap_or_else(|_| serde_json::json!([]));
 
                 Ok(HistoryReport {
                     report_id,
                     title,
                     summary,
                     keywords_json,
-                    depth_context_json,
+                    intent_mode,
+                    declared_level,
+                    depth_mode,
                 })
             })?.collect();
 
@@ -991,5 +995,95 @@ impl<'a> Store<'a> {
         ))?;
         
         Ok(run_id)
+    }
+
+    /// Get paper chunks for a single paper (supplement lookup).
+    /// Uses is_latest=1 run (is_latest is per paper_id).
+    /// db_filters: pre-converted selector names from command layer (used directly in SQL).
+    pub fn get_paper_chunks_supplement(
+        &self,
+        paper_id: &str,
+        db_filters: &[String],
+    ) -> Result<PaperSupplement> {
+        if db_filters.is_empty() {
+            return Ok(PaperSupplement {
+                paper_id: paper_id.to_string(),
+                chunks: vec![],
+            });
+        }
+
+        let in_list = db_filters
+            .iter()
+            .map(|s| format!("'{}'", s.replace('\'', "''")))
+            .collect::<Vec<_>>()
+            .join(",");
+
+        let sql = format!(
+            "SELECT cs.name AS selector_name, ct.text
+             FROM paper_run_map prm
+             JOIN paper_chunk_map pcm ON pcm.run_id = prm.run_id
+             JOIN chunk_selector cs ON cs.selector_id = pcm.selector_id
+             JOIN chunk_text ct ON ct.run_id = pcm.run_id AND ct.text_id = pcm.text_id
+             WHERE prm.paper_id = ?1
+               AND prm.is_latest = 1
+               AND LOWER(cs.name) IN ({})",
+            in_list
+        );
+
+        let mut stmt = self.conn.prepare(&sql)?;
+
+        let chunks: Result<Vec<PaperChunk>, rusqlite::Error> = stmt
+            .query_map(params![paper_id], |row| {
+                Ok(PaperChunk {
+                    selector: row.get(0)?,
+                    text: row.get(1)?,
+                })
+            })?
+            .collect();
+
+        Ok(PaperSupplement {
+            paper_id: paper_id.to_string(),
+            chunks: chunks?,
+        })
+    }
+
+    /// Get report fields for a single report (supplement lookup).
+    /// db_filters: pre-converted column names from command layer (used directly in SQL).
+    pub fn get_report_fields_supplement(
+        &self,
+        report_id: i64,
+        db_filters: &[String],
+    ) -> Result<ReportSupplement> {
+        if db_filters.is_empty() {
+            return Ok(ReportSupplement {
+                report_id,
+                fields: std::collections::HashMap::new(),
+            });
+        }
+
+        let columns_str = db_filters.join(", ");
+
+        let sql = format!(
+            "SELECT {} FROM report WHERE report_id = ?1",
+            columns_str
+        );
+
+        let mut stmt = self.conn.prepare(&sql)?;
+        let mut rows = stmt.query(params![report_id])?;
+
+        let mut fields = std::collections::HashMap::new();
+        if let Some(row) = rows.next()? {
+            for (i, col) in db_filters.iter().enumerate() {
+                let val: Option<String> = row.get(i)?;
+                if let Some(v) = val {
+                    fields.insert(col.clone(), v);
+                }
+            }
+        }
+
+        Ok(ReportSupplement {
+            report_id,
+            fields,
+        })
     }
 }

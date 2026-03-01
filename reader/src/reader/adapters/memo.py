@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import pydantic
-from pydantic import BaseModel, RootModel
+from pydantic import BaseModel, Field, RootModel
 
 from reader.pipelines.report_generation.config.config import MemoConfig
 from reader.pipelines.hf_data.report import FreshPaperPayload, InjectPapersChunkPayload, InjectClustersObservationInput
@@ -48,6 +48,11 @@ class MemoGetTopicResolverMetadataError(Exception):
 
 class MemoGetReportPlannerMetadataError(Exception):
     """Exception raised when get-report-planner-metadata subcommand fails."""
+    pass
+
+
+class MemoGetReportPlannerSupplementError(Exception):
+    """Exception raised when get-report-planner-supplement subcommand fails."""
     pass
 
 
@@ -176,7 +181,9 @@ class HistoryReport(BaseModel):
     title: str
     summary: str
     keywords_json: Any  # Report keywords as JSON
-    depth_context_json: Any  # Report depth context as JSON
+    intent_mode: str
+    declared_level: str
+    depth_mode: str
 
 
 class GetReportPlannerMetadataResponse(BaseModel):
@@ -184,6 +191,36 @@ class GetReportPlannerMetadataResponse(BaseModel):
     new_observation: NewObservation
     top_papers_from_new_observation: Optional[List[TopPaper]] = None  # Optional Top-K papers (K≤5)
     history_reports: Optional[List[HistoryReport]] = None  # Optional top ≤3 reports for the specified topic
+
+
+# ============================================================================
+# get-report-planner-supplement command models
+# ============================================================================
+
+class PaperSupplementRequest(BaseModel):
+    """Per-paper supplement request."""
+    paper_id: str
+    selectors: List[str]
+
+
+class ReportSupplementRequest(BaseModel):
+    """Per-report supplement request."""
+    report_id: int
+    selectors: List[str]
+
+
+class GetReportPlannerSupplementRequest(BaseModel):
+    """Request for get-report-planner-supplement command."""
+    paper_requests: List[PaperSupplementRequest] = Field(default_factory=list)
+    report_requests: List[ReportSupplementRequest] = Field(default_factory=list)
+
+
+class GetReportPlannerSupplementResponse(BaseModel):
+    """Response from get-report-planner-supplement command.
+    Matches phase2_supplement structure: paper_id/report_id -> selector -> value.
+    """
+    paper_supplements: Dict[str, Dict[str, str]] = Field(default_factory=dict)
+    report_supplements: Dict[str, Dict[str, str]] = Field(default_factory=dict)
 
 
 # ============================================================================
@@ -760,6 +797,85 @@ async def get_report_planner_metadata(
     except Exception as e:
         logger.error(f"Unexpected error in memo get-report-planner-metadata: {e}", exc_info=True)
         raise MemoGetReportPlannerMetadataError(f"Unexpected error in memo get-report-planner-metadata: {e}") from e
+
+
+async def get_report_planner_supplement(
+    request: "GetReportPlannerSupplementRequest",
+    config: MemoConfig,
+) -> "GetReportPlannerSupplementResponse":
+    """
+    Call memo CLI get-report-planner-supplement command to fetch evidence (paper chunks
+    and history report fields) for evidence gaps from planner output.
+
+    Args:
+        request: GetReportPlannerSupplementRequest instance
+        config: MemoConfig instance
+
+    Returns:
+        GetReportPlannerSupplementResponse instance
+
+    Raises:
+        MemoGetReportPlannerSupplementError: If the subcommand execution fails
+    """
+    try:
+        payload_json = request.model_dump_json(indent=2, exclude_none=False)
+
+        cmd = [
+            config.bin,
+        ]
+        if config.db_path:
+            cmd.append('--db')
+            cmd.append(config.db_path)
+        if config.db_schema_path:
+            cmd.append('--schema')
+            cmd.append(config.db_schema_path)
+        cmd.extend(['get-report-planner-supplement', '--input', '-'])
+
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(input=payload_json.encode('utf-8')),
+                timeout=config.timeout_sec
+            )
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            logger.warning(f"memo get-report-planner-supplement timed out after {config.timeout_sec}s")
+            raise MemoGetReportPlannerSupplementError(
+                f"memo get-report-planner-supplement timed out after {config.timeout_sec}s"
+            )
+        except asyncio.CancelledError:
+            process.kill()
+            await process.wait()
+            raise
+
+        stdout_text = stdout.decode('utf-8')
+        stderr_text = stderr.decode('utf-8')
+
+        if process.returncode != 0:
+            logger.error(f"Error calling memo get-report-planner-supplement: {stderr_text}")
+            raise MemoGetReportPlannerSupplementError(
+                f"Error calling memo get-report-planner-supplement: {stderr_text}"
+            )
+
+        return GetReportPlannerSupplementResponse.model_validate_json(stdout_text)
+
+    except MemoGetReportPlannerSupplementError:
+        raise
+    except pydantic.ValidationError as e:
+        logger.error(f"Error validating memo output: {e}")
+        raise MemoGetReportPlannerSupplementError(f"Error validating memo output: {e}") from e
+    except Exception as e:
+        logger.error(f"Unexpected error in memo get-report-planner-supplement: {e}", exc_info=True)
+        raise MemoGetReportPlannerSupplementError(
+            f"Unexpected error in memo get-report-planner-supplement: {e}"
+        ) from e
 
 
 async def inject_papers_chunk(

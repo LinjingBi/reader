@@ -17,6 +17,7 @@ main(feature level)
 [ ] - [reader] make "selectors" used in call1/call2 load/generate dynamically from memo, this should be a prod-level feature.   
 [ ] - [?] a vibe-coding like structure to derive pydantic model from prompt spec, so no need to validate these two using validate.py. "spec" holds the high-level design, "prompt"(semantic meanings) and "structure"(code model) should be derived from it.  
 [ ] - [reader] add new pipe/workflow for re-run missing cluster observation due to llm call 429 RESOURCE_EXHAUSTED error.  
+[ ] - [memo] async version wrt db query  
 
 sub(issue, bug level)  
 [x] - [chat] finalize the reader_algos package skeleton with chat.  
@@ -89,16 +90,18 @@ sub(issue, bug level)
 [x] - [reader] refine hf_data for better error shooting and multi-purpose configuratons and add retry for overall_score is 0's llm summarization calls.  
 [x] - [reader] attach suggestions based on judge valid errors in llm prompt during retry.  
 
-[...] - [reader] test call 1 llm report planner(heuristic rules for response?).  
+[x] - [reader] test call 1 llm report planner(heuristic rules for response?).  
 [x] - [reader] refactor chosen topic + report generation to an independent async workflow(report-generation) under pipelines.  
 [x] - [reader] add heuristic rules for call 1 and call 1 retry based on heuristic rules overall score  
 [x] - [reader] create call 1 planner production spec, only work on plan evidence completion, remove next step input.  
 [x] - [reader] refactor the design for report generation into call 1 report plan(with evidence collection iterations) + call 1.5 (report writting evidence collection based on plan's outline and other fields) + call 2 (pure writing with outline and call 1.5 evidence). 
-[ ] - [reader] implement call 1 stop line.  
+[x] - [reader] implement call 1 evidence collection stop line design.  
+[x] - [reader,memo] rework get report planner evidence cmd to collect summary-level call 1 evidance as a must-haev for each call.  
+[x] - [reader,memo] add new memo cmd to collect supplement evidence for the call 1 evidence gaps requests.  
 [ ] - [reader] implement call 1.5.  
 [ ] - [reader] implement call 2.  
-[ ] - [reader,memo] rework get report planner evidence cmd to support evidence selectors.
-[ ] - [reader,memo] design the report generation db update workflow.   
+[ ] - [reader] test call 1+1.5+2.  
+[ ] - [reader,memo] design the report generation db update workflow.note. resolve the one cluster event has more than one reports, or report regeneration issue.     
  
 
 [ ] - [paper-chunk] test training mode and remove duplicate code under paper_chunk dir.  

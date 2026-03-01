@@ -31,6 +31,13 @@ class LLMReportPlannerSufficiency(str, Enum):
     insufficient = "insufficient"
 
 
+# Subset of LLMReportPlannerSufficiency: sufficient and borderline allow evidence collection termination.
+EvidenceCollectionTerminationSufficiency = [
+    LLMReportPlannerSufficiency.sufficient,
+    LLMReportPlannerSufficiency.borderline,
+]
+
+
 # ---------- Output Models ----------
 class LLMReportPlannerSubthread(BaseModel):
     name: str = Field(description="A thematic bucket name grounded in evidence keywords/themes.")
@@ -50,9 +57,8 @@ class LLMReportPlannerPlan(BaseModel):
 
     sufficiency: LLMReportPlannerSufficiency
 
-# TODO: generate from memo dynamically
+# detail-level selectors, no summary level selectors
 PaperSelector = Literal[
-    "summary",
     "introduction",
     "related_work",
     "method",
@@ -64,16 +70,16 @@ PaperSelector = Literal[
     # "appendix",
     # "full_text",
 ]
-
+# detail-level selectors, no summary level selectors
 HistoryReportSelector = Literal[
-    "summary",
     "covered_bullets",
     "next_targets",
     "subthreads",
     "outline",
     "evidence_gaps",
-    "plan",
-    "full_json",
+    "sufficiency",
+    # "plan",
+    # "full_text",  # unsupported for supplement lookup in v0 (no report table column; memo cmd rejects)
 ]
 
 
@@ -164,4 +170,4 @@ class EvidenceGap(BaseModel):
 class LLMReportPlannerOutput(BaseModel):
     plan: LLMReportPlannerPlan
     # next_step_inputs: List[NextStepInput]
-    evidence_gaps: List[EvidenceGap]
+    evidence_gaps: List[EvidenceGap] = Field(default_factory=list)

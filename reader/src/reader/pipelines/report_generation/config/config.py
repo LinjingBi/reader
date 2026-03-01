@@ -55,6 +55,8 @@ class ReportGenSectionConfig(BaseModel):
     max_judge_retries: int = Field(default=3, description="Max retries when judge score below threshold")
     judge_retry_threshold: float = Field(default=1.5, description="Accept if overall > threshold (0-2 scale)")
     planner_output_log_path: Optional[str] = Field(default=None, description="If set, append (planner_output, judge_output) to JSONL")
+    max_evidence_gaps_threshold: int = Field(default=3, description="Evidence collection: conclude when len(evidence_gaps) < this")
+    max_evidence_loop_iterations: int = Field(default=3, description="Evidence collection: conclude when iteration count exceeds this")
 
 
 class ReportGenerationConfig(BaseModel):

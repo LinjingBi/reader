@@ -2,6 +2,7 @@ pub mod fresh_paper;
 pub mod get_best_run;
 pub mod get_cluster_observation;
 pub mod get_report_planner_metadata;
+pub mod get_report_planner_supplement;
 pub mod get_topic_resolver_metadata;
 pub mod inject_clusters_observation;
 pub mod inject_papers_chunk;
@@ -37,4 +38,13 @@ pub use inject_papers_chunk::{
     LibConfig,
     PaperChunkData,
     ChunkEntry,
+};
+pub use get_report_planner_supplement::{
+    GetReportPlannerSupplementRequest,
+    GetReportPlannerSupplementResponse,
+    PaperSupplementRequest,
+    ReportSupplementRequest,
+    PaperSupplement,
+    PaperChunk,
+    ReportSupplement,
 };

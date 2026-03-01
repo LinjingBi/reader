@@ -4,19 +4,32 @@ import json
 import os
 from dataclasses import asdict
 from datetime import datetime, timezone
+from enum import Enum
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
-from algo_lib.topic_resolver.models import TopicInput, ClusterInput as TopicResolverClusterInput
+from algo_lib.topic_resolver.models import TopicInput, ClusterInput as TopicResolverClusterInput, TopicResolveOutput
 from algo_lib.topic_resolver.resolver import resolve_topic
 from algo_lib.topic_resolver.errors import TopicResolverError
 
 from reader.pipelines.report_generation.config.config import ReportGenerationConfig, LLMGeminiConfig
 from reader.adapters import memo
-from reader.adapters.memo import PaperCard, StartReportJobResponse, GetReportPlannerMetadataResponse
+from reader.adapters.memo import (
+    ClusterObservationData,
+    PaperCard,
+    StartReportJobResponse,
+    GetReportPlannerMetadataResponse,
+    GetReportPlannerSupplementRequest,
+    PaperSupplementRequest,
+    ReportSupplementRequest,
+)
 from reader.adapters.llm import LLMClient, TokenBucket, LLMGenerationError
 from pydantic import ValidationError
-from reader.pipelines.report_generation.report import LLMReportPlannerOutput
+from reader.pipelines.report_generation.report import (
+    LLMReportPlannerOutput,
+    EvidenceGap,
+    EvidenceCollectionTerminationSufficiency,
+)
 from reader.pipelines.report_generation.metrics import (
     judge_output,
     JudgeOutput,
@@ -24,9 +37,48 @@ from reader.pipelines.report_generation.metrics import (
     inject_judge_warnings_into_prompt,
 )
 from reader.logging.logging_setup import get_logger
-from reader.pipelines.report_generation.prompts.planner.build import UserIntent, get_planner_intent_spec, build_planner_prompt
+from reader.pipelines.report_generation.prompts.planner.build import UserIntent, get_planner_intent_spec, build_plan_guidance, build_planner_prompt
+from reader.tui.clusters_observation import display_clusters_observation
 
 logger = get_logger()
+
+# ============================================================================
+# Cluster and intent selection (TUI)
+# ============================================================================
+
+
+async def select_cluster_and_intent(
+    clusters_observation: Dict[str, ClusterObservationData],
+) -> Tuple[str, UserIntent]:
+    """
+    Display clusters in TUI for user to select a cluster and intent, then convert
+    the selected intent string to UserIntent enum.
+
+    Args:
+        clusters_observation: Dict mapping pk_hash to ClusterObservationData
+
+    Returns:
+        Tuple of (selected_pk_hash, selected_intent_enum)
+
+    Raises:
+        ValueError: If the user intent string returned by display_clusters_observation
+            TUI is not a valid UserIntent display string
+    """
+    user_intent_options = UserIntent.get_all_display_strings()
+    selected_pk_hash, selected_intent = await display_clusters_observation(
+        clusters_observation, user_intent_options
+    )
+    if selected_intent is None:
+        raise ValueError(
+            "No user intent was selected (user quit) in display_clusters_observation TUI"
+        )
+    try:
+        selected_intent_enum = UserIntent.from_display_string(selected_intent)
+    except ValueError as e:
+        raise ValueError(
+            f"Invalid user_intent '{selected_intent}' returned by display_clusters_observation TUI"
+        ) from e
+    return selected_pk_hash, selected_intent_enum
 
 # ============================================================================
 # LLM client initialization (used by report generation)
@@ -109,12 +161,12 @@ async def _call_planner_with_judge_retry(
     planner_prompt: str,
     llm_client: LLMClient,
     cfg: ReportGenerationConfig,
-) -> Tuple[Optional[LLMReportPlannerOutput], JudgeOutput]:
+) -> Optional[LLMReportPlannerOutput]:
     """
     Call report planner LLM with judge retry logic.
 
     Returns:
-        Tuple of (planner_output, judge_output). planner_output may be None on LLM/validation failure.
+        planner_output, or None on LLM/validation failure.
     """
     prompt_base = planner_prompt
     max_retries = cfg.report_generation.max_judge_retries
@@ -151,7 +203,7 @@ async def _call_planner_with_judge_retry(
                     best_planner_output,
                     best_judge_result,
                 )
-                return best_planner_output, best_judge_result
+                return best_planner_output
 
             if attempt < max_retries:
                 planner_prompt, num_warnings = inject_judge_warnings_into_prompt(prompt_base, judge_result)
@@ -196,7 +248,7 @@ async def _call_planner_with_judge_retry(
                 best_planner_output,
                 best_judge_result,
             )
-            return best_planner_output, best_judge_result
+            return best_planner_output
 
     logger.warning(
         f"cluster {cluster_pk_hash} attempt {max_retries + 1}/{max_retries + 1}: "
@@ -208,10 +260,280 @@ async def _call_planner_with_judge_retry(
         best_planner_output,
         best_judge_result,
     )
-    return best_planner_output, best_judge_result
+    return best_planner_output
 
 
-async def _resolve_report_job_topic(cluster_pk_hash: str, cfg: ReportGenerationConfig) -> None:
+# ---------- Evidence collection loop enums ----------
+
+
+class EvidenceLoopExitCondition(str, Enum):
+    """Reason the report planner evidence collection (call 1) concluded."""
+
+    SUFFICIENCY_TERMINAL = "sufficiency_terminal"
+    EVIDENCE_GAPS_BELOW_THRESHOLD = "evidence_gaps_below_threshold"
+    MAX_ITERATIONS_REACHED = "max_iterations_reached"
+    ERROR = "error"
+
+
+class EvidenceCollectionStatus(str, Enum):
+    """Final status of the report planner evidence collection process."""
+
+    complete = "complete"
+    partial = "partial"
+    error = "error"
+
+
+def _deduplicate_evidence_gap_requests(
+    evidence_gaps: List[EvidenceGap],
+) -> Tuple[List[PaperSupplementRequest], List[ReportSupplementRequest]]:
+    """
+    Merge evidence gaps into unique (id, selectors) requests.
+    Returns (paper_requests, report_requests, duplicate_count).
+    """
+    paper_merge: Dict[str, set] = {}  # paper_id -> set of selector
+    report_merge: Dict[int, set] = {}  # report_id -> set of selector
+    total_gaps = len(evidence_gaps)
+
+    for gap in evidence_gaps:
+        if not gap.has_valid_selectors:
+            continue
+        if gap.target_kind == "paper" and gap.paper_id:
+            key = gap.paper_id
+            paper_merge.setdefault(key, set()).update(gap.paper_selectors)
+        elif gap.target_kind == "history" and gap.history_report_id:
+            try:
+                report_id = int(gap.history_report_id)
+            except (ValueError, TypeError):
+                continue
+            report_merge.setdefault(report_id, set()).update(gap.history_selectors)
+
+    paper_requests = [
+        PaperSupplementRequest(paper_id=pid, selectors=sorted(sels))
+        for pid, sels in paper_merge.items()
+    ]
+    report_requests = [
+        ReportSupplementRequest(report_id=rid, selectors=sorted(sels))
+        for rid, sels in report_merge.items()
+    ]
+    merged_count = len(paper_requests) + len(report_requests)
+
+    logger.info(
+        f"Report planner evidence gap deduplication: {total_gaps} gaps -> "
+        f"deduplicated to {merged_count}({len(paper_requests)} paper requests, {len(report_requests)} report requests)"
+    )
+    return paper_requests, report_requests
+
+
+def _should_exit_evidence_loop(
+    planner_output: Optional[LLMReportPlannerOutput],
+    loop_turn: int,
+    cfg: ReportGenerationConfig,
+) -> Optional[EvidenceLoopExitCondition]:
+    """
+    Decide whether the evidence collection loop should conclude.
+
+    Priority order: (a) sufficiency terminal, (b) evidence gaps below threshold,
+    (c) max iterations reached. Returns None to continue, otherwise the exit condition.
+    """
+    if planner_output is None:
+        return None
+    # 1.a: plan.sufficiency in termination set
+    if planner_output.plan.sufficiency in EvidenceCollectionTerminationSufficiency:
+        return EvidenceLoopExitCondition.SUFFICIENCY_TERMINAL
+    # 1.b: evidence_gaps count below threshold
+    threshold = cfg.report_generation.max_evidence_gaps_threshold
+    if len(planner_output.evidence_gaps) < threshold:
+        return EvidenceLoopExitCondition.EVIDENCE_GAPS_BELOW_THRESHOLD
+    # 1.c: max iterations reached
+    max_iter = cfg.report_generation.max_evidence_loop_iterations
+    if loop_turn >= max_iter:
+        return EvidenceLoopExitCondition.MAX_ITERATIONS_REACHED
+    return None
+
+
+def _filter_already_provided_selectors(
+    paper_reqs: List[PaperSupplementRequest],
+    report_reqs: List[ReportSupplementRequest],
+    phase2_supplement: Dict,
+) -> Tuple[List[PaperSupplementRequest], List[ReportSupplementRequest]]:
+    """Filter out selectors already in phase2_supplement. Returns same format."""
+    before_paper = len(paper_reqs)
+    before_report = len(report_reqs)
+
+    uncached_paper = []
+    for pr in paper_reqs:
+        provided = phase2_supplement["paper_supplements"].get(pr.paper_id, {})
+        new_selectors = [s for s in pr.selectors if s not in provided]
+        if new_selectors:
+            uncached_paper.append(PaperSupplementRequest(paper_id=pr.paper_id, selectors=new_selectors))
+
+    uncached_report = []
+    for rr in report_reqs:
+        provided = phase2_supplement["report_supplements"].get(str(rr.report_id), {})
+        new_selectors = [s for s in rr.selectors if s not in provided]
+        if new_selectors:
+            uncached_report.append(ReportSupplementRequest(report_id=rr.report_id, selectors=new_selectors))
+
+    cached_paper = before_paper - len(uncached_paper)
+    cached_report = before_report - len(uncached_report)
+    logger.info(
+        f"Report planner evidence cache filter(request/already-provided): {len(uncached_paper)}/{cached_paper} paper, "
+        f"{len(uncached_report)}/{cached_report} report"
+    )
+    return (uncached_paper, uncached_report)
+
+
+async def _run_evidence_completion_loop(
+    cluster_pk_hash: str,
+    phase1_metadata: GetReportPlannerMetadataResponse,
+    plan_guidance: str,
+    llm_client: LLMClient,
+    cfg: ReportGenerationConfig,
+) -> Tuple[Optional[LLMReportPlannerOutput], EvidenceCollectionStatus]:
+    """
+    Run the report planner evidence collection (call 1) until a conclusion condition is met.
+
+    Args:
+        cluster_pk_hash: Cluster pk_hash
+        phase1_metadata: Summary-level metadata (fetched once before calling this loop)
+        plan_guidance: Pre-built plan guidance string
+        llm_client: LLM client
+        cfg: Report generation config
+
+    Returns:
+        (last_planner_output, status). last_planner_output may be None only when status is error
+        and no successful planner call occurred.
+    """
+    last_planner_output: Optional[LLMReportPlannerOutput] = None
+    exit_condition: Optional[EvidenceLoopExitCondition] = None
+    loop_turn = 1
+    phase2_supplement: Dict = {"paper_supplements": {}, "report_supplements": {}}
+
+    try:
+        while True:
+            if loop_turn != 1:
+                # Turn 2+: deduplicate, filter already-provided, call memo, merge into phase2_supplement
+                paper_reqs, report_reqs = _deduplicate_evidence_gap_requests(
+                    last_planner_output.evidence_gaps
+                )
+                uncached_paper, uncached_report = _filter_already_provided_selectors(
+                    paper_reqs, report_reqs, phase2_supplement
+                )
+
+                if uncached_paper or uncached_report:
+                    req = GetReportPlannerSupplementRequest(
+                        paper_requests=uncached_paper,
+                        report_requests=uncached_report,
+                    )
+                    resp = await memo.get_report_planner_supplement(req, cfg.memo)
+                    for paper_id, selector_map in resp.paper_supplements.items():
+                        phase2_supplement["paper_supplements"].setdefault(paper_id, {}).update(selector_map)
+                    for report_id, field_map in resp.report_supplements.items():
+                        phase2_supplement["report_supplements"].setdefault(report_id, {}).update(field_map)
+                elif not paper_reqs and not report_reqs:
+                    logger.warning(
+                        f"No new supplement added after dedup and cache filter for cluster {cluster_pk_hash}. keep using the previous supplement."
+                    )
+
+            has_supplement = phase2_supplement["paper_supplements"] or phase2_supplement["report_supplements"]
+            planner_prompt = build_planner_prompt(
+                phase1_metadata=phase1_metadata,
+                plan_guidance=plan_guidance,
+                phase2_supplement=phase2_supplement if has_supplement else None,
+            )
+            planner_output = await _call_planner_with_judge_retry(
+                cluster_pk_hash, planner_prompt, llm_client, cfg
+            )
+
+            if planner_output is None:
+                exit_condition = EvidenceLoopExitCondition.ERROR
+                break
+
+            last_planner_output = planner_output
+            exit_condition = _should_exit_evidence_loop(planner_output, loop_turn, cfg)
+            if exit_condition is not None:
+                break
+
+            loop_turn += 1
+
+    except Exception as e:
+        logger.warning(
+            f"Report planner evidence collection (call 1) terminated due to an error for cluster {cluster_pk_hash}: {e}",
+            exc_info=True,
+        )
+        exit_condition = EvidenceLoopExitCondition.ERROR
+
+    # Map exit condition to status and log
+    if exit_condition == EvidenceLoopExitCondition.SUFFICIENCY_TERMINAL:
+        status = EvidenceCollectionStatus.complete
+        logger.info(
+            f"Report planner evidence collection (call 1) concluded for cluster {cluster_pk_hash}: "
+            f"plan sufficiency is sufficient or borderline — evidence collection complete."
+        )
+    elif exit_condition == EvidenceLoopExitCondition.EVIDENCE_GAPS_BELOW_THRESHOLD:
+        status = EvidenceCollectionStatus.complete
+        count = len(last_planner_output.evidence_gaps) if last_planner_output else 0
+        threshold = cfg.report_generation.max_evidence_gaps_threshold
+        logger.info(
+            f"Report planner evidence collection (call 1) concluded for cluster {cluster_pk_hash}: "
+            f"evidence gaps remaining ({count}) below threshold ({threshold}) — evidence collection complete."
+        )
+    elif exit_condition == EvidenceLoopExitCondition.MAX_ITERATIONS_REACHED:
+        status = EvidenceCollectionStatus.partial
+        max_iter = cfg.report_generation.max_evidence_loop_iterations
+        logger.info(
+            f"Report planner evidence collection (call 1) concluded for cluster {cluster_pk_hash}: "
+            f"reached maximum iterations ({max_iter}) — evidence collection partial."
+        )
+    else:
+        status = EvidenceCollectionStatus.error
+        if last_planner_output is not None:
+            logger.warning(
+                f"Report planner evidence collection (call 1) terminated due to an error for cluster {cluster_pk_hash}. "
+                f"The returned plan is from the last successful planner call, not a final result."
+            )
+        else:
+            logger.warning(
+                f"Report planner call failed for cluster {cluster_pk_hash} (no successful pass)."
+            )
+
+    return (last_planner_output, status)
+
+
+async def _generate_report_plan(
+    cluster_pk_hash: str,
+    user_intent: UserIntent,
+    resolved_topic: TopicResolveOutput,
+    llm_client: LLMClient,
+    cfg: ReportGenerationConfig,
+) -> Tuple[Optional[LLMReportPlannerOutput], EvidenceCollectionStatus]:
+    """
+    Generate a report plan via two-phase evidence collection.
+
+    Phase 1: Fetch summary-level metadata and build plan guidance (once).
+    Phase 2: Run evidence completion loop (planner calls until exit condition).
+
+    Returns:
+        (last_planner_output, evidence_status)
+    """
+    # Phase 1: fetch summary-level metadata once
+    intent_spec = get_planner_intent_spec(user_intent)
+    add_top_papers = user_intent != UserIntent.QUICK_BACKGROUND
+    phase1_metadata = await memo.get_report_planner_metadata(
+        cluster_pk_hash=cluster_pk_hash,
+        config=cfg.memo,
+        topic_id=resolved_topic.merge_to_topic,
+        add_top_papers=add_top_papers,
+    )
+    plan_guidance = build_plan_guidance(intent_spec)
+
+    # Phase 2: evidence completion loop
+    return await _run_evidence_completion_loop(
+        cluster_pk_hash, phase1_metadata, plan_guidance, llm_client, cfg
+    )
+
+
+async def _resolve_report_job_topic(cluster_pk_hash: str, cfg: ReportGenerationConfig) -> TopicResolveOutput:
     """
     Resolve a cluster to a topic using the topic resolver.
 
@@ -264,17 +586,17 @@ async def _resolve_report_job_topic(cluster_pk_hash: str, cfg: ReportGenerationC
         raise
 
 
-async def _kick_off_report_job(cluster_pk_hash: str, user_intent: str, cfg: ReportGenerationConfig) -> None:
+async def _kick_off_report_job(cluster_pk_hash: str, user_intent: UserIntent, cfg: ReportGenerationConfig) -> None:
     """
     Kick off a report generation job by resolving the cluster to a topic.
     Uses async LLM call (non-blocking) when executor is configured.
 
     Args:
         cluster_pk_hash: Cluster pk_hash (primary key hash from cluster table)
-        user_intent: User intent string
+        user_intent: User intent enum
         cfg: ReportGenerationConfig instance
     """
-    # call 1 to llm report planner
+    # new topic resolution
     resolved_topic = await _resolve_report_job_topic(cluster_pk_hash, cfg)
     if resolved_topic.action.value == "merge":
         logger.info(
@@ -286,32 +608,25 @@ async def _kick_off_report_job(cluster_pk_hash: str, user_intent: str, cfg: Repo
             f"Topic resolution for cluster {cluster_pk_hash}: CREATE new topic "
             f"(new weight: {resolved_topic.new_topic_weight:.2f})"
         )
-    planner_prompt = await _generate_planner_prompt(user_intent, cluster_pk_hash, cfg, resolved_topic.merge_to_topic)
 
-    # Initialize LLM client 
+    # Initialize LLM client
     llm_cfg = cfg.report_generation.llm_gemini
     llm_client = _initialize_llm_client(llm_cfg, llm_cfg.model)
-    # call 1 to llm report planner with judge retry
-    planner_output, judge_result = await _call_planner_with_judge_retry(
-        cluster_pk_hash, planner_prompt, llm_client, cfg
+
+    # call 1 to llm report planner
+    last_planner_output, evidence_status = await _generate_report_plan(
+        cluster_pk_hash, user_intent, resolved_topic, llm_client, cfg
     )
-    if planner_output is not None:
-        logger.info(f"Successfully called report planner for cluster {cluster_pk_hash}, overall score: {judge_result.overall:.2f}")
-        # call 2 to llm report writter
-        # organize metadata for db updates and save report to local fs
-    else:
+    # !!!! placeholder[exit point]
+    if last_planner_output is None:
         logger.warning(f"Report planner call failed for cluster {cluster_pk_hash}")
         # write to memo with error metadata
         # need to update the report job status to error
+    # call 1.5 to llm report writer
+    # call 2 to llm report writer
 
 
-
-
-
-    
-
-
-async def create_report_job(cluster_pk_hash: str, user_intent: str, cfg: ReportGenerationConfig) -> Optional[Tuple[str, str]]:
+async def create_report_job(cluster_pk_hash: str, user_intent: UserIntent, cfg: ReportGenerationConfig) -> Optional[Tuple[str, str]]:
     """
     Create a report generation job as the first step for any report generation request.
     Non-blocking: uses async LLM calls when executor is configured.
@@ -326,7 +641,7 @@ async def create_report_job(cluster_pk_hash: str, user_intent: str, cfg: ReportG
 
     Args:
         cluster_pk_hash: Cluster pk_hash (primary key hash from cluster table)
-        user_intent: User intent string
+        user_intent: User intent enum
         cfg: ReportGenerationConfig instance
 
     Returns:
@@ -367,54 +682,6 @@ async def create_report_job(cluster_pk_hash: str, user_intent: str, cfg: ReportG
         # Unexpected status
         logger.warning(f"Memo start-report-job: Unexpected response. status={start_report_job_response.status}, new_job={start_report_job_response.new_job}, message={start_report_job_response.message}")
         raise ValueError(f"Unexpected response. status={start_report_job_response.status}, new_job={start_report_job_response.new_job}, message={start_report_job_response.message}")
-
-
-# forplanner prompt generation
-async def _generate_planner_prompt(
-    user_intent: str,
-    cluster_pk_hash: str,
-    config: ReportGenerationConfig,
-    topic_id: Optional[str] = None,
-) -> str:
-    """
-    Generate planner prompt by fetching cluster metadata and building the prompt.
-
-    Args:
-        user_intent: User intent as string (e.g., "Quick Background (5-10 min overview)")
-        cluster_pk_hash: Cluster primary key hash
-        config: ReportGenerationConfig instance
-        topic_id: Optional topic ID (as string) to include top ≤3 reports for that topic
-
-    Returns:
-        Final prompt string ready to be sent to the LLM
-
-    Raises:
-        ValueError: If user_intent is invalid, memo is disabled, or other errors occur
-    """
-    # Convert user_intent string to UserIntent enum
-    try:
-        intent_enum = UserIntent.from_display_string(user_intent)
-    except ValueError as e:
-        raise ValueError(f"Invalid user_intent: {user_intent}") from e
-
-    # Get IntentSpec for the user intent (production: evidence gaps only)
-    intent_spec = get_planner_intent_spec(intent_enum)
-
-    # Determine add_top_papers: False only for QUICK_BACKGROUND, True for all others
-    add_top_papers = intent_enum != UserIntent.QUICK_BACKGROUND
-
-    # Call memo.get_report_planner_metadata
-    cluster_metadata = await memo.get_report_planner_metadata(
-        cluster_pk_hash=cluster_pk_hash,
-        config=config.memo,
-        topic_id=topic_id,
-        add_top_papers=add_top_papers,
-    )
-
-    # Call build_planner_prompt with intent_spec and cluster_metadata
-    prompt = build_planner_prompt(intent_spec=intent_spec, cluster_metadata=cluster_metadata)
-
-    return prompt
 
 
 # -------------------------

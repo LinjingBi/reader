@@ -2,6 +2,7 @@ mod fresh_paper;
 mod get_best_run;
 mod get_cluster_observation;
 mod get_report_planner_metadata;
+mod get_report_planner_supplement;
 mod get_topic_resolver_metadata;
 mod inject_clusters_observation;
 mod inject_papers_chunk;
@@ -38,6 +39,9 @@ pub fn dispatch(args: Args) -> Result<()> {
         }
         Command::InjectPapersChunk { input } => {
             inject_papers_chunk::handle(args.dry_run, &args.db, args.schema.as_deref(), &input)
+        }
+        Command::GetReportPlannerSupplement { input } => {
+            get_report_planner_supplement::handle(args.dry_run, &args.db, args.schema.as_deref(), &input)
         }
     }
 }
