@@ -3,10 +3,14 @@
 Validation rules for LLMReportPlannerOutput. Rules are organized per field.
 """
 
+import json
 import re
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Tuple, get_args
 
+from reader.logging.logging_setup import get_logger
 from reader.pipelines.report_generation.report import (
     LLMReportPlannerOutput,
     SupportField,
@@ -538,6 +542,8 @@ def soft_validate_planner_output(output: LLMReportPlannerOutput) -> ValidationRe
 # Judge Output
 # ============================================================================
 
+logger = get_logger()
+
 
 @dataclass
 class JudgeOutput:
@@ -547,13 +553,39 @@ class JudgeOutput:
     reasons: Dict[str, List[Tuple[str, str]]]  # (rule_declaration, received_fact) per rule group
 
 
-def judge_output(planner_output: LLMReportPlannerOutput) -> JudgeOutput:
+def append_planner_output_to_jsonl(
+    log_path: Optional[str],
+    cluster_pk_hash: str,
+    planner_output: Optional[LLMReportPlannerOutput],
+    judge_output_result: JudgeOutput,
+) -> None:
+    """Append (planner_output, judge_output) to JSONL file. No-op if log_path is None or empty."""
+    if not log_path:
+        return
+    Path(log_path).parent.mkdir(parents=True, exist_ok=True)
+    record = {
+        "cluster_pk_hash": cluster_pk_hash,
+        "date": datetime.now(timezone.utc).isoformat(),
+        "planner_output": planner_output.model_dump() if planner_output is not None else None,
+        "judge_output": asdict(judge_output_result),
+    }
+    with open(log_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    logger.info(f"Successfully appended report planner output for cluster {cluster_pk_hash} to {log_path}")
+
+
+def judge_output(
+    planner_output: LLMReportPlannerOutput,
+    log_path: Optional[str] = None,
+    cluster_pk_hash: Optional[str] = None,
+) -> JudgeOutput:
     """
     Judge LLM report planner output using hard and soft validation checks.
 
     Args:
         planner_output: LLMReportPlannerOutput instance from LLM
-
+        log_path: If provided with cluster_pk_hash, append (planner_output, judge_output) to this JSONL
+        cluster_pk_hash: Required when log_path is not None; otherwise can be None
     Returns:
         JudgeOutput: Contains sub_scores, overall, and reasons
     """
@@ -583,11 +615,16 @@ def judge_output(planner_output: LLMReportPlannerOutput) -> JudgeOutput:
     else:
         overall = 1.0 + sub_scores["soft_schema_valid"]
 
-    return JudgeOutput(
+    result = JudgeOutput(
         sub_scores=sub_scores,
         overall=overall,
         reasons=reasons,
     )
+
+    if log_path and cluster_pk_hash:
+        append_planner_output_to_jsonl(log_path, cluster_pk_hash, planner_output, result)
+
+    return result
 
 
 def count_judge_warnings(judge_output: JudgeOutput) -> int:

@@ -33,6 +33,7 @@ class LLMGeminiConfig(BaseModel):
     gemini_rpm_limit: int = Field(default=15, description="Requests per minute limit")
     gemini_tpm_limit: int = Field(default=250000, description="Tokens per minute limit")
     gemini_call_max_workers: Optional[int] = Field(default=None, description="Number of worker threads for LLM call executor. If set, enables non-blocking async LLM calls.")
+    max_retry: int = Field(default=5, description="Max retry attempts for LLM API calls")
     _gemini_call_executor: Optional[ThreadPoolExecutor] = PrivateAttr(default=None)
 
     def model_post_init(self, __context):

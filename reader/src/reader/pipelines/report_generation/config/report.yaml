@@ -26,3 +26,4 @@ report_generation:
     gemini_rpm_limit: 5           # Requests per minute limit
     gemini_tpm_limit: 250000       # Tokens per minute limit
     gemini_call_max_workers: 2     # Optional: worker threads for non-blocking async LLM calls
+    max_retry: 5                   # Max retry attempts for LLM API calls

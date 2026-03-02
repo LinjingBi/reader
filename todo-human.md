@@ -98,6 +98,7 @@ sub(issue, bug level)
 [x] - [reader] implement call 1 evidence collection stop line design.  
 [x] - [reader,memo] rework get report planner evidence cmd to collect summary-level call 1 evidance as a must-haev for each call.  
 [x] - [reader,memo] add new memo cmd to collect supplement evidence for the call 1 evidence gaps requests.  
+[x] - [reader] refactor the llm call judge loop, evidence collection loop and call 1 step with detailed status.  
 [ ] - [reader] implement call 1.5.  
 [ ] - [reader] implement call 2.  
 [ ] - [reader] test call 1+1.5+2.  

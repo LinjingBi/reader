@@ -11,7 +11,7 @@ from typing import Optional, TypeVar, Type, Callable
 from google import genai
 from pydantic import BaseModel, ValidationError
 from tenacity import (
-    retry,
+    Retrying,
     stop_after_attempt,
     wait_exponential,
     before_sleep_log,
@@ -102,39 +102,19 @@ def _extract_retry_delay(error: Exception) -> Optional[float]:
 class LLMGenerationError(Exception):
     """
     Exception raised when LLM generation API call fails.
-    
-    This exception wraps errors from the Gemini API and preserves
-    status_code/code attributes for retry logic.
+
+    This exception wraps errors from the Gemini API.
     """
     def __init__(self, message: str, original_error: Exception):
         """
         Initialize LLM generation error.
-        
+
         Args:
             message: Error message indicating this is an LLM generation API error
             original_error: The original exception from the API call
         """
         super().__init__(message)
         self.original_error = original_error
-        
-        # Preserve status_code and code attributes from original error for retry logic
-        self.status_code = getattr(original_error, 'status_code', None)
-        self.code = getattr(original_error, 'code', None)
-        
-        # Also check if error has nested error dict with code (Google API structure)
-        if self.code is None:
-            error_dict = getattr(original_error, 'error', None)
-            if isinstance(error_dict, dict):
-                self.code = error_dict.get('code')
-            elif hasattr(error_dict, 'code'):
-                self.code = getattr(error_dict, 'code', None)
-        
-        # If original error doesn't have status_code but has code, use code as status_code
-        if self.status_code is None and self.code is not None:
-            self.status_code = self.code
-        
-        # Extract retryDelay from error response if available
-        self.retry_delay = _extract_retry_delay(original_error)
 
 
 
@@ -203,43 +183,43 @@ class WaitWithRetryDelay:
     """
     Custom wait strategy that uses retryDelay from API error response when available,
     otherwise falls back to exponential backoff.
-    
+
     This is a callable class that matches tenacity's wait strategy interface.
     Tenacity accepts any callable that takes a RetryCallState and returns a float.
     """
-    def __init__(self, exponential_wait: Callable):
+    def __init__(self, exponential_wait: Callable, max_retry: int = 5):
         """
         Initialize wait strategy.
-        
+
         Args:
             exponential_wait: Exponential backoff wait function to use as fallback
+            max_retry: Max retry attempts (for logging)
         """
         self.exponential_wait = exponential_wait
-    
+        self.max_retry = max_retry
+
     def __call__(self, retry_state):
         """
         Calculate wait time for retry.
-        
+
         Args:
             retry_state: Tenacity retry state containing exception info
-            
+
         Returns:
             Wait time in seconds
         """
         # Extract retryDelay directly from the original exception
-        # Since we work directly with original exceptions during retry, extract from the exception itself
         exception = retry_state.outcome.exception()
         if exception:
-            # Extract retryDelay directly from the original exception
             retry_delay = _extract_retry_delay(exception)
-            
+
             if retry_delay is not None and retry_delay > 0:
                 logger.info(
                     "Using API-provided retryDelay: %.2fs (attempt %d/%d)",
-                    retry_delay, retry_state.attempt_number, 5
+                    retry_delay, retry_state.attempt_number, self.max_retry
                 )
                 return retry_delay
-        
+
         # Fall back to exponential backoff
         return self.exponential_wait(retry_state)
 
@@ -296,23 +276,33 @@ class TokenBucket:
 
 class LLMClient:
     """Client for calling Gemini LLM API"""
-    
-    def __init__(self, model: str, api_key: str, rpm_bucket: TokenBucket, tpm_bucket: TokenBucket, executor: Optional[ThreadPoolExecutor] = None):
+
+    def __init__(
+        self,
+        model: str,
+        api_key: str,
+        rpm_bucket: TokenBucket,
+        tpm_bucket: TokenBucket,
+        executor: Optional[ThreadPoolExecutor] = None,
+        max_retry: int = 5,
+    ):
         """
         Initialize Gemini LLM client.
-        
+
         Args:
             model: Gemini model name
             api_key: Gemini API key
             rpm_bucket: TokenBucket for requests per minute rate limiting
             tpm_bucket: TokenBucket for tokens per minute rate limiting
             executor: Optional thread pool executor for async calls. If None, calls are synchronous.
+            max_retry: Max retry attempts for LLM API calls.
         """
         self.model = model
         self.rpm_bucket = rpm_bucket
         self.tpm_bucket = tpm_bucket
         self.api_key = api_key
         self.executor = executor
+        self.max_retry = max_retry
         self.client = genai.Client(api_key=api_key)
             
     def estimate_tokens(self, prompt: str, expected_output_tokens: int) -> int:
@@ -365,13 +355,6 @@ class LLMClient:
                     logger.error("Gemini API error: %s", error_message)
                     raise Exception(f"Gemini API error: {error_message}")
     
-    @retry(
-        stop=stop_after_attempt(5),
-        wait=WaitWithRetryDelay(wait_exponential(multiplier=1, min=2, max=60)),
-        retry=retry_if_exception(_should_retry_exception),
-        before_sleep=before_sleep_log(logger, logging.WARNING),
-        reraise=False,  # Don't reraise - we'll wrap in LLMGenerationError after retries
-    )
     def _call_structured_raw_inner(self, prompt: str, response_model: Type[T], temperature: float, max_tokens: int) -> T:
         """
         Inner function that performs the actual API call and raises original exceptions.
@@ -442,74 +425,34 @@ class LLMClient:
             LLMGenerationError: If API call fails after all retries or if retry is not applicable
         """
         try:
-            return self._call_structured_raw_inner(prompt, response_model, temperature, max_tokens)
-        except ValidationError as e:
-            # Log validation errors
-            logger.error("Pydantic validation error: %s", str(e))
-            # Wrap in LLMGenerationError after retries are exhausted
-            error_message = f"LLM generation API error: {str(e)}"
-            raise LLMGenerationError(error_message, e) from e
+            retrying = Retrying(
+                stop=stop_after_attempt(self.max_retry),
+                wait=WaitWithRetryDelay(
+                    wait_exponential(multiplier=1, min=2, max=60),
+                    max_retry=self.max_retry,
+                ),
+                retry=retry_if_exception(_should_retry_exception),
+                before_sleep=before_sleep_log(logger, logging.WARNING),
+                reraise=False,  # Only LLMGenerationError is raised (retried exceptions become RetryError, then wrapped)
+            )
+            return retrying(self._call_structured_raw_inner)(
+                prompt, response_model, temperature, max_tokens
+            )
         except RetryError as e:
-            # RetryError is raised when all retries are exhausted
-            # Extract the underlying exception from the last attempt
+            # RetryError is raised when all retries are exhausted.
+            # last_attempt is a tenacity Future - call exception() directly on it.
             last_attempt = getattr(e, 'last_attempt', None)
-            underlying_exception = None
-            attempt_number = None
-            
-            if last_attempt:
-                attempt_number = getattr(last_attempt, 'attempt_number', None)
-                outcome = getattr(last_attempt, 'outcome', None)
-                if outcome:
-                    underlying_exception = outcome.exception()
-            
-            # Extract status code from underlying exception if available
-            status_code = None
-            if underlying_exception:
-                status_code = getattr(underlying_exception, 'status_code', None) or getattr(underlying_exception, 'code', None)
-            
-            # Create a clearer error message
-            if status_code:
-                if status_code == 429:
-                    error_message = (
-                        f"LLM API call failed after 5 retry attempts: "
-                        f"Rate limit/quota exceeded (HTTP {status_code}). "
-                        f"Last error: {str(underlying_exception) if underlying_exception else str(e)}"
-                    )
-                else:
-                    error_message = (
-                        f"LLM API call failed after 5 retry attempts: "
-                        f"HTTP {status_code} error. "
-                        f"Last error: {str(underlying_exception) if underlying_exception else str(e)}"
-                    )
-                logger.error(
-                    "Gemini API retries exhausted: status_code=%s, attempts=%s, error=%s",
-                    status_code, attempt_number or "unknown", str(underlying_exception) if underlying_exception else str(e)
-                )
-            else:
-                error_message = (
-                    f"LLM API call failed after 5 retry attempts. "
-                    f"Last error: {str(underlying_exception) if underlying_exception else str(e)}"
-                )
-                logger.error(
-                    "Gemini API retries exhausted: attempts=%s, error=%s",
-                    attempt_number or "unknown", str(underlying_exception) if underlying_exception else str(e)
-                )
-            
-            # Wrap in LLMGenerationError with clearer message
-            raise LLMGenerationError(error_message, underlying_exception or e) from e
+            underlying_exception = last_attempt.exception() if last_attempt else None
+            original_error = underlying_exception or e
+
+            error_message = (
+                f"LLM API call failed after {self.max_retry} retry attempts. "
+                f"Last error: {str(original_error)}"
+            )
+            logger.error("Gemini API retries exhausted: %s", error_message)
+            raise LLMGenerationError(error_message, original_error) from e
         except Exception as e:
-            # Extract status code from exception for logging
-            status_code = getattr(e, 'status_code', None) or getattr(e, 'code', None)
-            
-            if status_code:
-                logger.error(
-                    "Gemini API HTTP error: status_code=%s, error=%s",
-                    status_code, str(e)
-                )
-            else:
-                # Log non-HTTP errors at error level too
-                logger.error("Gemini API error: %s", str(e))
-            
+            logger.error("Gemini API error: %s", str(e))
             # Wrap the exception in LLMGenerationError after retries are exhausted
             error_message = f"LLM generation API error: {str(e)}"
             raise LLMGenerationError(error_message, e) from e
@@ -528,8 +471,7 @@ class LLMClient:
             Parsed Pydantic model instance of type T
             
         Raises:
-            ValidationError: If JSON parsing/validation fails after all retries
-            Exception: If API call fails after all retries
+            LLMGenerationError: If API call or validation fails after all retries
         """
         if self.executor is not None:
             # Use executor to run synchronous call in thread pool
