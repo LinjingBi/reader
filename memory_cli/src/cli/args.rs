@@ -135,9 +135,9 @@ EXAMPLES:
         cluster_pk_hash: String,
     },
 
-    /// Get report planner metadata (cluster observation, top papers, and topic reports).
+    /// Inlcude a cluster's observation and its top papers (≤5) for the given cluster pk_hash, and topic details for the given topic id.
     #[command(
-        long_about = "Get report planner metadata including cluster observation data, optional top papers, and optional topic reports.
+        long_about = "Planner metadata includes a cluster's observation and its top papers (≤5)(optional) for the given cluster pk_hash, and topic details for the given topic id.
 
 EXAMPLES:
   memo get-report-planner-metadata --cluster-pk-hash abc123def456
@@ -151,7 +151,7 @@ EXAMPLES:
         /// Optional: Include top ≤3 reports for a topic.
         #[arg(long)]
         add_topic_reports: Option<i64>,
-        /// Optional: Include Top-K papers (K≤5) for the cluster.
+        /// Include top-K papers details (≤5) for the cluster.
         #[arg(long)]
         add_top_papers: bool,
     },

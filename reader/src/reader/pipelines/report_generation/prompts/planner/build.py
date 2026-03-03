@@ -104,8 +104,8 @@ def build_planner_prompt(
 ) -> str:
     """Build planner prompt using production spec (evidence gaps only, no next_step_inputs)."""
     cluster_dict = phase1_metadata.model_dump()
-    if not phase1_metadata.top_papers_from_new_observation:
-        cluster_dict.pop('top_papers_from_new_observation', None)
+    if not phase1_metadata.new_observation_key_paper_details:
+        cluster_dict.pop('new_observation_key_paper_details', None)
     if not phase1_metadata.history_reports:
         cluster_dict['history_reports'] = 'no history, observed for the first time.'
 
@@ -143,9 +143,9 @@ def build_baseline_planner_prompt(intent_spec: IntentSpec, cluster_metadata: Get
     # Process evidence pack
     cluster_dict = cluster_metadata.model_dump()
 
-    # Remove top_papers_from_new_observation if empty/none
-    if not cluster_metadata.top_papers_from_new_observation:
-        cluster_dict.pop('top_papers_from_new_observation', None)
+    # Remove new_observation_key_paper_details if empty/none
+    if not cluster_metadata.new_observation_key_paper_details:
+        cluster_dict.pop('new_observation_key_paper_details', None)
 
     # Set history_reports message if empty/none
     if not cluster_metadata.history_reports:

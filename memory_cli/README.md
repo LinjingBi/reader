@@ -81,7 +81,7 @@ Returns a JSON object containing:
 
 Returns a JSON object containing:
 - `new_observation`: Cluster observation data (name, summary, keywords, key_paper_keywords)
-- `top_papers_from_new_observation`: Optional Top-K papers (K≤5) with full details (paper_id, title, summary, keywords, rank_in_cluster, sim_to_centroid)
+- `new_observation_key_paper_details`: Optional Top-K papers (K≤5) with full details (paper_id, title, summary, keywords, rank)
 - `history_reports`: Optional top ≤3 reports for the specified topic (report_id, title, summary, keywords_json, intent_mode, declared_level, depth_mode)
 
 ## Docs

@@ -15,7 +15,7 @@ HARD RULES (anti-hallucination):
 - Treat intent_mode as first class evidence: it is a user goal signal and must influence planning decisions.
 - If you cannot derive any plan field without making up details:
   1) Fill that field with a conservative placeholder derived from available evidence (usually keywords/themes).
-  2) Add an item to evidence_request describing what evidence is needed and why.
+  2) Add an item to evidence_gaps describing what evidence is needed and why.
 - Do NOT output Markdown. Return valid JSON only.
 - Output JSON structure is enforced by a typed schema. Focus on semantic correctness and evidence grounding.
 

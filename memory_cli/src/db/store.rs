@@ -681,9 +681,10 @@ impl<'a> Store<'a> {
 
         let keywords: Vec<String> = serde_json::from_str(&keywords_json_str).unwrap_or_default();
 
-        // Query top ≤5 papers for key_paper_keywords
-        let mut stmt_keywords = self.conn.prepare(
-            "SELECT p.paper_id, p.keywords_json
+        // Single query for top ≤5 papers: used for key_paper_keywords (always) and top_papers (if requested).
+        // Both structures are built from the same result set to guarantee they reference the same papers.
+        let mut stmt_top_papers = self.conn.prepare(
+            "SELECT p.paper_id, p.title, p.summary, p.keywords_json, cm.rank_in_cluster
              FROM cluster_member cm
              JOIN paper p ON p.paper_id = cm.paper_id
              JOIN cluster c ON (
@@ -701,16 +702,29 @@ impl<'a> Store<'a> {
         )?;
 
         let mut key_paper_keywords = std::collections::HashMap::new();
-        let rows_keywords = stmt_keywords.query_map(params![cluster_pk_hash], |row| {
+        let mut top_papers_vec: Vec<TopPaper> = Vec::new();
+
+        let rows = stmt_top_papers.query_map(params![cluster_pk_hash], |row| {
             let paper_id: String = row.get(0)?;
-            let kw_json: String = row.get(1)?;
-            Ok((paper_id, kw_json))
+            let title: String = row.get(1)?;
+            let summary: String = row.get(2)?;
+            let kw_json: String = row.get(3)?;
+            let rank: i64 = row.get(4)?;
+            let keywords_vec: Vec<String> = serde_json::from_str(&kw_json).unwrap_or_default();
+            Ok((paper_id, title, summary, keywords_vec, rank))
         })?;
 
-        for row_result in rows_keywords {
-            let (paper_id, kw_json) = row_result?;
-            if let Ok(keywords_vec) = serde_json::from_str::<Vec<String>>(&kw_json) {
-                key_paper_keywords.insert(paper_id, keywords_vec);
+        for row_result in rows {
+            let (paper_id, title, summary, keywords_vec, rank) = row_result?;
+            key_paper_keywords.insert(paper_id.clone(), keywords_vec.clone());
+            if add_top_papers {
+                top_papers_vec.push(TopPaper {
+                    paper_id,
+                    title,
+                    summary,
+                    keywords: keywords_vec,
+                    rank,
+                });
             }
         }
 
@@ -721,47 +735,8 @@ impl<'a> Store<'a> {
             key_paper_keywords,
         };
 
-        // Query top papers if requested
-        let top_papers = if add_top_papers {
-            let mut stmt_papers = self.conn.prepare(
-                "SELECT p.paper_id, p.title, p.summary, p.keywords_json, cm.rank_in_cluster, cm.sim_to_centroid
-                 FROM cluster_member cm
-                 JOIN paper p ON p.paper_id = cm.paper_id
-                 JOIN cluster c ON (
-                     cm.source = c.source AND
-                     cm.period_start = c.period_start AND
-                     cm.period_end = c.period_end AND
-                     cm.embed_config_id = c.embed_config_id AND
-                     cm.cluster_config_id = c.cluster_config_id AND
-                     cm.role = c.role AND
-                     cm.cluster_index = c.cluster_index
-                 )
-                 WHERE c.pk_hash = ?1
-                 ORDER BY cm.rank_in_cluster ASC
-                 LIMIT 5"
-            )?;
-
-            let papers: Result<Vec<TopPaper>, rusqlite::Error> = stmt_papers.query_map(params![cluster_pk_hash], |row| {
-                let paper_id: String = row.get(0)?;
-                let title: String = row.get(1)?;
-                let summary: String = row.get(2)?;
-                let kw_json: String = row.get(3)?;
-                let rank: i64 = row.get(4)?;
-                let sim: Option<f64> = row.get(5)?;
-
-                let keywords: Vec<String> = serde_json::from_str(&kw_json).unwrap_or_default();
-
-                Ok(TopPaper {
-                    paper_id,
-                    title,
-                    summary,
-                    keywords,
-                    rank_in_cluster: rank,
-                    sim_to_centroid: sim,
-                })
-            })?.collect();
-
-            Some(papers?)
+        let top_papers = if add_top_papers && !top_papers_vec.is_empty() {
+            Some(top_papers_vec)
         } else {
             None
         };
@@ -806,7 +781,7 @@ impl<'a> Store<'a> {
 
         Ok(GetReportPlannerMetadataResponse {
             new_observation,
-            top_papers_from_new_observation: top_papers,
+            new_observation_key_paper_details: top_papers,
             history_reports,
         })
     }

@@ -27,9 +27,7 @@ pub struct TopPaper {
     /// Paper keywords.
     pub keywords: Vec<String>,
     /// Rank in cluster (0 = most representative).
-    pub rank_in_cluster: i64,
-    /// Similarity to cluster centroid.
-    pub sim_to_centroid: Option<f64>,
+    pub rank: i64,
 }
 
 /// History report data for a topic.
@@ -58,7 +56,7 @@ pub struct GetReportPlannerMetadataResponse {
     pub new_observation: NewObservation,
     /// Optional Top-K papers (K≤5) for the cluster.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub top_papers_from_new_observation: Option<Vec<TopPaper>>,
+    pub new_observation_key_paper_details: Option<Vec<TopPaper>>,
     /// Optional top ≤3 reports for the specified topic.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub history_reports: Option<Vec<HistoryReport>>,

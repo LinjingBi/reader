@@ -99,9 +99,12 @@ sub(issue, bug level)
 [x] - [reader,memo] rework get report planner evidence cmd to collect summary-level call 1 evidance as a must-haev for each call.  
 [x] - [reader,memo] add new memo cmd to collect supplement evidence for the call 1 evidence gaps requests.  
 [x] - [reader] refactor the llm call judge loop, evidence collection loop and call 1 step with detailed status.  
-[ ] - [reader] implement call 1.5.  
-[ ] - [reader] implement call 2.  
-[ ] - [reader] test call 1+1.5+2.  
+[x] - [reader] redesign to report generation to step 1 write report(call 1) + step 2 write by outline: loop plan.outline(call 2n one section evidence fetch + call 3n one section writing) + step 3 write report name, summary, keywords(call 4)  
+[x] - [reader] attach new report class for step 2 and 3 and also their prompt.  
+[x] - [reader,memo] remove redundent geometric fields from memo get report metadata cmd.  
+[...] - [reader] implement step 2.  
+[ ] - [reader] implement step 3.    
+[ ] - [reader] test report generation in one.   
 [ ] - [reader,memo] design the report generation db update workflow.note. resolve the one cluster event has more than one reports, or report regeneration issue.     
  
 
@@ -109,6 +112,7 @@ sub(issue, bug level)
 [ ] - [paperchunk] refactor pdf extractor, it is in poor condition..note. pdf extractor is disbaled now, only html is enabled.      
 [ ] - [reader] draft code agent integration for auto-scheduled rerun wrt rerun helper.  
 [ ] - [hf-data] collect pipeline events as jsonl for performance analysis.  
+[ ] - [report-generation] remove spec_baseline and its deps, f.e. NextStepInput.  
 
 
 [ ] - [reader,memo] generate the report writter prompt from llm call 2, memo supply metadata if necessary.  

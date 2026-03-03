@@ -171,8 +171,7 @@ class TopPaper(BaseModel):
     title: str
     summary: str
     keywords: List[str]
-    rank_in_cluster: int  # 0 = most representative
-    sim_to_centroid: Optional[float] = None
+    rank: int  # 0 = most representative
 
 
 class HistoryReport(BaseModel):
@@ -189,7 +188,7 @@ class HistoryReport(BaseModel):
 class GetReportPlannerMetadataResponse(BaseModel):
     """Response from get-report-planner-metadata command."""
     new_observation: NewObservation
-    top_papers_from_new_observation: Optional[List[TopPaper]] = None  # Optional Top-K papers (K≤5)
+    new_observation_key_paper_details: Optional[List[TopPaper]] = None  # Optional Top-K papers (K≤5)
     history_reports: Optional[List[HistoryReport]] = None  # Optional top ≤3 reports for the specified topic
 
 

@@ -8,7 +8,7 @@ from typing import List, Literal, Dict, Any, Optional
 from pydantic import BaseModel, Field, computed_field, conlist
 
 # ----------------------------
-# llm report generation models
+# llm report planner models
 # ----------------------------
 
 # ---------- Enums ----------
@@ -171,3 +171,67 @@ class LLMReportPlannerOutput(BaseModel):
     plan: LLMReportPlannerPlan
     # next_step_inputs: List[NextStepInput]
     evidence_gaps: List[EvidenceGap] = Field(default_factory=list)
+
+
+
+# ----------------------------
+# llm report writer models
+# ----------------------------
+class WriterSupplementRequest(BaseModel):
+    # Retrieval target (exactly one should be set)
+    paper_id: Optional[str] = Field(None, description="Paper to fetch from. Omit for history-only needs.")
+    history_report_id: Optional[str] = Field(
+        None,
+        description="History report identifier to fetch from (if you have ids). Omit for paper-only needs.",
+    )
+    # Retrieval selectors (use the one that matches the target)
+    paper_selectors: List[PaperSelector] = Field(default_factory=list, description="Which paper part(s) to extract.")
+    history_selectors: List[HistoryReportSelector] = Field(default_factory=list, description="Which history fields to extract.")
+
+    # intentionally a bit ambiguous — lets the model express uncertainty plainly. this can be used to calibrate the workflow understanding vs the model's understanding.
+    why: str = Field(
+        ...,
+        description=(
+            "A simple question that this request is trying to answer. "
+            "Write it as a direct question (e.g., 'What is the evaluation protocol and baseline set?')."
+        ),
+    )
+
+    @property
+    def target_kind(self) -> Literal["paper", "history"]:
+        if self.paper_id:
+            return "paper"
+        if self.history_report_id:
+            return "history"
+        raise ValueError("No target kind found for supplement request")
+
+    @property
+    def has_valid_selectors(self) -> bool:
+        if self.target_kind == "paper":
+            return len(self.paper_selectors) > 0 and len(self.history_selectors) == 0
+        if self.target_kind == "history":
+            return len(self.history_selectors) > 0 and len(self.paper_selectors) == 0
+        return False
+
+
+
+class ReportWriterSupplementOutput(BaseModel):
+    supplements_requests: List[WriterSupplementRequest] = Field(
+        default_factory=list,
+        description="Supplements needed for writing. Empty list allowed.",
+        max_length=10,
+    )
+
+
+class ReportWriterSectionOutput(BaseModel):
+    section_name: str = Field(..., description="Section name (usually derived from outline item).")
+    section_text: str = Field(..., description="The written section content.")
+    confidence: List[Literal["high", "medium", "low"]] = Field(
+        ...,
+        description="confidence in writting materials and supplements support for this section.",
+    )
+
+class ReportWriterFrontMatterOutput(BaseModel):
+    title: str = Field(..., min_length=5, max_length=120)
+    summary: str = Field(..., min_length=40, max_length=1200)
+    keywords: conlist(str, min_length=5, max_length=12, unique=True)

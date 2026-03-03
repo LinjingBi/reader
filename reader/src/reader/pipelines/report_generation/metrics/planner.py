@@ -547,7 +547,7 @@ logger = get_logger()
 
 @dataclass
 class JudgeOutput:
-    """Output from judge_output function matching HeuristicResult format"""
+    """Output from judge_planner_output function matching HeuristicResult format"""
     sub_scores: Dict[str, float]  # All rule scores (0.0 or 1.0 for bools)
     overall: float  # 0.0 if any must-pass fails, else 1.0 + soft_schema_valid.score
     reasons: Dict[str, List[Tuple[str, str]]]  # (rule_declaration, received_fact) per rule group
@@ -574,7 +574,7 @@ def append_planner_output_to_jsonl(
     logger.info(f"Successfully appended report planner output for cluster {cluster_pk_hash} to {log_path}")
 
 
-def judge_output(
+def judge_planner_output(
     planner_output: LLMReportPlannerOutput,
     log_path: Optional[str] = None,
     cluster_pk_hash: Optional[str] = None,
@@ -632,7 +632,7 @@ def count_judge_warnings(judge_output: JudgeOutput) -> int:
     Count unique rule declarations from judge_output.reasons.
 
     Args:
-        judge_output: JudgeOutput from judge_output()
+        judge_output: JudgeOutput from judge_planner_output()
 
     Returns:
         Number of unique rule declarations (deduplicated while preserving order)

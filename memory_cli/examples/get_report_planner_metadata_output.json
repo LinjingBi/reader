@@ -30,7 +30,7 @@
       ]
     }
   },
-  "top_papers_from_new_observation": [
+  "new_observation_key_paper_details": [
     {
       "paper_id": "arxiv:2024.12345",
       "title": "CodeGen: Large Language Models for Code Generation",
@@ -41,8 +41,7 @@
         "programming",
         "transformer"
       ],
-      "rank_in_cluster": 0,
-      "sim_to_centroid": 0.92
+      "rank": 0
     },
     {
       "paper_id": "arxiv:2024.12346",
@@ -54,8 +53,7 @@
         "program synthesis",
         "software engineering"
       ],
-      "rank_in_cluster": 1,
-      "sim_to_centroid": 0.89
+      "rank": 1
     },
     {
       "paper_id": "arxiv:2024.12347",
@@ -67,8 +65,7 @@
         "fine-tuning",
         "language models"
       ],
-      "rank_in_cluster": 2,
-      "sim_to_centroid": 0.87
+      "rank": 2
     }
   ],
   "history_reports": [

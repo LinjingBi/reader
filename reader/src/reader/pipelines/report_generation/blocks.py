@@ -14,8 +14,6 @@ from reader.pipelines.report_generation.config.config import ReportGenerationCon
 from reader.adapters import memo
 from reader.adapters.memo import (
     ClusterObservationData,
-    PaperCard,
-    StartReportJobResponse,
     GetReportPlannerMetadataResponse,
     GetReportPlannerSupplementRequest,
     PaperSupplementRequest,
@@ -28,7 +26,7 @@ from reader.pipelines.report_generation.report import (
     EvidenceCollectionTerminationSufficiency,
 )
 from reader.pipelines.report_generation.metrics import (
-    judge_output,
+    judge_planner_output,
     JudgeOutput,
     count_judge_warnings,
     inject_judge_warnings_into_prompt,
@@ -167,7 +165,7 @@ async def _call_planner_with_judge_retry(
                 temperature=llm_cfg.temperature,
                 max_tokens=llm_cfg.max_tokens,
             )
-            judge_result = judge_output(
+            judge_result = judge_planner_output(
                 planner_output,
                 log_path=cfg.report_generation.planner_output_log_path,
                 cluster_pk_hash=cluster_pk_hash,
@@ -539,48 +537,28 @@ async def _run_evidence_completion_loop(
 async def _generate_report_plan(
     cluster_pk_hash: str,
     user_intent: UserIntent,
-    resolved_topic: TopicResolveOutput,
+    new_topic_metadata: GetReportPlannerMetadataResponse,
     llm_client: LLMClient,
     cfg: ReportGenerationConfig,
 ) -> Tuple[Optional[LLMReportPlannerOutput], StepTerminationStatus]:
     """
-    Generate a report plan via two-phase evidence collection.
-
-    Phase 1: Fetch summary-level metadata and build plan guidance (once).
-    Phase 2: Run evidence completion loop (planner calls until exit condition).
+    Generate a report plan via evidence collection loop (planner calls until exit condition).
 
     Returns:
         (plan, step_status). plan is None on error; step_status is done or error.
     """
     step_prefix = f"[report plan generation step] - [cluster {cluster_pk_hash}]"
-    # Phase 1: fetch summary-level metadata once
-    try:
-        logger.info(f"{step_prefix} - [phase 1] start collecting new obersvation metadata")
-        intent_spec = get_planner_intent_spec(user_intent)
-        add_top_papers = user_intent != UserIntent.QUICK_BACKGROUND
-        phase1_metadata = await memo.get_report_planner_metadata(
-            cluster_pk_hash=cluster_pk_hash,
-            config=cfg.memo,
-            topic_id=resolved_topic.merge_to_topic,
-            add_top_papers=add_top_papers,
-        )
-        plan_guidance = build_plan_guidance(intent_spec)
-    except Exception as e:
-        logger.warning(
-            f"{step_prefix} - phase 1 failed: {e}",
-            exc_info=True,
-        )
-        return (None, StepTerminationStatus.error)
+    intent_spec = get_planner_intent_spec(user_intent)
+    plan_guidance = build_plan_guidance(intent_spec)
 
-    # Phase 2: evidence completion/plan refinement loop
     try:
-        logger.info(f"{step_prefix} - [phase 2] start refining report plan with supplement collection loop")
+        logger.info(f"{step_prefix} - start refining report plan with supplement collection loop")
         plan, status = await _run_evidence_completion_loop(
-            cluster_pk_hash, phase1_metadata, plan_guidance, llm_client, cfg
+            cluster_pk_hash, new_topic_metadata, plan_guidance, llm_client, cfg
         )
     except Exception as e:
         logger.warning(
-            f"{step_prefix} - phase 2 failed: {e}",
+            f"{step_prefix} - supplement collection loop failed: {e}",
             exc_info=True,
         )
         return (None, StepTerminationStatus.error)
@@ -688,6 +666,23 @@ async def _kick_off_report_job(cluster_pk_hash: str, user_intent: UserIntent, cf
             f"Topic resolution for cluster {cluster_pk_hash}: CREATE new topic "
             f"(new weight: {resolved_topic.new_topic_weight:.2f})"
         )
+    # fetch new topic metadata
+    add_top_papers = user_intent != UserIntent.QUICK_BACKGROUND
+    try:
+        new_topic_metadata = await memo.get_report_planner_metadata(
+            cluster_pk_hash=cluster_pk_hash,
+            config=cfg.memo,
+            topic_id=resolved_topic.merge_to_topic,
+            add_top_papers=add_top_papers,
+        )
+    except Exception as e:
+        logger.warning(
+            f"New topic metadata fetch failed for cluster {cluster_pk_hash}: {e}",
+            exc_info=True,
+        )
+        # write to memo with error metadata
+        # need to update the report job status to error
+        return
 
     # Initialize LLM client
     llm_cfg = cfg.report_generation.llm_gemini
@@ -695,15 +690,15 @@ async def _kick_off_report_job(cluster_pk_hash: str, user_intent: UserIntent, cf
 
     # call 1 to llm report planner
     plan, step_status = await _generate_report_plan(
-        cluster_pk_hash, user_intent, resolved_topic, llm_client, cfg
+        cluster_pk_hash, user_intent, new_topic_metadata, llm_client, cfg
     )
     # !!!! placeholder[exit point]
     if step_status == StepTerminationStatus.error or plan is None:
         logger.warning(f"Report planner call failed for cluster {cluster_pk_hash}")
         # write to memo with error metadata
         # need to update the report job status to error
-    # call 1.5 to llm report writer
-    # call 2 to llm report writer
+    # call 2a to llm report writer for todo list
+    # call 2b to llm report writer for report body
 
 
 async def create_report_job(cluster_pk_hash: str, user_intent: UserIntent, cfg: ReportGenerationConfig) -> Optional[Tuple[str, str]]:

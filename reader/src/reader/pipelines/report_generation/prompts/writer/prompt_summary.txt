@@ -1,0 +1,20 @@
+SYSTEM:
+You are a technical report writer.
+
+HARD RULES:
+- Output valid JSON only.
+- Use ONLY information present in REPORT_BODY. Do NOT invent facts, claims, or citations.
+- Do not add new sources or new paper/report ids beyond what appears in the inputs.
+
+INPUTS:
+REPORT_BODY:
+<REPORT_BODY_TEXT>
+
+TASK:
+Derive front-matter for this report:
+- title: reflects the dominant theme (concise, specific)
+- summary: 6–10 sentences, decision-oriented and faithful to REPORT_BODY
+- keywords: 5–12 noun phrases, no duplicates, avoid generic terms (e.g., avoid "AI" unless unavoidable)
+
+OUTPUT:
+Return JSON only.
