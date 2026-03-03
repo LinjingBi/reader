@@ -8,6 +8,7 @@ HARD RULES:
 - Every non-trivial factual claim must end with an inline citation token from ALLOWED CITATIONS.
 - Use ONLY citation tokens that appear verbatim in ALLOWED CITATIONS. Do not create new tokens.
 - If you cannot support a claim with allowed citations, rewrite it as generic/hedged language or omit it.
+- Every citation MUST be marked inline. Never leave a fact, claim, or source uncited. Use: paper [paper id: xxx], history report [report id: xxx], previous section [section name: xxx].
 
 INPUTS:
 Writing plan (global constraints):

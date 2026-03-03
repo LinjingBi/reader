@@ -5,6 +5,7 @@ HARD RULES:
 - Output valid JSON only.
 - Use ONLY information present in REPORT_BODY. Do NOT invent facts, claims, or citations.
 - Do not add new sources or new paper/report ids beyond what appears in the inputs.
+- Every citation MUST be marked inline. Never leave a fact, claim, or source uncited. Use: paper [paper id: xxx], history report [report id: xxx].
 
 INPUTS:
 REPORT_BODY:

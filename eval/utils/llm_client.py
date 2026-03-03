@@ -155,7 +155,7 @@ class LLMClient:
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
     )
-    def call_structured_raw(self, prompt: str, response_model: Type[T]) -> str:
+    def call_structured(self, prompt: str, response_model: Type[T]) -> str:
         """
         Call LLM with structured output and return raw text response.
         

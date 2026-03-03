@@ -5,8 +5,9 @@ import logging
 import re
 import time
 import threading
+from enum import Enum
 from concurrent.futures import ThreadPoolExecutor
-from typing import Optional, TypeVar, Type, Callable
+from typing import Optional, Protocol, Tuple, Type, TypeVar, Callable
 
 from google import genai
 from pydantic import BaseModel, ValidationError
@@ -24,6 +25,72 @@ from reader.logging.logging_setup import get_logger
 T = TypeVar('T', bound=BaseModel)
 
 logger = get_logger()
+
+
+# ---------- Judge retry loop ----------
+
+
+class JudgeLoopExitCondition(str, Enum):
+    """Reason the judge retry loop concluded."""
+
+    JUDGE_ACCEPTED = "judge_accepted"
+    RETRIES_EXHAUSTED = "retries_exhausted"
+    LLM_ERROR = "llm_error"
+    ERROR = "error"
+
+
+class JudgeLoopTerminationStatus(str, Enum):
+    """Termination status for judge retry loop (complete / partial / error)."""
+
+    complete = "complete"
+    partial = "partial"
+    error = "error"
+
+
+class JudgeResultProtocol(Protocol):
+    """Minimal interface for judge output - only needs overall score."""
+
+    overall: float
+
+
+class JudgeProtocol(Protocol[T]):
+    """Protocol for judge used by call_structured_with_judge_retry."""
+
+    name: str
+
+    def judge(self, output: T) -> JudgeResultProtocol: ...
+
+    def inject_warnings_into_prompt(
+        self, prompt_base: str, judge_output: JudgeResultProtocol
+    ) -> tuple[str, int]: ...
+
+    def count_warnings(self, judge_output: JudgeResultProtocol) -> int: ...
+
+    def log_to_jsonl(
+        self,
+        log_path: str,
+        item_pk: str,
+        output: T,
+        judge_output: JudgeResultProtocol,
+    ) -> None: ...
+
+
+def _should_exit_judge_loop(
+    judge_result: JudgeResultProtocol,
+    attempt: int,
+    max_retries: int,
+    retry_threshold: float,
+) -> Optional[JudgeLoopExitCondition]:
+    """
+    Decide whether the judge retry loop should conclude.
+    Returns None to continue, otherwise the exit condition.
+    """
+    if judge_result.overall > retry_threshold:
+        return JudgeLoopExitCondition.JUDGE_ACCEPTED
+    if attempt >= max_retries:
+        return JudgeLoopExitCondition.RETRIES_EXHAUSTED
+    return None
+
 
 def _extract_retry_delay(error: Exception) -> Optional[float]:
     """
@@ -320,42 +387,7 @@ class LLMClient:
         input_tokens = max(1, len(prompt) // 4)
         return input_tokens + expected_output_tokens
     
-    def _raise_for_status(self, response):
-        """
-        Check response for HTTP errors and raise if found.
-        
-        Args:
-            response: Gemini API response object
-            
-        Raises:
-            Exception: If response indicates an HTTP error
-        """
-        # Gemini API responses typically don't have explicit status codes in the response object
-        # Errors are usually raised as exceptions. This method is called after successful
-        # API call, so we mainly check for any error indicators in the response.
-        # If there are issues, they would have been raised as exceptions already.
-        
-        # Check if response has any error indicators
-        if hasattr(response, 'error'):
-            error = response.error
-            if error:
-                status_code = getattr(error, 'code', None) or getattr(error, 'status_code', None)
-                error_message = str(error)
-                
-                if status_code:
-                    logger.error(
-                        "Gemini API HTTP error: status_code=%s, message=%s",
-                        status_code, error_message
-                    )
-                    # Create an exception with status code info
-                    http_error = Exception(f"Gemini API error: {status_code} - {error_message}")
-                    http_error.status_code = status_code
-                    raise http_error
-                else:
-                    logger.error("Gemini API error: %s", error_message)
-                    raise Exception(f"Gemini API error: {error_message}")
-    
-    def _call_structured_raw_inner(self, prompt: str, response_model: Type[T], temperature: float, max_tokens: int) -> T:
+    def _call_structured_inner(self, prompt: str, response_model: Type[T], temperature: float, max_tokens: int) -> T:
         """
         Inner function that performs the actual API call and raises original exceptions.
         This is wrapped by the retry decorator to handle retries with original exceptions.
@@ -393,9 +425,6 @@ class LLMClient:
             }
         )
         
-        # Check for HTTP errors in response
-        self._raise_for_status(response)
-        
         # Parse JSON response into Pydantic model
         json_text = response.text or ""
         if not json_text:
@@ -404,7 +433,7 @@ class LLMClient:
         parsed_model = response_model.model_validate_json(json_text)
         return parsed_model
     
-    def call_structured_raw(self, prompt: str, response_model: Type[T], temperature: float, max_tokens: int) -> T:
+    def call_structured(self, prompt: str, response_model: Type[T], temperature: float, max_tokens: int) -> T:
         """
         Call Gemini LLM with structured output and return parsed Pydantic model instance.
         
@@ -435,7 +464,7 @@ class LLMClient:
                 before_sleep=before_sleep_log(logger, logging.WARNING),
                 reraise=False,  # Only LLMGenerationError is raised (retried exceptions become RetryError, then wrapped)
             )
-            return retrying(self._call_structured_raw_inner)(
+            return retrying(self._call_structured_inner)(
                 prompt, response_model, temperature, max_tokens
             )
         except RetryError as e:
@@ -457,9 +486,9 @@ class LLMClient:
             error_message = f"LLM generation API error: {str(e)}"
             raise LLMGenerationError(error_message, e) from e
     
-    async def call_structured_raw_async(self, prompt: str, response_model: Type[T], temperature: float, max_tokens: int) -> T:
+    async def call_structured_async(self, prompt: str, response_model: Type[T], temperature: float, max_tokens: int) -> T:
         """
-        Async wrapper for call_structured_raw that uses executor if provided.
+        Async wrapper for call_structured that uses executor if provided.
         
         Args:
             prompt: Full prompt string
@@ -478,7 +507,7 @@ class LLMClient:
             loop = asyncio.get_running_loop()
             return await loop.run_in_executor(
                 self.executor,
-                self.call_structured_raw,
+                self.call_structured,
                 prompt,
                 response_model,
                 temperature,
@@ -487,9 +516,146 @@ class LLMClient:
         else:
             # No executor provided, use default thread pool to avoid blocking event loop
             return await asyncio.to_thread(
-                self.call_structured_raw,
+                self.call_structured,
                 prompt,
                 response_model,
                 temperature,
                 max_tokens
             )
+
+    async def call_structured_with_judge_retry(
+        self,
+        prompt: str,
+        response_model: Type[T],
+        temperature: float,
+        max_tokens: int,
+        judge: JudgeProtocol[T],
+        item_pk: str,
+        max_retries: int,
+        retry_threshold: float,
+        log_path: Optional[str] = None,
+    ) -> Tuple[Optional[T], JudgeLoopTerminationStatus]:
+        """
+        Call LLM with structured output and judge retry logic.
+
+        Retries until judge accepts (overall > retry_threshold) or max_retries exhausted.
+        Returns the best output seen and the termination status.
+
+        Args:
+            prompt: Full prompt string
+            response_model: Pydantic model class for response schema
+            temperature: Temperature parameter
+            max_tokens: Maximum tokens to generate
+            judge: Judge with judge, inject_warnings_into_prompt, count_warnings, log_to_jsonl
+            item_pk: Item identifier for logging (e.g. cluster_pk_hash)
+            max_retries: Max retries when judge score below threshold
+            retry_threshold: Accept if overall > threshold
+            log_path: If set and item_pk truthy, append (output, judge_output) to JSONL
+
+        Returns:
+            (best_output, status). best_output may be None on LLM/validation failure.
+        """
+        loop_prefix = f"[judge {judge.name}] - [cluster {item_pk}]"
+
+        logger.info(f"{loop_prefix} - start")
+
+        prompt_base = prompt
+        best_output: Optional[T] = None
+        best_score = float("-inf")
+        exit_reason: Optional[JudgeLoopExitCondition] = None
+
+        for attempt in range(max_retries + 1):
+            try:
+                output = await self.call_structured_async(
+                    prompt=prompt,
+                    response_model=response_model,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+                judge_result = judge.judge(output)
+                if log_path and item_pk:
+                    judge.log_to_jsonl(log_path, item_pk, output, judge_result)
+
+                if judge_result.overall > best_score:
+                    best_score = judge_result.overall
+                    best_output = output
+
+                exit_reason = _should_exit_judge_loop(
+                    judge_result, attempt, max_retries, retry_threshold
+                )
+                if exit_reason is not None:
+                    if exit_reason == JudgeLoopExitCondition.JUDGE_ACCEPTED:
+                        logger.info(
+                            f"{loop_prefix} - attempt {attempt + 1}/{max_retries + 1}: "
+                            f"overall score {best_score:.2f} > {retry_threshold}, accepted"
+                        )
+                    elif exit_reason == JudgeLoopExitCondition.RETRIES_EXHAUSTED:
+                        logger.warning(
+                            f"{loop_prefix} - attempt {attempt + 1}/{max_retries + 1}: "
+                            f"judge retries exhausted, returning best output (overall score: {best_score:.2f})"
+                        )
+                    break
+
+                if attempt < max_retries:
+                    prompt, num_warnings = judge.inject_warnings_into_prompt(
+                        prompt_base, judge_result
+                    )
+                    logger.warning(
+                        f"{loop_prefix} - attempt {attempt + 1}/{max_retries + 1}: "
+                        f"overall score {judge_result.overall:.2f} <= {retry_threshold}, "
+                        f"injecting {num_warnings} warning(s), retrying"
+                    )
+                else:
+                    num_warnings = judge.count_warnings(judge_result)
+                    logger.warning(
+                        f"{loop_prefix} - attempt {attempt + 1}/{max_retries + 1}: "
+                        f"overall score {judge_result.overall:.2f} <= {retry_threshold}, "
+                        f"{num_warnings} warning(s) (last judge retry, returning best)"
+                    )
+
+            except LLMGenerationError as e:
+                logger.warning(
+                    f"{loop_prefix} - attempt {attempt + 1}/{max_retries + 1}: llm call failed, breaking retry: {e}"
+                )
+                exit_reason = JudgeLoopExitCondition.LLM_ERROR
+                break
+            except Exception as e:
+                logger.warning(
+                    f"{loop_prefix} - attempt {attempt + 1}/{max_retries + 1}: unexpected error, breaking retry: {e}",
+                    exc_info=True,
+                )
+                exit_reason = JudgeLoopExitCondition.ERROR
+                break
+
+        # Map exit condition to status
+        none_output = best_output is None
+        if not none_output and exit_reason == JudgeLoopExitCondition.JUDGE_ACCEPTED:
+            status = JudgeLoopTerminationStatus.complete
+        elif not none_output and exit_reason == JudgeLoopExitCondition.RETRIES_EXHAUSTED:
+            status = JudgeLoopTerminationStatus.partial
+        elif not none_output and exit_reason in (
+            JudgeLoopExitCondition.LLM_ERROR,
+            JudgeLoopExitCondition.ERROR,
+        ):
+            status = JudgeLoopTerminationStatus.partial
+            logger.warning(
+                f"{loop_prefix} - terminated due to an error. The returned result is from the best overall score llm call."
+            )
+        elif none_output and exit_reason in (
+            JudgeLoopExitCondition.LLM_ERROR,
+            JudgeLoopExitCondition.ERROR,
+        ):
+            status = JudgeLoopTerminationStatus.error
+        else:
+            error_msg = (
+                f"{loop_prefix} - undefined exit reason({exit_reason}) and best_output(none:{none_output}) "
+                "condition for exit status resolution."
+            )
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+
+        logger.info(
+            f"{loop_prefix} - finished, reasons: {exit_reason}, status: {status.value}, empty result: {none_output}"
+        )
+        return (best_output, status)
+

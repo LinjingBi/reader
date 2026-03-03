@@ -25,11 +25,9 @@ from reader.pipelines.report_generation.report import (
     EvidenceGap,
     EvidenceCollectionTerminationSufficiency,
 )
-from reader.pipelines.report_generation.metrics import (
-    judge_planner_output,
-    JudgeOutput,
-    count_judge_warnings,
-    inject_judge_warnings_into_prompt,
+from reader.pipelines.report_generation.judges import (
+    LLMJudge,
+    planner_judge,
 )
 from reader.logging.logging_setup import get_logger
 from reader.pipelines.report_generation.prompts.planner.build import UserIntent, get_planner_intent_spec, build_plan_guidance, build_planner_prompt
@@ -131,115 +129,6 @@ def _initialize_llm_client(llm_config: LLMGeminiConfig, model: str) -> LLMClient
 # Report generation blocks
 # ============================================================================
 
-# TODO: add unit test to catch when outputs None planner_output but status is not error
-async def _call_planner_with_judge_retry(
-    cluster_pk_hash: str,
-    planner_prompt: str,
-    llm_client: LLMClient,
-    cfg: ReportGenerationConfig,
-) -> Tuple[Optional[LLMReportPlannerOutput], LoopTerminationStatus]:
-    """
-    Call report planner LLM with judge retry logic.
-
-    Returns:
-        (planner_output, status). planner_output may be None on LLM/validation failure.
-    """
-    loop_prefix = f"[report planner judge] - [cluster {cluster_pk_hash}]"
-
-    logger.info(f"{loop_prefix} - start")
-
-    prompt_base = planner_prompt
-    max_retries = cfg.report_generation.max_judge_retries
-    retry_threshold = cfg.report_generation.judge_retry_threshold
-    llm_cfg = cfg.report_generation.llm_gemini
-
-    best_planner_output: Optional[LLMReportPlannerOutput] = None
-    best_score = float("-inf")
-    exit_reason: Optional[JudgeLoopExitCondition] = None
-
-    for attempt in range(max_retries + 1):
-        try:
-            planner_output = await llm_client.call_structured_raw_async(
-                prompt=planner_prompt,
-                response_model=LLMReportPlannerOutput,
-                temperature=llm_cfg.temperature,
-                max_tokens=llm_cfg.max_tokens,
-            )
-            judge_result = judge_planner_output(
-                planner_output,
-                log_path=cfg.report_generation.planner_output_log_path,
-                cluster_pk_hash=cluster_pk_hash,
-            )
-
-            if judge_result.overall > best_score:
-                best_score = judge_result.overall
-                best_planner_output = planner_output
-
-            exit_reason = _should_exit_judge_loop(
-                judge_result, attempt, max_retries, retry_threshold
-            )
-            if exit_reason is not None:
-                if exit_reason == JudgeLoopExitCondition.JUDGE_ACCEPTED:
-                    logger.info(
-                        f"{loop_prefix} - attempt {attempt + 1}/{max_retries + 1}: "
-                        f"planner overall score {best_score:.2f} > {retry_threshold}, accepted"
-                    )
-                elif exit_reason == JudgeLoopExitCondition.RETRIES_EXHAUSTED:
-                    logger.warning(
-                        f"{loop_prefix} - attempt {attempt + 1}/{max_retries + 1}: "
-                        f"judge retries exhausted, returning best planner_output (overall score: {best_score:.2f})"
-                    )
-                break
-
-            if attempt < max_retries:
-                planner_prompt, num_warnings = inject_judge_warnings_into_prompt(prompt_base, judge_result)
-                logger.warning(
-                    f"{loop_prefix} - attempt {attempt + 1}/{max_retries + 1}: "
-                    f"planner overall score {judge_result.overall:.2f} <= {retry_threshold}, "
-                    f"injecting {num_warnings} warning(s), retrying"
-                )
-            else:
-                num_warnings = count_judge_warnings(judge_result)
-                logger.warning(
-                    f"{loop_prefix} - attempt {attempt + 1}/{max_retries + 1}: "
-                    f"planner overall score {judge_result.overall:.2f} <= {retry_threshold}, "
-                    f"{num_warnings} warning(s) (last judge retry, returning best)"
-                )
-
-        except LLMGenerationError as e:
-            logger.warning(f"{loop_prefix} - attempt {attempt + 1}/{max_retries + 1}: llm call failed, breaking retry: {e}")
-            exit_reason = JudgeLoopExitCondition.LLM_ERROR
-            break
-        except Exception as e:
-            logger.warning(
-                f"{loop_prefix} - attempt {attempt + 1}/{max_retries + 1}: unexpected error, breaking retry: {e}",
-                exc_info=True,
-            )
-            exit_reason = JudgeLoopExitCondition.ERROR
-            break
-
-    # Map exit condition to status
-    none_planner_output = best_planner_output is None
-    if not none_planner_output and exit_reason == JudgeLoopExitCondition.JUDGE_ACCEPTED:
-        status = LoopTerminationStatus.complete
-    elif not none_planner_output and exit_reason in (JudgeLoopExitCondition.RETRIES_EXHAUSTED):
-        status = LoopTerminationStatus.partial
-    elif not none_planner_output and exit_reason in (JudgeLoopExitCondition.LLM_ERROR, JudgeLoopExitCondition.ERROR):
-        status = LoopTerminationStatus.partial
-        logger.warning(
-            f"{loop_prefix} - terminated due to an error. The returned result is from the best overall score llm call."
-        )
-    elif none_planner_output and exit_reason in (JudgeLoopExitCondition.LLM_ERROR, JudgeLoopExitCondition.ERROR):
-        status = LoopTerminationStatus.error
-    else:
-        error_msg = f"{loop_prefix} - undefined exit reason({exit_reason}) and best_planner_output(none:{none_planner_output}) condition for exit status resolution."
-        logger.error(error_msg)
-        raise ValueError(error_msg)
-
-    logger.info(f"{loop_prefix} - finished, reasons: {exit_reason}, status: {status.value}, empty result: {none_planner_output}")
-    return (best_planner_output, status)
-
-
 # ---------- Evidence collection loop enums ----------
 
 
@@ -249,15 +138,6 @@ class EvidenceLoopExitCondition(str, Enum):
     SUFFICIENCY_TERMINAL = "sufficiency_terminal"
     EVIDENCE_GAPS_BELOW_THRESHOLD = "evidence_gaps_below_threshold"
     MAX_ITERATIONS_REACHED = "max_iterations_reached"
-    ERROR = "error"
-
-
-class JudgeLoopExitCondition(str, Enum):
-    """Reason the judge retry loop concluded."""
-
-    JUDGE_ACCEPTED = "judge_accepted"
-    RETRIES_EXHAUSTED = "retries_exhausted"
-    LLM_ERROR = "llm_error"
     ERROR = "error"
 
 
@@ -274,23 +154,6 @@ class StepTerminationStatus(str, Enum):
 
     done = "done"
     error = "error"
-
-
-def _should_exit_judge_loop(
-    judge_result: JudgeOutput,
-    attempt: int,
-    max_retries: int,
-    retry_threshold: float,
-) -> Optional[JudgeLoopExitCondition]:
-    """
-    Decide whether the judge retry loop should conclude.
-    Returns None to continue, otherwise the exit condition.
-    """
-    if judge_result.overall > retry_threshold:
-        return JudgeLoopExitCondition.JUDGE_ACCEPTED
-    if attempt >= max_retries:
-        return JudgeLoopExitCondition.RETRIES_EXHAUSTED
-    return None
 
 
 def _deduplicate_evidence_gap_requests(
@@ -421,6 +284,7 @@ async def _run_evidence_completion_loop(
     plan_guidance: str,
     llm_client: LLMClient,
     cfg: ReportGenerationConfig,
+    planner_judge: LLMJudge,
 ) -> Tuple[Optional[LLMReportPlannerOutput], LoopTerminationStatus]:
     """
     Run the report planner evidence collection (call 1) until a conclusion condition is met.
@@ -474,9 +338,18 @@ async def _run_evidence_completion_loop(
                 plan_guidance=plan_guidance,
                 phase2_supplement=phase2_supplement if has_supplement else None,
             )
-            planner_output, judge_status = await _call_planner_with_judge_retry(
-                cluster_pk_hash, planner_prompt, llm_client, cfg
+            planner_output, judge_status_raw = await llm_client.call_structured_with_judge_retry(
+                prompt=planner_prompt,
+                response_model=LLMReportPlannerOutput,
+                temperature=cfg.report_generation.llm_gemini.temperature,
+                max_tokens=cfg.report_generation.llm_gemini.max_tokens,
+                judge=planner_judge,
+                item_pk=cluster_pk_hash,
+                max_retries=cfg.report_generation.max_planner_judge_retries,
+                retry_threshold=cfg.report_generation.planner_judge_retry_threshold,
+                log_path=cfg.report_generation.planner_output_log_path,
             )
+            judge_status = LoopTerminationStatus(judge_status_raw.value)
 
             exit_condition, exit_planner_output = _should_exit_evidence_loop(
                 planner_output, loop_turn, cfg, judge_status, last_planner_output
@@ -540,6 +413,7 @@ async def _generate_report_plan(
     new_topic_metadata: GetReportPlannerMetadataResponse,
     llm_client: LLMClient,
     cfg: ReportGenerationConfig,
+    planner_judge: LLMJudge,
 ) -> Tuple[Optional[LLMReportPlannerOutput], StepTerminationStatus]:
     """
     Generate a report plan via evidence collection loop (planner calls until exit condition).
@@ -554,7 +428,7 @@ async def _generate_report_plan(
     try:
         logger.info(f"{step_prefix} - start refining report plan with supplement collection loop")
         plan, status = await _run_evidence_completion_loop(
-            cluster_pk_hash, new_topic_metadata, plan_guidance, llm_client, cfg
+            cluster_pk_hash, new_topic_metadata, plan_guidance, llm_client, cfg, planner_judge
         )
     except Exception as e:
         logger.warning(
@@ -690,15 +564,18 @@ async def _kick_off_report_job(cluster_pk_hash: str, user_intent: UserIntent, cf
 
     # call 1 to llm report planner
     plan, step_status = await _generate_report_plan(
-        cluster_pk_hash, user_intent, new_topic_metadata, llm_client, cfg
+        cluster_pk_hash, user_intent, new_topic_metadata, llm_client, cfg, planner_judge
     )
     # !!!! placeholder[exit point]
     if step_status == StepTerminationStatus.error or plan is None:
         logger.warning(f"Report planner call failed for cluster {cluster_pk_hash}")
         # write to memo with error metadata
         # need to update the report job status to error
-    # call 2a to llm report writer for todo list
-    # call 2b to llm report writer for report body
+        raise
+        
+    # step 2 to write report by outline
+
+
 
 
 async def create_report_job(cluster_pk_hash: str, user_intent: UserIntent, cfg: ReportGenerationConfig) -> Optional[Tuple[str, str]]:

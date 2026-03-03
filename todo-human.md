@@ -99,9 +99,11 @@ sub(issue, bug level)
 [x] - [reader,memo] rework get report planner evidence cmd to collect summary-level call 1 evidance as a must-haev for each call.  
 [x] - [reader,memo] add new memo cmd to collect supplement evidence for the call 1 evidence gaps requests.  
 [x] - [reader] refactor the llm call judge loop, evidence collection loop and call 1 step with detailed status.  
-[x] - [reader] redesign to report generation to step 1 write report(call 1) + step 2 write by outline: loop plan.outline(call 2n one section evidence fetch + call 3n one section writing) + step 3 write report name, summary, keywords(call 4)  
+[x] - [reader] redesign report generation to step 1 write report(call 1) + step 2 write by outline: loop plan.outline(call 2n one section evidence fetch + call 3n one section writing) + step 3 write report name, summary, keywords(call 4)  
 [x] - [reader] attach new report class for step 2 and 3 and also their prompt.  
 [x] - [reader,memo] remove redundent geometric fields from memo get report metadata cmd.  
+[x] - [reader] refactor judge_output to a judge class using different metrics as this workflow will be shared by all the steps.  
+[x] - [reader] port planner's llm call retry based on judge result to a generic method of LLMClient as this function will be shared by all the steps.  
 [...] - [reader] implement step 2.  
 [ ] - [reader] implement step 3.    
 [ ] - [reader] test report generation in one.   

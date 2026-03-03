@@ -227,7 +227,7 @@ def _call_llm_per_cluster(
     logger._log("llm.call", f"model={model}, cluster_size={len(cluster_data.get('papers', []))}, args={llm_client.get_api_args()}", level=logging.INFO)
     
     # Get raw response text (so we can save it even if validation fails)
-    raw_response_text = llm_client.call_structured_raw(prompt, ClusterReport)
+    raw_response_text = llm_client.call_structured(prompt, ClusterReport)
 
     sanitized_model = model.replace("/", "_")
     raw_response_path = run_results_dir / f"raw_response_{sanitized_model}_cluster_{cluster_index}.json"

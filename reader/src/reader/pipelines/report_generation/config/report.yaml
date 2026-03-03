@@ -13,11 +13,14 @@ memo:
 
 report_generation:
   topic_resolver_threshold: 0.98
-  max_judge_retries: 3
+  # report planner config
+  max_planner_judge_retries: 3
   max_evidence_gaps_threshold: 3
   max_evidence_loop_iterations: 3
-  judge_retry_threshold: 0.0
+  planner_judge_retry_threshold: 0.0
   planner_output_log_path: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/artifacts/planner_outputs.jsonl"  # e.g. "reader/src/reader/pipelines/report_generation/artifacts/planner_outputs.jsonl" to enable
+  # report writer config
+  
   llm_gemini:
     model: "models/gemini-2.5-pro"
     temperature: 0.2

@@ -711,7 +711,7 @@ async def summarize_clusters_parallel(
         for attempt in range(max_retries + 1):  # Initial attempt + 3 retries = 4 total
             try:
                 # Call LLM with structured output (returns parsed ClusterReport) using async method
-                cluster_report = await llm_client.call_structured_raw_async(
+                cluster_report = await llm_client.call_structured_async(
                     prompt=prompt,
                     response_model=ClusterReport,
                     temperature=cfg.cluster_summarization.llm_gemini.temperature,
