@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import List
 
 from reader.pipelines.report_generation.report import (
     ReportWriterSectionInput,
+    ReportWriterSectionOutput,
     ReportWriterSupplementInput,
 )
 
@@ -38,3 +40,16 @@ def build_section_writing_prompt(
     input_dict = section_input.model_dump()
     input_json = json.dumps(input_dict, indent=2, ensure_ascii=False)
     return template.replace("<INPUT_JSON>", input_json)
+
+
+def build_summary_writing_prompt(
+    sections: List[ReportWriterSectionOutput],
+    template_name: str,
+) -> str:
+    """Build prompt for front matter (summary) step from report body sections."""
+    report_body_parts = [
+        f"## {s.section_name}\n\n{s.section_text}" for s in sections
+    ]
+    report_body_text = "\n\n".join(report_body_parts)
+    template = _load_template(template_name)
+    return template.replace("<REPORT_BODY_TEXT>", report_body_text)

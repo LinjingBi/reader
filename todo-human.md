@@ -105,9 +105,9 @@ sub(issue, bug level)
 [x] - [reader] refactor judge_output to a judge class using different metrics as this workflow will be shared by all the steps.  
 [x] - [reader] port planner's llm call retry based on judge result to a generic method of LLMClient as this function will be shared by all the steps.  
 [x] - [reader] implement step 2.  
-[ ] - [reader] implement step 3.    
+[x] - [reader] implement step 3.    
 [ ] - [reader] test report generation in one.   
-[ ] - [reader,memo] design the report generation db update workflow.note. resolve the one cluster event has more than one reports, or report regeneration issue.     
+[ ] - [reader,memo] design the report generation db update workflow.note. resolve the one cluster event has more than one reports, or report regeneration issue. ps. consider a design for saving checkpoint to local fs for manual retry.         
  
 
 [ ] - [paper-chunk] test training mode and remove duplicate code under paper_chunk dir.  
@@ -121,4 +121,4 @@ sub(issue, bug level)
 [ ] - [reader,memo] write the whole metadata from reader to memo db, and dump report to local fs.  
 
 random(spikes, explore)  
-[x] - [reader] use lite llm and lite metadata(name, title, keywords) for summarization and thinking llm and depth-aware metadata for report genereation.  
+[x] - [reader] use lite llm and lite metadata(name, title, keywords) for summarization and thinking llm and depth-aware metadata for report genereation. 

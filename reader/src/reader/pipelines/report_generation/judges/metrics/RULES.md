@@ -123,7 +123,7 @@ This document lists all hard and soft validation rules for report generation out
 
 ---
 
-## 4. Writer Front Matter — ReportWriterFrontMatterOutput (W4)
+## 4. Writer Front Matter — ReportWriterFrontMatterOutput (W4 / D-H / D-S)
 
 ### Model constraints (report.py)
 
@@ -137,4 +137,25 @@ This document lists all hard and soft validation rules for report generation out
 
 | Rule | Description | Enforced in |
 |------|-------------|-------------|
-| W4-H1 Keywords uniqueness (case-insensitive) | model_validator rejects case-insensitive duplicates; metrics will also enforce when W4 judge is added | model, metrics |
+| W4-H1 Keywords uniqueness (case-insensitive) | model_validator rejects case-insensitive duplicates | model, metrics |
+
+### Hard rules (metrics)
+
+| Rule | Description | Enforced in |
+|------|-------------|-------------|
+| D-H3 | Keywords count must be 5–12 | metrics |
+| D-H4 | Keywords must be case-insensitively unique | metrics |
+| D-H6 | Title must not be in banned set (technical report, research summary, weekly report, overview, report) | metrics |
+
+### Soft rules (metrics)
+
+| Rule | Description | Enforced in |
+|------|-------------|-------------|
+| D-H1 | Title: 5–120 chars, non-empty after strip | metrics |
+| D-H2 | Summary: 40–1200 chars, non-empty after strip | metrics |
+| D-H5 | Each keyword: non-empty, ≤40 chars, ≥1 alphanumeric | metrics |
+| D-S1 | Title specific; avoid vague words (some, various, misc, general, thoughts, notes) and generic prefixes (A study of, An overview of) | metrics |
+| D-S2 | Title word count prefer 4–12 | metrics |
+| D-S3 | Summary prefer 3–8 sentences | metrics |
+| D-S4 | Summary must avoid overclaiming/hype (state-of-the-art, breakthrough, proves, guarantees, solves) | metrics |
+| D-S5 | Keywords: avoid generic (AI, ML, deep learning, paper, survey, method); prefer ≥2 multiword | metrics |

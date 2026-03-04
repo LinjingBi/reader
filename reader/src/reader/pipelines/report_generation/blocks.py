@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
@@ -32,6 +31,7 @@ from reader.pipelines.report_generation.report import (
     LLMReportPlannerOutput,
     EvidenceCollectionTerminationSufficiency,
     EvidenceGap,
+    ReportWriterFrontMatterOutput,
     ReportWriterSectionInput,
     ReportWriterSectionOutput,
     ReportWriterSupplementInput,
@@ -40,6 +40,7 @@ from reader.pipelines.report_generation.report import (
 )
 from reader.pipelines.report_generation.judges import (
     LLMJudge,
+    front_matter_judge,
     planner_judge,
     WriterSupplyJudgeWrapper,
     WriterWritingJudgeWrapper,
@@ -49,6 +50,7 @@ from reader.pipelines.report_generation.prompts.planner.build import UserIntent,
 from reader.pipelines.report_generation.prompts.writer.build import (
     build_evidence_requests_prompt,
     build_section_writing_prompt,
+    build_summary_writing_prompt,
 )
 from reader.tui.clusters_observation import display_clusters_observation
 
@@ -185,24 +187,6 @@ class StepWritingExitCondition(str, Enum):
     UNKNOWN_ERROR = "unknown_error"
 
 
-@dataclass
-class DraftSection:
-    """A single draft section with title and body."""
-
-    title: str
-    body: str
-
-    def to_dict(self) -> Dict[str, str]:
-        return {"title": self.title, "body": self.body}
-
-
-@dataclass
-class ReportWritingDraft:
-    """Draft content from the per-outline writing loop (without status)."""
-
-    draft: List[DraftSection]
-
-
 def _deduplicate_evidence_gap_requests(
     evidence_gaps: List[EvidenceGap],
 ) -> Tuple[List[PaperSupplementRequest], List[ReportSupplementRequest]]:
@@ -296,7 +280,7 @@ def _writer_requests_to_supply_request(
 
 def _build_allowed_citations(
     materials: GetReportGenerationMetadataResponse,
-    written_sections: List[DraftSection],
+    written_sections: List[ReportWriterSectionOutput],
 ) -> List[str]:
     """Build allowed citation tokens: [paper id: xxx], [report id: xxx], [section name: xxx]."""
     tokens: List[str] = []
@@ -305,8 +289,8 @@ def _build_allowed_citations(
     for r in (materials.history_reports or []):
         tokens.append(f"[report id: {r.report_id}]")
     for s in written_sections:
-        if s.title:
-            tokens.append(f"[section name: {s.title}]")
+        if s.section_name:
+            tokens.append(f"[section name: {s.section_name}]")
     return tokens
 
 
@@ -578,15 +562,15 @@ async def _run_writing_loop(
     materials: GetReportGenerationMetadataResponse,
     llm_client: LLMClient,
     cfg: ReportGenerationConfig,
-) -> Tuple[Optional[ReportWritingDraft], LoopTerminationStatus]:
+) -> Tuple[Optional[List[ReportWriterSectionOutput]], LoopTerminationStatus]:
     """
     Run the per-outline writing loop: supply -> fetch -> write for each outline item.
 
     Returns:
-        (draft, status). draft may be None only when status is error and no sections were written.
+        (sections, status). sections may be None only when status is error and no sections were written.
     """
     available_ids = _derive_available_ids(materials)
-    draft: List[DraftSection] = []
+    sections: List[ReportWriterSectionOutput] = []
     exit_condition: Optional[StepWritingExitCondition] = None
     loop_prefix = f"[report writing loop] - [cluster {cluster_pk_hash}]"
     wcfg = cfg.report_generation
@@ -656,12 +640,12 @@ async def _run_writing_loop(
                     break
 
             # Write: LLM writes section with supplements
-            allowed_citations = _build_allowed_citations(materials, draft)
+            allowed_citations = _build_allowed_citations(materials, sections)
             section_input = ReportWriterSectionInput(
                 materials=materials.model_dump(),
                 plan=plan.plan.model_dump(),
                 target_section=target_outline,
-                written_sections=[s.to_dict() for s in draft],
+                written_sections=[{"title": s.section_name, "body": s.section_text} for s in sections],
                 allowed_citations=allowed_citations,
                 supplements=supply_resp,
             )
@@ -688,10 +672,7 @@ async def _run_writing_loop(
                 exit_condition = StepWritingExitCondition.WRITING_LLM_ERROR
                 break
 
-            draft.append(DraftSection(
-                title=section_output.section_name,
-                body=section_output.section_text,
-            ))
+            sections.append(section_output)
         else:
             exit_condition = StepWritingExitCondition.COMPLETE
     except Exception as e:
@@ -702,12 +683,12 @@ async def _run_writing_loop(
         exit_condition = StepWritingExitCondition.UNKNOWN_ERROR
 
     # Map exit condition to LoopTerminationStatus
-    empty_draft = len(draft) == 0
+    empty_sections = len(sections) == 0
     if exit_condition == StepWritingExitCondition.COMPLETE:
         status = LoopTerminationStatus.complete
-        if empty_draft:
+        if empty_sections:
             logger.warning(
-                f"{loop_prefix} - concluded: all outline items processed but draft is empty."
+                f"{loop_prefix} - concluded: all outline items processed but sections is empty."
             )
         else:
             logger.info(
@@ -717,22 +698,22 @@ async def _run_writing_loop(
         status = LoopTerminationStatus.partial
         logger.warning(
             f"{loop_prefix} - incomplete writing due to exit condition {exit_condition.value}, "
-            f"draft sections: {len(draft)} — writing partial."
+            f"sections: {len(sections)} — writing partial."
         )
     elif exit_condition == StepWritingExitCondition.UNKNOWN_ERROR:
         status = LoopTerminationStatus.error
-        if empty_draft:
+        if empty_sections:
             logger.warning(
                 f"{loop_prefix} - terminated due to unknown error, no sections written."
             )
     else:
         raise ValueError(f"{loop_prefix} - unexpected exit condition: {exit_condition}")
 
-    result_draft = None if (status == LoopTerminationStatus.error and empty_draft) else ReportWritingDraft(draft=draft)
+    result_sections = None if (status == LoopTerminationStatus.error and empty_sections) else sections
     logger.info(
-        f"{loop_prefix} - finished, reasons: {exit_condition}, status: {status.value}, empty draft: {empty_draft}"
+        f"{loop_prefix} - finished, reasons: {exit_condition}, status: {status.value}, empty sections: {empty_sections}"
     )
-    return result_draft, status
+    return result_sections, status
 
 
 async def _generate_report_body(
@@ -741,18 +722,18 @@ async def _generate_report_body(
     materials: GetReportGenerationMetadataResponse,
     llm_client: LLMClient,
     cfg: ReportGenerationConfig,
-) -> Tuple[Optional[ReportWritingDraft], StepTerminationStatus]:
+) -> Tuple[Optional[List[ReportWriterSectionOutput]], StepTerminationStatus]:
     """
     Generate report body via per-outline writing loop (supply -> fetch -> write for each outline item).
 
     Returns:
-        (draft, step_status). draft is None on error; step_status is done or error.
+        (sections, step_status). sections is None on error; step_status is done or error.
     """
     step_prefix = f"[report body generation step] - [cluster {cluster_pk_hash}]"
 
     try:
         logger.info(f"{step_prefix} - start writing report body with per-outline loop")
-        draft, status = await _run_writing_loop(
+        sections, status = await _run_writing_loop(
             cluster_pk_hash, plan, materials, llm_client, cfg
         )
     except Exception as e:
@@ -763,25 +744,77 @@ async def _generate_report_body(
         return (None, StepTerminationStatus.error)
 
 
-    if status in (LoopTerminationStatus.complete, LoopTerminationStatus.partial):
-        if status == LoopTerminationStatus.partial:
-            logger.warning(
-                f"{step_prefix} - report body completion status is partial even though draft is not empty."
-            )
-        result_draft = draft
+    if status == LoopTerminationStatus.complete:
+        result_sections = sections
         result_status = StepTerminationStatus.done
-    elif status == LoopTerminationStatus.error:
-        logger.error(f"{step_prefix} - failed to generate report body due to error")
-        result_draft = None
+    elif status in (LoopTerminationStatus.partial, LoopTerminationStatus.error):
+        logger.warning(
+            f"{step_prefix} - report body generation ended with status {status.value}, returning {len(sections)} sections."
+        )
+        result_sections = sections
         result_status = StepTerminationStatus.error
     else:
         raise ValueError(f"{step_prefix} - unexpected status: {status}")
 
     logger.info(
-        f"{step_prefix} - finished, draft={'empty' if result_draft is None else 'present'}, "
+        f"{step_prefix} - finished, sections={'empty' if result_sections is None else 'present'}, "
         f"status: {result_status.value}"
     )
-    return (result_draft, result_status)
+    return (result_sections, result_status)
+
+
+async def _generate_report_front_matter(
+    cluster_pk_hash: str,
+    sections_result: List[ReportWriterSectionOutput],
+    llm_client: LLMClient,
+    cfg: ReportGenerationConfig,
+) -> Tuple[Optional[ReportWriterFrontMatterOutput], StepTerminationStatus]:
+    """
+    Generate report front matter (title, summary, keywords) from report body sections.
+
+    Returns:
+        (front_matter, step_status). front_matter is None on error; step_status is done or error.
+    """
+    step_prefix = f"[report front matter generation step] - [cluster {cluster_pk_hash}]"
+    wcfg = cfg.report_generation
+    llm_cfg = wcfg.llm_gemini
+
+    prompt = build_summary_writing_prompt(
+        sections_result,
+        template_name=wcfg.writer_summary_prompt_template,
+    )
+    front_matter_output, judge_status = await llm_client.call_structured_with_judge_retry(
+        prompt=prompt,
+        response_model=ReportWriterFrontMatterOutput,
+        temperature=llm_cfg.temperature,
+        max_tokens=llm_cfg.max_tokens,
+        judge=front_matter_judge,
+        item_pk=cluster_pk_hash,
+        max_retries=wcfg.max_writer_summary_judge_retries,
+        retry_threshold=wcfg.writer_summary_judge_retry_threshold,
+        log_path=wcfg.writer_summary_output_log_path,
+    )
+
+    if judge_status in (JudgeLoopTerminationStatus.complete, JudgeLoopTerminationStatus.partial):
+        result_status = StepTerminationStatus.done
+        result_output = front_matter_output
+        if judge_status == JudgeLoopTerminationStatus.partial:
+            logger.warning(
+                f"{step_prefix} - front matter completion status is partial, marking as done."
+            )
+    elif judge_status == JudgeLoopTerminationStatus.error:
+        result_status = StepTerminationStatus.error
+        result_output = None
+    else:
+        raise ValueError(
+            f"{step_prefix} - unexpected judge status: {judge_status}"
+        )
+
+    logger.info(
+        f"{step_prefix} - finished, front_matter={'present' if result_output else 'empty'}, "
+        f"status: {result_status.value}"
+    )
+    return (result_output, result_status)
 
 
 async def _resolve_report_job_topic(cluster_pk_hash: str, cfg: ReportGenerationConfig) -> TopicResolveOutput:
@@ -891,15 +924,25 @@ async def _kick_off_report_job(cluster_pk_hash: str, user_intent: UserIntent, cf
         # need to update the report job status to error
         raise
 
-    draft_result, step_status = await _generate_report_body(
+    sections_result, step_status = await _generate_report_body(
         cluster_pk_hash, plan, new_topic_metadata, llm_client, cfg
     )
-    if step_status == StepTerminationStatus.error or draft_result is None:
+    if step_status == StepTerminationStatus.error or sections_result is None:
         logger.warning(f"Report body writing failed for cluster {cluster_pk_hash}")
         # write to memo with error metadata
         # need to update the report job status to error
+        # !!!! if sections_result is not none, save a writing checkpoint to local for manual retry
         raise
-    
+
+    # generate report front matter
+    front_matter, step_status = await _generate_report_front_matter(
+        cluster_pk_hash, sections_result, llm_client, cfg
+    )
+    if step_status == StepTerminationStatus.error or front_matter is None:
+        logger.warning(f"Report front matter generation failed for cluster {cluster_pk_hash}")
+        # write to memo with error metadata
+        # need to update the report job status to error
+        raise
 
 
 async def create_report_job(cluster_pk_hash: str, user_intent: UserIntent, cfg: ReportGenerationConfig) -> Optional[Tuple[str, str]]:

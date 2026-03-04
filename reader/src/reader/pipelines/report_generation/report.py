@@ -263,9 +263,24 @@ class ReportWriterSectionOutput(BaseModel):
     )
 
 class ReportWriterFrontMatterOutput(BaseModel):
-    title: str = Field(..., min_length=5, max_length=120)
-    summary: str = Field(..., min_length=40, max_length=1200)
-    keywords: Set[str] = Field(..., min_length=5, max_length=12)
+    title: str = Field(
+        ...,
+        min_length=5,
+        max_length=120,
+        description="Reflects the dominant theme(concise, specific).",
+    )
+    summary: str = Field(
+        ...,
+        min_length=40,
+        max_length=1200,
+        description="Decision-oriented and faithful to REPORT_BODY. Generic; no citations needed.",
+    )
+    keywords: Set[str] = Field(
+        ...,
+        min_length=5,
+        max_length=12,
+        description="Noun phrases for the report.",
+    )
 
     @model_validator(mode="after")
     def _keywords_case_insensitive_unique(self) -> "ReportWriterFrontMatterOutput":

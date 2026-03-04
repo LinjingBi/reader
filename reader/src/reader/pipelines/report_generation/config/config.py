@@ -67,6 +67,11 @@ class ReportGenSectionConfig(BaseModel):
     max_writer_writing_judge_retries: int = Field(default=3, description="Max retries for writing judge")
     writer_writing_judge_retry_threshold: float = Field(default=0.0, description="Accept writing if overall > threshold")
     writer_writing_output_log_path: Optional[str] = Field(default=None, description="If set, append writing outputs to JSONL")
+    # Front matter (summary) config
+    writer_summary_prompt_template: str = Field(..., description="Template path for summary/front matter step")
+    max_writer_summary_judge_retries: int = Field(default=3, description="Max retries for summary judge")
+    writer_summary_judge_retry_threshold: float = Field(default=0.0, description="Accept summary if overall > threshold")
+    writer_summary_output_log_path: Optional[str] = Field(default=None, description="If set, append summary outputs to JSONL")
 
 
 class ReportGenerationConfig(BaseModel):

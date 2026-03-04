@@ -20,7 +20,20 @@ report_generation:
   planner_judge_retry_threshold: 0.0
   planner_output_log_path: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/artifacts/planner_outputs.jsonl"  # e.g. "reader/src/reader/pipelines/report_generation/artifacts/planner_outputs.jsonl" to enable
   # report writer config
-  
+  writer_supplement_prompt_template: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/prompts/writer/prompt_evidence_request.txt"   # Template in prompts/writer/ for supply step
+  writer_section_writing_prompt_template: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/prompts/writer/prompt_writing.txt"       # Template in prompts/writer/ for write step
+  max_writer_supplement_judge_retries: 3
+  writer_supplement_judge_retry_threshold: 0.0
+  writer_supplement_output_log_path: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/artifacts/writing_supply_outputs.jsonl"                            # e.g. "/path/to/supply_outputs.jsonl" to enable
+  max_writer_writing_judge_retries: 3
+  writer_writing_judge_retry_threshold: 0.0
+  writer_writing_output_log_path: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/artifacts/writing_outputs.jsonl"                               # e.g. "/path/to/writing_outputs.jsonl" to enable
+  # front matter (summary) config
+  writer_summary_prompt_template: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/prompts/writer/prompt_summary.txt"
+  max_writer_summary_judge_retries: 3
+  writer_summary_judge_retry_threshold: 0.0
+  writer_summary_output_log_path: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/artifacts/writing_front_matter_outputs.jsonl"   # e.g. "/path/to/summary_outputs.jsonl" to enable
+
   llm_gemini:
     model: "models/gemini-2.5-pro"
     temperature: 0.2

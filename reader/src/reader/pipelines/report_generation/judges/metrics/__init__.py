@@ -19,6 +19,10 @@ from reader.pipelines.report_generation.judges.metrics.writer_writing import (
     hard_validate_writer_writing,
     soft_validate_writer_writing,
 )
+from reader.pipelines.report_generation.judges.metrics.writer_summary import (
+    hard_validate_writer_summary,
+    soft_validate_writer_summary,
+)
 
 __all__ = [
     "ValidationReport",
@@ -32,4 +36,6 @@ __all__ = [
     "WriterWritingJudgeInput",
     "hard_validate_writer_writing",
     "soft_validate_writer_writing",
+    "hard_validate_writer_summary",
+    "soft_validate_writer_summary",
 ]

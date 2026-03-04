@@ -42,6 +42,11 @@ def word_count(s: str) -> int:
     return len(_WORD_RE.findall((s or "").strip()))
 
 
+def sentence_count(s: str) -> int:
+    """Approximate sentence count by counting .?!"""
+    return len(re.findall(r"[.?!]", (s or "").strip()))
+
+
 def run_checks(output: T, checks: Sequence[Callable[[T], Tuple[bool, Optional[Tuple[str, str]]]]]) -> ValidationReport:
     """Run a sequence of checks and return ValidationReport"""
     passed = 0
