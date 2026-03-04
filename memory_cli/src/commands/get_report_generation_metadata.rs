@@ -3,7 +3,7 @@ use crate::db;
 use anyhow::Result;
 use std::io::{self, Write};
 
-fn validate_get_report_planner_metadata(
+fn validate_get_report_generation_metadata(
     topic_id: Option<i64>,
     db_path: &str,
     schema_path: Option<&str>,
@@ -44,7 +44,7 @@ pub fn handle(
     add_topic_reports: Option<i64>,
     add_top_papers: bool,
 ) -> Result<()> {
-    let validation = validate_get_report_planner_metadata(add_topic_reports, db_path, schema_path);
+    let validation = validate_get_report_generation_metadata(add_topic_reports, db_path, schema_path);
 
     if !validation.is_all_passed() {
         return Err(validation.to_error().unwrap());
@@ -61,7 +61,7 @@ pub fn handle(
     }
 
     let store = db::store::Store::new(&conn);
-    let resp = store.get_report_planner_metadata(cluster_pk_hash, add_topic_reports, add_top_papers)?;
+    let resp = store.get_report_generation_metadata(cluster_pk_hash, add_topic_reports, add_top_papers)?;
     
     // Output JSON to stdout (compact format for machine parsing)
     let out = serde_json::to_string(&resp)?;
@@ -70,4 +70,3 @@ pub fn handle(
     
     Ok(())
 }
-

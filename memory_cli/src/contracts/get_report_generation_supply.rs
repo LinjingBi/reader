@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-/// Input payload for `get-report-planner-supplement` command.
+/// Input payload for `get-report-generation-supply` command.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GetReportPlannerSupplementRequest {
+pub struct GetReportGenerationSupplyRequest {
     /// Paper lookup requests.
     #[serde(default)]
     pub paper_requests: Vec<PaperSupplementRequest>,
@@ -25,10 +25,10 @@ pub struct ReportSupplementRequest {
     pub selectors: Vec<String>,
 }
 
-/// Response for `get-report-planner-supplement` command.
+/// Response for `get-report-generation-supply` command.
 /// Matches phase2_supplement structure: paper_id/report_id -> selector -> value.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GetReportPlannerSupplementResponse {
+pub struct GetReportGenerationSupplyResponse {
     #[serde(default)]
     pub paper_supplements: std::collections::HashMap<String, std::collections::HashMap<String, String>>,
     #[serde(default)]

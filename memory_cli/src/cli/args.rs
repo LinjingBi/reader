@@ -137,14 +137,14 @@ EXAMPLES:
 
     /// Inlcude a cluster's observation and its top papers (≤5) for the given cluster pk_hash, and topic details for the given topic id.
     #[command(
-        long_about = "Planner metadata includes a cluster's observation and its top papers (≤5)(optional) for the given cluster pk_hash, and topic details for the given topic id.
+        long_about = "Report generation metadata includes a cluster's observation and its top papers (≤5)(optional) for the given cluster pk_hash, and topic details for the given topic id.
 
 EXAMPLES:
-  memo get-report-planner-metadata --cluster-pk-hash abc123def456
-  memo get-report-planner-metadata --cluster-pk-hash abc123def456 --add-top-papers
-  memo get-report-planner-metadata --cluster-pk-hash abc123def456 --add-topic-reports 42 --add-top-papers"
+  memo get-report-generation-metadata --cluster-pk-hash abc123def456
+  memo get-report-generation-metadata --cluster-pk-hash abc123def456 --add-top-papers
+  memo get-report-generation-metadata --cluster-pk-hash abc123def456 --add-topic-reports 42 --add-top-papers"
     )]
-    GetReportPlannerMetadata {
+    GetReportGenerationMetadata {
         /// Cluster pk_hash (primary key hash from cluster table).
         #[arg(long)]
         cluster_pk_hash: String,
@@ -170,15 +170,15 @@ EXAMPLES:
         input: String,
     },
 
-    /// Get report planner supplement (paper chunks and history report fields for evidence gaps).
+    /// Get report generation supply (paper chunks and history report fields for evidence gaps).
     #[command(
         long_about = "Fetch evidence (paper chunks and history report fields) to fill evidence gaps from planner output.
 
 EXAMPLES:
-  memo get-report-planner-supplement --input supplement_request.json
-  echo '{\"paper_requests\":[],\"report_requests\":[]}' | memo get-report-planner-supplement --input -"
+  memo get-report-generation-supply --input supplement_request.json
+  echo '{\"paper_requests\":[],\"report_requests\":[]}' | memo get-report-generation-supply --input -"
     )]
-    GetReportPlannerSupplement {
+    GetReportGenerationSupply {
         /// JSON payload path. Use '-' to read from stdin.
         #[arg(long)]
         input: String,

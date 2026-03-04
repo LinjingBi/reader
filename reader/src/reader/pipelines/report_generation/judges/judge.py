@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from reader.logging.logging_setup import get_logger
 
-from reader.pipelines.report_generation.judges.metrics.planner import ValidationReport
+from reader.pipelines.report_generation.judges.metrics.common import ValidationReport
 
 T = TypeVar("T", bound=BaseModel)
 

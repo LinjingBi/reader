@@ -58,6 +58,15 @@ class ReportGenSectionConfig(BaseModel):
     planner_output_log_path: Optional[str] = Field(default=None, description="If set, append (planner_output, judge_output) to JSONL")
     max_evidence_gaps_threshold: int = Field(default=3, description="Evidence collection: conclude when len(evidence_gaps) < this")
     max_evidence_loop_iterations: int = Field(default=3, description="Evidence collection: conclude when iteration count exceeds this")
+    # Writer config
+    writer_supplement_prompt_template: str = Field(..., description="Template name in prompts/writer/ for supply step")
+    writer_section_writing_prompt_template: str = Field(..., description="Template name in prompts/writer/ for write step")
+    max_writer_supplement_judge_retries: int = Field(default=3, description="Max retries for supply judge")
+    writer_supplement_judge_retry_threshold: float = Field(default=0.0, description="Accept supply if overall > threshold")
+    writer_supplement_output_log_path: Optional[str] = Field(default=None, description="If set, append supply outputs to JSONL")
+    max_writer_writing_judge_retries: int = Field(default=3, description="Max retries for writing judge")
+    writer_writing_judge_retry_threshold: float = Field(default=0.0, description="Accept writing if overall > threshold")
+    writer_writing_output_log_path: Optional[str] = Field(default=None, description="If set, append writing outputs to JSONL")
 
 
 class ReportGenerationConfig(BaseModel):

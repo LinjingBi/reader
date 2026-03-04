@@ -10,30 +10,11 @@ HARD RULES:
 - If you cannot support a claim with allowed citations, rewrite it as generic/hedged language or omit it.
 - Every citation MUST be marked inline. Never leave a fact, claim, or source uncited. Use: paper [paper id: xxx], history report [report id: xxx], previous section [section name: xxx].
 
-INPUTS:
-Writing plan (global constraints):
-<PLAN_JSON>
-
-Writing materials (summary-level context):
-<METADATA_JSON>
-
-Writing supplements (fetched for this section; may be empty):
-<EVIDENCE_PACK_JSON>
-
-Report outline:
-<PLAN_OUTLINE_STRING>
-
-Section to write now:
-<OUTLINE_ITEM_STRING>
-
-Draft so far (full text written so far; use for style and consistency):
-<DRAFT_SO_FAR_TEXT>
-
-Allowed citations (verbatim tokens allowed inline):
-<ALLOWED_CITATIONS_LIST>
+INPUT:
+<INPUT_JSON>
 
 TASK:
-Write only the section for "Section to write now".
+Write only the section for target_section.
 
 STYLE + CONTENT GUIDANCE:
 - Match declared_level_final in the writing plan.
@@ -42,4 +23,4 @@ STYLE + CONTENT GUIDANCE:
 - Prefer clarity over completeness: if evidence is thin, stay conservative rather than adding details.
 
 OUTPUT:
-Return JSON only.
+Return valid JSON only.

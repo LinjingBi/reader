@@ -46,13 +46,13 @@ class MemoGetTopicResolverMetadataError(Exception):
     pass
 
 
-class MemoGetReportPlannerMetadataError(Exception):
-    """Exception raised when get-report-planner-metadata subcommand fails."""
+class MemoGetReportGenerationMetadataError(Exception):
+    """Exception raised when get-report-generation-metadata subcommand fails."""
     pass
 
 
-class MemoGetReportPlannerSupplementError(Exception):
-    """Exception raised when get-report-planner-supplement subcommand fails."""
+class MemoGetReportGenerationSupplyError(Exception):
+    """Exception raised when get-report-generation-supply subcommand fails."""
     pass
 
 
@@ -154,7 +154,7 @@ class GetTopicResolverMetadataResponse(BaseModel):
 
 
 # ============================================================================
-# get-report-planner-metadata command models
+# get-report-generation-metadata command models
 # ============================================================================
 
 class NewObservation(BaseModel):
@@ -185,15 +185,15 @@ class HistoryReport(BaseModel):
     depth_mode: str
 
 
-class GetReportPlannerMetadataResponse(BaseModel):
-    """Response from get-report-planner-metadata command."""
+class GetReportGenerationMetadataResponse(BaseModel):
+    """Response from get-report-generation-metadata command."""
     new_observation: NewObservation
     new_observation_key_paper_details: Optional[List[TopPaper]] = None  # Optional Top-K papers (K≤5)
     history_reports: Optional[List[HistoryReport]] = None  # Optional top ≤3 reports for the specified topic
 
 
 # ============================================================================
-# get-report-planner-supplement command models
+# get-report-generation-supply command models
 # ============================================================================
 
 class PaperSupplementRequest(BaseModel):
@@ -208,14 +208,14 @@ class ReportSupplementRequest(BaseModel):
     selectors: List[str]
 
 
-class GetReportPlannerSupplementRequest(BaseModel):
-    """Request for get-report-planner-supplement command."""
+class GetReportGenerationSupplyRequest(BaseModel):
+    """Request for get-report-generation-supply command."""
     paper_requests: List[PaperSupplementRequest] = Field(default_factory=list)
     report_requests: List[ReportSupplementRequest] = Field(default_factory=list)
 
 
-class GetReportPlannerSupplementResponse(BaseModel):
-    """Response from get-report-planner-supplement command.
+class GetReportGenerationSupplyResponse(BaseModel):
+    """Response from get-report-generation-supply command.
     Matches phase2_supplement structure: paper_id/report_id -> selector -> value.
     """
     paper_supplements: Dict[str, Dict[str, str]] = Field(default_factory=dict)
@@ -720,14 +720,14 @@ async def get_topic_resolver_metadata(
         raise MemoGetTopicResolverMetadataError(f"Unexpected error in memo get-topic-resolver-metadata: {e}") from e
 
 
-async def get_report_planner_metadata(
+async def get_report_generation_metadata(
     cluster_pk_hash: str,
     config: MemoConfig,
     topic_id: Optional[str] = None,
     add_top_papers: bool = False,
-) -> GetReportPlannerMetadataResponse:
+) -> GetReportGenerationMetadataResponse:
     """
-    Call memo CLI get-report-planner-metadata command to retrieve report planner metadata.
+    Call memo CLI get-report-generation-metadata command to retrieve report generation metadata.
 
     Args:
         cluster_pk_hash: Cluster pk_hash (primary key hash from cluster table)
@@ -736,10 +736,10 @@ async def get_report_planner_metadata(
         add_top_papers: Whether to include Top-K papers (K≤5) for the cluster
 
     Returns:
-        GetReportPlannerMetadataResponse instance
+        GetReportGenerationMetadataResponse instance
 
     Raises:
-        MemoGetReportPlannerMetadataError: If the subcommand execution fails
+        MemoGetReportGenerationMetadataError: If the subcommand execution fails
     """
     try:
         cmd = [
@@ -751,7 +751,7 @@ async def get_report_planner_metadata(
         if config.db_schema_path:
             cmd.append('--schema')
             cmd.append(config.db_schema_path)
-        cmd.extend(['get-report-planner-metadata', '--cluster-pk-hash', cluster_pk_hash])
+        cmd.extend(['get-report-generation-metadata', '--cluster-pk-hash', cluster_pk_hash])
 
         if topic_id is not None:
             cmd.extend(['--add-topic-reports', str(topic_id)])
@@ -772,8 +772,8 @@ async def get_report_planner_metadata(
         except asyncio.TimeoutError:
             process.kill()
             await process.wait()
-            logger.warning(f"memo get-report-planner-metadata timed out after {config.timeout_sec}s")
-            raise MemoGetReportPlannerMetadataError(f"memo get-report-planner-metadata timed out after {config.timeout_sec}s")
+            logger.warning(f"memo get-report-generation-metadata timed out after {config.timeout_sec}s")
+            raise MemoGetReportGenerationMetadataError(f"memo get-report-generation-metadata timed out after {config.timeout_sec}s")
         except asyncio.CancelledError:
             process.kill()
             await process.wait()
@@ -783,38 +783,38 @@ async def get_report_planner_metadata(
         stderr_text = stderr.decode('utf-8')
 
         if process.returncode != 0:
-            logger.error(f"Error calling memo get-report-planner-metadata: {stderr_text}")
-            raise MemoGetReportPlannerMetadataError(f"Error calling memo get-report-planner-metadata: {stderr_text}")
+            logger.error(f"Error calling memo get-report-generation-metadata: {stderr_text}")
+            raise MemoGetReportGenerationMetadataError(f"Error calling memo get-report-generation-metadata: {stderr_text}")
 
-        return GetReportPlannerMetadataResponse.model_validate_json(stdout_text)
+        return GetReportGenerationMetadataResponse.model_validate_json(stdout_text)
 
-    except MemoGetReportPlannerMetadataError:
+    except MemoGetReportGenerationMetadataError:
         raise
     except pydantic.ValidationError as e:
         logger.error(f"Error validating memo output: {e}")
-        raise MemoGetReportPlannerMetadataError(f"Error validating memo output: {e}") from e
+        raise MemoGetReportGenerationMetadataError(f"Error validating memo output: {e}") from e
     except Exception as e:
-        logger.error(f"Unexpected error in memo get-report-planner-metadata: {e}", exc_info=True)
-        raise MemoGetReportPlannerMetadataError(f"Unexpected error in memo get-report-planner-metadata: {e}") from e
+        logger.error(f"Unexpected error in memo get-report-generation-metadata: {e}", exc_info=True)
+        raise MemoGetReportGenerationMetadataError(f"Unexpected error in memo get-report-generation-metadata: {e}") from e
 
 
-async def get_report_planner_supplement(
-    request: "GetReportPlannerSupplementRequest",
+async def get_report_generation_supply(
+    request: "GetReportGenerationSupplyRequest",
     config: MemoConfig,
-) -> "GetReportPlannerSupplementResponse":
+) -> "GetReportGenerationSupplyResponse":
     """
-    Call memo CLI get-report-planner-supplement command to fetch evidence (paper chunks
+    Call memo CLI get-report-generation-supply command to fetch evidence (paper chunks
     and history report fields) for evidence gaps from planner output.
 
     Args:
-        request: GetReportPlannerSupplementRequest instance
+        request: GetReportGenerationSupplyRequest instance
         config: MemoConfig instance
 
     Returns:
-        GetReportPlannerSupplementResponse instance
+        GetReportGenerationSupplyResponse instance
 
     Raises:
-        MemoGetReportPlannerSupplementError: If the subcommand execution fails
+        MemoGetReportGenerationSupplyError: If the subcommand execution fails
     """
     try:
         payload_json = request.model_dump_json(indent=2, exclude_none=False)
@@ -828,7 +828,7 @@ async def get_report_planner_supplement(
         if config.db_schema_path:
             cmd.append('--schema')
             cmd.append(config.db_schema_path)
-        cmd.extend(['get-report-planner-supplement', '--input', '-'])
+        cmd.extend(['get-report-generation-supply', '--input', '-'])
 
         process = await asyncio.create_subprocess_exec(
             *cmd,
@@ -845,9 +845,9 @@ async def get_report_planner_supplement(
         except asyncio.TimeoutError:
             process.kill()
             await process.wait()
-            logger.warning(f"memo get-report-planner-supplement timed out after {config.timeout_sec}s")
-            raise MemoGetReportPlannerSupplementError(
-                f"memo get-report-planner-supplement timed out after {config.timeout_sec}s"
+            logger.warning(f"memo get-report-generation-supply timed out after {config.timeout_sec}s")
+            raise MemoGetReportGenerationSupplyError(
+                f"memo get-report-generation-supply timed out after {config.timeout_sec}s"
             )
         except asyncio.CancelledError:
             process.kill()
@@ -858,22 +858,22 @@ async def get_report_planner_supplement(
         stderr_text = stderr.decode('utf-8')
 
         if process.returncode != 0:
-            logger.error(f"Error calling memo get-report-planner-supplement: {stderr_text}")
-            raise MemoGetReportPlannerSupplementError(
-                f"Error calling memo get-report-planner-supplement: {stderr_text}"
+            logger.error(f"Error calling memo get-report-generation-supply: {stderr_text}")
+            raise MemoGetReportGenerationSupplyError(
+                f"Error calling memo get-report-generation-supply: {stderr_text}"
             )
 
-        return GetReportPlannerSupplementResponse.model_validate_json(stdout_text)
+        return GetReportGenerationSupplyResponse.model_validate_json(stdout_text)
 
-    except MemoGetReportPlannerSupplementError:
+    except MemoGetReportGenerationSupplyError:
         raise
     except pydantic.ValidationError as e:
         logger.error(f"Error validating memo output: {e}")
-        raise MemoGetReportPlannerSupplementError(f"Error validating memo output: {e}") from e
+        raise MemoGetReportGenerationSupplyError(f"Error validating memo output: {e}") from e
     except Exception as e:
-        logger.error(f"Unexpected error in memo get-report-planner-supplement: {e}", exc_info=True)
-        raise MemoGetReportPlannerSupplementError(
-            f"Unexpected error in memo get-report-planner-supplement: {e}"
+        logger.error(f"Unexpected error in memo get-report-generation-supply: {e}", exc_info=True)
+        raise MemoGetReportGenerationSupplyError(
+            f"Unexpected error in memo get-report-generation-supply: {e}"
         ) from e
 
 

@@ -4,7 +4,7 @@ use crate::contracts::{
     GetClusterObservationResponse, ClusterObservationData,
     ReportJobStatus,
     GetTopicResolverMetadataResponse, TopicCentroid, ClusterMetadata,
-    GetReportPlannerMetadataResponse, NewObservation, TopPaper, HistoryReport,
+    GetReportGenerationMetadataResponse, NewObservation, TopPaper, HistoryReport,
     PaperOutput,
     InjectPapersChunkRequest,
     PaperSupplement, PaperChunk, ReportSupplement,
@@ -623,13 +623,13 @@ impl<'a> Store<'a> {
         })
     }
 
-    /// Get report planner metadata (cluster observation, top papers, and topic reports).
-    pub fn get_report_planner_metadata(
+    /// Get report generation metadata (cluster observation, top papers, and topic reports).
+    pub fn get_report_generation_metadata(
         &self,
         cluster_pk_hash: &str,
         topic_id: Option<i64>,
         add_top_papers: bool,
-    ) -> Result<GetReportPlannerMetadataResponse> {
+    ) -> Result<GetReportGenerationMetadataResponse> {
         // Validate cluster_pk_hash exists
         let cluster_exists: bool = match self.conn.query_row(
             "SELECT COUNT(*) > 0 FROM cluster_observation WHERE pk_hash = ?1",
@@ -779,7 +779,7 @@ impl<'a> Store<'a> {
             None
         };
 
-        Ok(GetReportPlannerMetadataResponse {
+        Ok(GetReportGenerationMetadataResponse {
             new_observation,
             new_observation_key_paper_details: top_papers,
             history_reports,

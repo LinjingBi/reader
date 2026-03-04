@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Literal, Dict, Any, Optional
+from typing import List, Literal, Dict, Any, Optional, Set
 
-from pydantic import BaseModel, Field, computed_field, conlist
+from pydantic import BaseModel, Field, computed_field, model_validator
 
 # ----------------------------
 # llm report planner models
@@ -223,6 +223,37 @@ class ReportWriterSupplementOutput(BaseModel):
     )
 
 
+# Input models for writer steps (used to build prompts)
+class ReportWriterSupplementInput(BaseModel):
+    """Input for supply step: decide what supplements to request for one outline item."""
+    materials: Any = Field(..., description="GetReportGenerationMetadataResponse as dict")
+    plan: Any = Field(..., description="LLMReportPlannerPlan as dict")
+    target_outline: str = Field(..., description="Current outline item to write")
+    available_ids: Dict[str, List[str]] = Field(
+        default_factory=dict,
+        description="Whitelist: paper_id list, report_id list",
+    )
+
+
+class ReportWriterSectionInput(BaseModel):
+    """Input for write step: write one section with fetched supplements."""
+    materials: Any = Field(..., description="GetReportGenerationMetadataResponse as dict")
+    plan: Any = Field(..., description="LLMReportPlannerPlan as dict")
+    target_section: str = Field(..., description="Current outline item to write")
+    written_sections: List[Dict[str, str]] = Field(
+        default_factory=list,
+        description="Draft so far: [{\"title\": ..., \"body\": ...}]",
+    )
+    allowed_citations: List[str] = Field(
+        default_factory=list,
+        description="Allowed citation tokens: [paper id: xxx], [report id: xxx], [section name: xxx]",
+    )
+    supplements: Any = Field(
+        ...,
+        description="GetReportGenerationSupplyResponse (paper_supplements, report_supplements)",
+    )
+
+
 class ReportWriterSectionOutput(BaseModel):
     section_name: str = Field(..., description="Section name (usually derived from outline item).")
     section_text: str = Field(..., description="The written section content.")
@@ -234,4 +265,11 @@ class ReportWriterSectionOutput(BaseModel):
 class ReportWriterFrontMatterOutput(BaseModel):
     title: str = Field(..., min_length=5, max_length=120)
     summary: str = Field(..., min_length=40, max_length=1200)
-    keywords: conlist(str, min_length=5, max_length=12, unique=True)
+    keywords: Set[str] = Field(..., min_length=5, max_length=12)
+
+    @model_validator(mode="after")
+    def _keywords_case_insensitive_unique(self) -> "ReportWriterFrontMatterOutput":
+        """Enforce case-insensitive uniqueness (W4-H1)."""
+        if self.keywords and len(self.keywords) != len({k.lower() for k in self.keywords}):
+            raise ValueError("keywords must be case-insensitively unique")
+        return self

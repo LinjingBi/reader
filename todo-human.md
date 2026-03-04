@@ -63,7 +63,7 @@ sub(issue, bug level)
 [x] - [memo] refactor topic related db tables for report generation  
 [x] - [memo,reader] add new memo cmd to record report generation job status in db and integrate with reader.  
 [x] - [reader,memo] add a new algo-lib topic-resolver to fetch the existing topics from db and compute the sim with chosen cluster, and gate to decide create/merge.  
-[...] - [reader,memo] generate the report planner prompt for llm call 1, memo supply metadat if necessary.  
+[x] - [reader,memo] generate the report planner prompt for llm call 1, memo supply metadat if necessary.  
 [x] - [reader] benchmark pdf libs for paper introduction extraction.  
 [x] - [reader] add prompt spec and builder to for llm report planner prompt generation under prompts/report_planner.  
 [x] - [reader,memo] add new memo cmd get-report-planner-metadata for call 1 planner prompt generation and integrate with reader.  
@@ -104,7 +104,7 @@ sub(issue, bug level)
 [x] - [reader,memo] remove redundent geometric fields from memo get report metadata cmd.  
 [x] - [reader] refactor judge_output to a judge class using different metrics as this workflow will be shared by all the steps.  
 [x] - [reader] port planner's llm call retry based on judge result to a generic method of LLMClient as this function will be shared by all the steps.  
-[...] - [reader] implement step 2.  
+[x] - [reader] implement step 2.  
 [ ] - [reader] implement step 3.    
 [ ] - [reader] test report generation in one.   
 [ ] - [reader,memo] design the report generation db update workflow.note. resolve the one cluster event has more than one reports, or report regeneration issue.     

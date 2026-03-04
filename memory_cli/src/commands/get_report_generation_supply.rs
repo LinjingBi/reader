@@ -1,4 +1,4 @@
-use crate::contracts::{GetReportPlannerSupplementRequest, GetReportPlannerSupplementResponse};
+use crate::contracts::{GetReportGenerationSupplyRequest, GetReportGenerationSupplyResponse};
 use crate::commands::validation::{self, ValidationResult};
 use crate::db;
 use anyhow::{Context, Result};
@@ -57,7 +57,7 @@ fn convert_selectors(
     Ok(out)
 }
 
-fn validate_request(req: &GetReportPlannerSupplementRequest) -> Result<()> {
+fn validate_request(req: &GetReportGenerationSupplyRequest) -> Result<()> {
     if req.paper_requests.is_empty() && req.report_requests.is_empty() {
         return Err(anyhow::anyhow!(
             "Both paper_requests and report_requests are empty; at least one request required"
@@ -77,10 +77,10 @@ fn validate_request(req: &GetReportPlannerSupplementRequest) -> Result<()> {
     Ok(())
 }
 
-fn validate_get_report_planner_supplement(
+fn validate_get_report_generation_supply(
     db_path: &str,
     schema_path: Option<&str>,
-    req: &GetReportPlannerSupplementRequest,
+    req: &GetReportGenerationSupplyRequest,
 ) -> ValidationResult {
     let mut validation = ValidationResult::new();
 
@@ -121,10 +121,10 @@ pub fn handle(
             .with_context(|| format!("failed to read input: {}", input_path))?;
     }
 
-    let req: GetReportPlannerSupplementRequest = serde_json::from_str(&input_str)
-        .with_context(|| "invalid JSON payload for get-report-planner-supplement")?;
+    let req: GetReportGenerationSupplyRequest = serde_json::from_str(&input_str)
+        .with_context(|| "invalid JSON payload for get-report-generation-supply")?;
 
-    let validation = validate_get_report_planner_supplement(db_path, schema_path, &req);
+    let validation = validate_get_report_generation_supply(db_path, schema_path, &req);
 
     if !validation.is_all_passed() {
         return Err(validation.to_error().unwrap());
@@ -202,7 +202,7 @@ pub fn handle(
         report_supplements.len()
     );
 
-    let resp = GetReportPlannerSupplementResponse {
+    let resp = GetReportGenerationSupplyResponse {
         paper_supplements,
         report_supplements,
     };

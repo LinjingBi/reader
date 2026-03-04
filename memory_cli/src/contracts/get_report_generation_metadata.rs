@@ -49,9 +49,9 @@ pub struct HistoryReport {
     pub depth_mode: String,
 }
 
-/// Response for `get-report-planner-metadata` command.
+/// Response for `get-report-generation-metadata` command.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GetReportPlannerMetadataResponse {
+pub struct GetReportGenerationMetadataResponse {
     /// New observation data from cluster.
     pub new_observation: NewObservation,
     /// Optional Top-K papers (K≤5) for the cluster.
@@ -61,4 +61,3 @@ pub struct GetReportPlannerMetadataResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub history_reports: Option<Vec<HistoryReport>>,
 }
-

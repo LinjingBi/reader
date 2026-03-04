@@ -1,17 +1,17 @@
 ---
 name: Async Switch for Supplement Lookups
-overview: Switch the get-report-planner-supplement command from multi-thread (std::thread::spawn) to async with tokio, using spawn_blocking for sync rusqlite calls and bounded concurrency for I/O-bound DB lookups.
+overview: Switch the get-report-generation-supply command from multi-thread (std::thread::spawn) to async with tokio, using spawn_blocking for sync rusqlite calls and bounded concurrency for I/O-bound DB lookups.
 todos: []
 isProject: false
 ---
 
-# Plan: Async Switch for get-report-planner-supplement
+# Plan: Async Switch for get-report-generation-supply
 
 ## Current State
 
 - **Concurrency**: `std::thread::spawn` per paper/report request (unbounded threads)
 - **DB**: Sync rusqlite via [memory_cli/src/db/store.rs](memory_cli/src/db/store.rs) `get_paper_chunks_supplement` and `get_report_fields_supplement`
-- **Entry**: Sync `handle()` in [memory_cli/src/commands/get_report_planner_supplement.rs](memory_cli/src/commands/get_report_planner_supplement.rs)
+- **Entry**: Sync `handle()` in [memory_cli/src/commands/get_report_generation_supply.rs](memory_cli/src/commands/get_report_generation_supply.rs)
 - **Scope**: Only this command uses parallelism; all other memo commands remain sync
 
 ---
@@ -76,7 +76,7 @@ flowchart TB
         Rusqlite[(rusqlite)]
     end
     
-    Dispatch -->|GetReportPlannerSupplement| BlockOn
+    Dispatch -->|GetReportGenerationSupply| BlockOn
     BlockOn --> HandleAsync
     HandleAsync --> Stream
     Stream --> B1
@@ -108,7 +108,7 @@ futures = "0.3"
 
 ### 2. Add async handle and bounded concurrency
 
-In [memory_cli/src/commands/get_report_planner_supplement.rs](memory_cli/src/commands/get_report_planner_supplement.rs):
+In [memory_cli/src/commands/get_report_generation_supply.rs](memory_cli/src/commands/get_report_generation_supply.rs):
 
 - Add `pub async fn handle_async(...) -> Result<()>` that:
   - Keeps validation and selector conversion (sync, unchanged)
@@ -122,12 +122,12 @@ In [memory_cli/src/commands/get_report_planner_supplement.rs](memory_cli/src/com
 
 In [memory_cli/src/commands.rs](memory_cli/src/commands.rs):
 
-For `Command::GetReportPlannerSupplement`:
+For `Command::GetReportGenerationSupply`:
 
 ```rust
-Command::GetReportPlannerSupplement { input } => {
+Command::GetReportGenerationSupply { input } => {
     let rt = tokio::runtime::Runtime::new()?;
-    rt.block_on(get_report_planner_supplement::handle_async(
+    rt.block_on(get_report_generation_supply::handle_async(
         args.dry_run, &args.db, args.schema.as_deref(), &input
     ))
 }
@@ -174,8 +174,8 @@ Same pattern for report lookups.
 | File                                                                                                                 | Change                                                                          |
 | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | [memory_cli/Cargo.toml](memory_cli/Cargo.toml)                                                                       | Add tokio, futures                                                              |
-| [memory_cli/src/commands/get_report_planner_supplement.rs](memory_cli/src/commands/get_report_planner_supplement.rs) | Add `handle_async`, refactor `handle` to use `block_on(handle_async)` or remove |
-| [memory_cli/src/commands.rs](memory_cli/src/commands.rs)                                                             | For GetReportPlannerSupplement: create runtime, `block_on(handle_async(...))`   |
+| [memory_cli/src/commands/get_report_generation_supply.rs](memory_cli/src/commands/get_report_generation_supply.rs) | Add `handle_async`, refactor `handle` to use `block_on(handle_async)` or remove |
+| [memory_cli/src/commands.rs](memory_cli/src/commands.rs)                                                             | For GetReportGenerationSupply: create runtime, `block_on(handle_async(...))`   |
 
 
 ---

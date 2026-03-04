@@ -1,8 +1,8 @@
 pub mod fresh_paper;
 pub mod get_best_run;
 pub mod get_cluster_observation;
-pub mod get_report_planner_metadata;
-pub mod get_report_planner_supplement;
+pub mod get_report_generation_metadata;
+pub mod get_report_generation_supply;
 pub mod get_topic_resolver_metadata;
 pub mod inject_clusters_observation;
 pub mod inject_papers_chunk;
@@ -30,7 +30,7 @@ pub use inject_clusters_observation::{
 };
 pub use start_report_job::{StartReportJobResponse, ReportJobStatus};
 pub use get_topic_resolver_metadata::{TopicCentroid, ClusterMetadata, GetTopicResolverMetadataResponse};
-pub use get_report_planner_metadata::{GetReportPlannerMetadataResponse, NewObservation, TopPaper, HistoryReport};
+pub use get_report_generation_metadata::{GetReportGenerationMetadataResponse, NewObservation, TopPaper, HistoryReport};
 pub use inject_papers_chunk::{
     InjectPapersChunkRequest,
     InjectPapersChunkResponse,
@@ -39,9 +39,9 @@ pub use inject_papers_chunk::{
     PaperChunkData,
     ChunkEntry,
 };
-pub use get_report_planner_supplement::{
-    GetReportPlannerSupplementRequest,
-    GetReportPlannerSupplementResponse,
+pub use get_report_generation_supply::{
+    GetReportGenerationSupplyRequest,
+    GetReportGenerationSupplyResponse,
     PaperSupplementRequest,
     ReportSupplementRequest,
     PaperSupplement,

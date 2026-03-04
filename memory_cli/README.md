@@ -72,11 +72,11 @@ Returns a JSON object containing:
 - `topics`: List of all topics with their centroid data (id, centroid_b64, centroid_weight)
 - `cluster`: Cluster metadata with centroid and centroid_weight (cluster size) for the specified cluster_pk_hash
 
-### 8) Get report planner metadata
+### 8) Get report generation metadata
 ```bash
-./target/release/memo-cli get-report-planner-metadata --cluster-pk-hash abc123def456
-./target/release/memo-cli get-report-planner-metadata --cluster-pk-hash abc123def456 --add-top-papers
-./target/release/memo-cli get-report-planner-metadata --cluster-pk-hash abc123def456 --add-topic-reports 42 --add-top-papers
+./target/release/memo-cli get-report-generation-metadata --cluster-pk-hash abc123def456
+./target/release/memo-cli get-report-generation-metadata --cluster-pk-hash abc123def456 --add-top-papers
+./target/release/memo-cli get-report-generation-metadata --cluster-pk-hash abc123def456 --add-topic-reports 42 --add-top-papers
 ```
 
 Returns a JSON object containing:

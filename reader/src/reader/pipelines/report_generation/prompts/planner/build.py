@@ -20,7 +20,7 @@ from reader.pipelines.report_generation.prompts.planner.spec import (
     BRAINSTORM_DIRECTIONS_SPEC as BRAINSTORM_DIRECTIONS_SPEC_PROD,
     IMPLEMENTATION_ANGLE_SPEC as IMPLEMENTATION_ANGLE_SPEC_PROD,
 )
-from reader.adapters.memo import GetReportPlannerMetadataResponse
+from reader.adapters.memo import GetReportGenerationMetadataResponse
 
 
 def _format_guidance(field_name: str, g: FieldGuidance) -> str:
@@ -98,7 +98,7 @@ def build_plan_guidance(intent_spec: SpecIntentSpec) -> str:
 
 
 def build_planner_prompt(
-    phase1_metadata: GetReportPlannerMetadataResponse,
+    phase1_metadata: GetReportGenerationMetadataResponse,
     plan_guidance: str,
     phase2_supplement: Optional[Dict[str, Any]] = None,
 ) -> str:
@@ -119,7 +119,7 @@ def build_planner_prompt(
     return prompt
 
 
-def build_baseline_planner_prompt(intent_spec: IntentSpec, cluster_metadata: GetReportPlannerMetadataResponse) -> str:
+def build_baseline_planner_prompt(intent_spec: IntentSpec, cluster_metadata: GetReportGenerationMetadataResponse) -> str:
     # Build plan guidance content
     plan_guidance_parts = [
         f"Intent mode:\n- {intent_spec.intent_goal}\n",

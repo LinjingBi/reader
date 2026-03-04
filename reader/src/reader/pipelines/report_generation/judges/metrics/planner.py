@@ -3,9 +3,13 @@
 Validation rules for LLMReportPlannerOutput. Rules are organized per field.
 """
 
-import re
-from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Sequence, Tuple, get_args
+
+from reader.pipelines.report_generation.judges.metrics.common import (
+    ValidationReport,
+    run_checks,
+    word_count,
+)
 from reader.pipelines.report_generation.report import (
     LLMReportPlannerOutput,
     SupportField,
@@ -26,15 +30,6 @@ OUTLINE_MAX_WORDS_PER_ITEM = 18
 NEXT_TARGETS_MIN_WORDS = 3
 NEXT_TARGETS_MAX_WORDS = 16
 
-# Question starters (case-insensitive)
-QUESTION_STARTERS = frozenset(
-    w.lower()
-    for w in (
-        "What", "Which", "How", "Why", "When", "Where",
-        "Is", "Are", "Do", "Does", "Can", "Should"
-    )
-)
-
 # Generic subthread names to reject
 GENERIC_SUBTHREAD_NAMES = frozenset(
     w.lower()
@@ -45,40 +40,7 @@ GENERIC_SUBTHREAD_NAMES = frozenset(
 NARRATIVE_PHRASE_PREFIX = "in this report we will"
 
 
-# ============================================================================
-# Common Functions
-# ============================================================================
-
-_WORD_RE = re.compile(r"\b[\w'-]+\b", re.UNICODE)
-
-
-@dataclass(frozen=True)
-class ValidationReport:
-    """Validation result with score and reasons"""
-    score: float
-    reasons: List[Tuple[str, str]]  # [(rule_declaration, received_fact), ...]
-
-
 CheckFn = Callable[[LLMReportPlannerOutput], Tuple[bool, Optional[Tuple[str, str]]]]
-
-
-def word_count(s: str) -> int:
-    """Count words in a string"""
-    return len(_WORD_RE.findall((s or "").strip()))
-
-
-def run_checks(output: LLMReportPlannerOutput, checks: Sequence[CheckFn]) -> ValidationReport:
-    """Run a sequence of checks and return ValidationReport"""
-    passed = 0
-    reason_tuples: List[Tuple[str, str]] = []
-    for fn in checks:
-        ok, pair = fn(output)
-        if ok:
-            passed += 1
-        elif pair is not None:
-            reason_tuples.append(pair)
-    score = passed / max(1, len(checks))
-    return ValidationReport(score=score, reasons=reason_tuples)
 
 
 # ============================================================================
@@ -254,17 +216,6 @@ def hard_validate_planner_output(output: LLMReportPlannerOutput) -> ValidationRe
 # ============================================================================
 # Soft Rules (per field)
 # ============================================================================
-
-
-def _is_question(s: str) -> bool:
-    """Check if string is phrased as a question"""
-    t = (s or "").strip()
-    if not t:
-        return False
-    if t.endswith("?"):
-        return True
-    first_word = t.split()[0].lower() if t.split() else ""
-    return first_word in QUESTION_STARTERS
 
 
 def check_evidence_gap_why_word_count(output: LLMReportPlannerOutput) -> Tuple[bool, Optional[Tuple[str, str]]]:

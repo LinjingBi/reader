@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
@@ -14,23 +15,41 @@ from reader.pipelines.report_generation.config.config import ReportGenerationCon
 from reader.adapters import memo
 from reader.adapters.memo import (
     ClusterObservationData,
-    GetReportPlannerMetadataResponse,
-    GetReportPlannerSupplementRequest,
+    GetReportGenerationMetadataResponse,
+    GetReportGenerationSupplyRequest,
+    GetReportGenerationSupplyResponse,
+    MemoGetReportGenerationSupplyError,
     PaperSupplementRequest,
     ReportSupplementRequest,
 )
-from reader.adapters.llm import LLMClient, TokenBucket, LLMGenerationError
+from reader.adapters.llm import (
+    LLMClient,
+    TokenBucket,
+    LLMGenerationError,
+    JudgeLoopTerminationStatus,
+)
 from reader.pipelines.report_generation.report import (
     LLMReportPlannerOutput,
-    EvidenceGap,
     EvidenceCollectionTerminationSufficiency,
+    EvidenceGap,
+    ReportWriterSectionInput,
+    ReportWriterSectionOutput,
+    ReportWriterSupplementInput,
+    ReportWriterSupplementOutput,
+    WriterSupplementRequest,
 )
 from reader.pipelines.report_generation.judges import (
     LLMJudge,
     planner_judge,
+    WriterSupplyJudgeWrapper,
+    WriterWritingJudgeWrapper,
 )
 from reader.logging.logging_setup import get_logger
 from reader.pipelines.report_generation.prompts.planner.build import UserIntent, get_planner_intent_spec, build_plan_guidance, build_planner_prompt
+from reader.pipelines.report_generation.prompts.writer.build import (
+    build_evidence_requests_prompt,
+    build_section_writing_prompt,
+)
 from reader.tui.clusters_observation import display_clusters_observation
 
 logger = get_logger()
@@ -156,6 +175,34 @@ class StepTerminationStatus(str, Enum):
     error = "error"
 
 
+class StepWritingExitCondition(str, Enum):
+    """Reason the per-outline writing loop concluded."""
+
+    COMPLETE = "complete"
+    SUPPLY_LLM_ERROR = "supply_llm_error"
+    SUPPLY_FETCH_ERROR = "supply_fetch_error"
+    WRITING_LLM_ERROR = "writing_llm_error"
+    UNKNOWN_ERROR = "unknown_error"
+
+
+@dataclass
+class DraftSection:
+    """A single draft section with title and body."""
+
+    title: str
+    body: str
+
+    def to_dict(self) -> Dict[str, str]:
+        return {"title": self.title, "body": self.body}
+
+
+@dataclass
+class ReportWritingDraft:
+    """Draft content from the per-outline writing loop (without status)."""
+
+    draft: List[DraftSection]
+
+
 def _deduplicate_evidence_gap_requests(
     evidence_gaps: List[EvidenceGap],
 ) -> Tuple[List[PaperSupplementRequest], List[ReportSupplementRequest]]:
@@ -195,6 +242,72 @@ def _deduplicate_evidence_gap_requests(
         f"deduplicated to {merged_count}({len(paper_requests)} paper requests, {len(report_requests)} report requests)"
     )
     return paper_requests, report_requests
+
+
+def _derive_available_ids(
+    materials: GetReportGenerationMetadataResponse,
+) -> Dict[str, List[str]]:
+    """Derive paper_id and report_id whitelists from materials."""
+    paper_ids = [
+        p.paper_id
+        for p in (materials.new_observation_key_paper_details or [])
+    ]
+    report_ids = [
+        str(r.report_id)
+        for r in (materials.history_reports or [])
+    ]
+    return {"paper_id": paper_ids, "report_id": report_ids}
+
+
+def _writer_requests_to_supply_request(
+    supplements_requests: List[WriterSupplementRequest],
+) -> GetReportGenerationSupplyRequest:
+    """Convert WriterSupplementRequest list to GetReportGenerationSupplyRequest (deduplicated)."""
+    paper_merge: Dict[str, set] = {}
+    report_merge: Dict[int, set] = {}
+    for req in supplements_requests:
+        if not req.has_valid_selectors:
+            continue
+        if req.target_kind == "paper" and req.paper_id:
+            paper_merge.setdefault(req.paper_id, set()).update(
+                req.paper_selectors or []
+            )
+        elif req.target_kind == "history" and req.history_report_id:
+            try:
+                report_id = int(req.history_report_id)
+            except (ValueError, TypeError):
+                continue
+            report_merge.setdefault(report_id, set()).update(
+                req.history_selectors or []
+            )
+    paper_requests = [
+        PaperSupplementRequest(paper_id=pid, selectors=sorted(sels))
+        for pid, sels in paper_merge.items()
+    ]
+    report_requests = [
+        ReportSupplementRequest(report_id=rid, selectors=sorted(sels))
+        for rid, sels in report_merge.items()
+    ]
+    return GetReportGenerationSupplyRequest(
+        paper_requests=paper_requests,
+        report_requests=report_requests,
+    )
+
+
+def _build_allowed_citations(
+    materials: GetReportGenerationMetadataResponse,
+    written_sections: List[DraftSection],
+) -> List[str]:
+    """Build allowed citation tokens: [paper id: xxx], [report id: xxx], [section name: xxx]."""
+    tokens: List[str] = []
+    for p in (materials.new_observation_key_paper_details or []):
+        tokens.append(f"[paper id: {p.paper_id}]")
+    for r in (materials.history_reports or []):
+        tokens.append(f"[report id: {r.report_id}]")
+    for s in written_sections:
+        if s.title:
+            tokens.append(f"[section name: {s.title}]")
+    return tokens
 
 
 # Statuses that force evidence loop to exit with ERROR (extensible)
@@ -280,7 +393,7 @@ def _filter_already_provided_selectors(
 
 async def _run_evidence_completion_loop(
     cluster_pk_hash: str,
-    phase1_metadata: GetReportPlannerMetadataResponse,
+    phase1_metadata: GetReportGenerationMetadataResponse,
     plan_guidance: str,
     llm_client: LLMClient,
     cfg: ReportGenerationConfig,
@@ -318,11 +431,11 @@ async def _run_evidence_completion_loop(
                 )
 
                 if uncached_paper or uncached_report:
-                    req = GetReportPlannerSupplementRequest(
+                    req = GetReportGenerationSupplyRequest(
                         paper_requests=uncached_paper,
                         report_requests=uncached_report,
                     )
-                    resp = await memo.get_report_planner_supplement(req, cfg.memo)
+                    resp = await memo.get_report_generation_supply(req, cfg.memo)
                     for paper_id, selector_map in resp.paper_supplements.items():
                         phase2_supplement["paper_supplements"].setdefault(paper_id, {}).update(selector_map)
                     for report_id, field_map in resp.report_supplements.items():
@@ -410,7 +523,7 @@ async def _run_evidence_completion_loop(
 async def _generate_report_plan(
     cluster_pk_hash: str,
     user_intent: UserIntent,
-    new_topic_metadata: GetReportPlannerMetadataResponse,
+    new_topic_metadata: GetReportGenerationMetadataResponse,
     llm_client: LLMClient,
     cfg: ReportGenerationConfig,
     planner_judge: LLMJudge,
@@ -437,20 +550,15 @@ async def _generate_report_plan(
         )
         return (None, StepTerminationStatus.error)
 
-    # Handle (plan, status) when no error
-    # Sanity check: plan is None but status is not error
-    if plan is None and status != LoopTerminationStatus.error:
-        raise ValueError(
-            f"{step_prefix} - report plan should not be None when status ({status}) is not error"
-        )
-    elif plan is not None and status in (LoopTerminationStatus.complete, LoopTerminationStatus.partial):
+    # Handle (plan, status)
+    if status in (LoopTerminationStatus.complete, LoopTerminationStatus.partial):
         if status == LoopTerminationStatus.partial:
             logger.warning(
                 f"{step_prefix} - report plan completion status is partial even it is not empty."
             )
         result_plan = plan
         result_status = StepTerminationStatus.done
-    elif plan is not None and status == LoopTerminationStatus.error:
+    elif status == LoopTerminationStatus.error:
         logger.error(f"{step_prefix} - failed to generate report plan due to error")
         result_plan = None
         result_status = StepTerminationStatus.error
@@ -463,6 +571,217 @@ async def _generate_report_plan(
     )
     return (result_plan, result_status)
 
+
+async def _run_writing_loop(
+    cluster_pk_hash: str,
+    plan: LLMReportPlannerOutput,
+    materials: GetReportGenerationMetadataResponse,
+    llm_client: LLMClient,
+    cfg: ReportGenerationConfig,
+) -> Tuple[Optional[ReportWritingDraft], LoopTerminationStatus]:
+    """
+    Run the per-outline writing loop: supply -> fetch -> write for each outline item.
+
+    Returns:
+        (draft, status). draft may be None only when status is error and no sections were written.
+    """
+    available_ids = _derive_available_ids(materials)
+    draft: List[DraftSection] = []
+    exit_condition: Optional[StepWritingExitCondition] = None
+    loop_prefix = f"[report writing loop] - [cluster {cluster_pk_hash}]"
+    wcfg = cfg.report_generation
+    llm_cfg = cfg.report_generation.llm_gemini
+
+    _WRITING_LOOP_ERROR_CONDITIONS: Tuple[StepWritingExitCondition, ...] = (
+        StepWritingExitCondition.SUPPLY_LLM_ERROR,
+        StepWritingExitCondition.SUPPLY_FETCH_ERROR,
+        StepWritingExitCondition.WRITING_LLM_ERROR,
+    )
+
+    logger.info(f"{loop_prefix} - start")
+    try:
+        for target_outline in plan.plan.outline:
+            # Supply: LLM decides what supplements to request
+            supplement_input = ReportWriterSupplementInput(
+                materials=materials.model_dump(),
+                plan=plan.plan.model_dump(),
+                target_outline=target_outline,
+                available_ids=available_ids,
+            )
+            supply_prompt = build_evidence_requests_prompt(
+                supplement_input,
+                template_name=wcfg.writer_supplement_prompt_template,
+            )
+            supply_judge = WriterSupplyJudgeWrapper(
+                available_paper_ids=available_ids["paper_id"],
+                available_history_report_ids=available_ids["report_id"],
+            )
+            supplement_output, supply_status = await llm_client.call_structured_with_judge_retry(
+                prompt=supply_prompt,
+                response_model=ReportWriterSupplementOutput,
+                temperature=llm_cfg.temperature,
+                max_tokens=llm_cfg.max_tokens,
+                judge=supply_judge,
+                item_pk=cluster_pk_hash,
+                max_retries=wcfg.max_writer_supplement_judge_retries,
+                retry_threshold=wcfg.writer_supplement_judge_retry_threshold,
+                log_path=wcfg.writer_supplement_output_log_path,
+            )
+            if supply_status == JudgeLoopTerminationStatus.error or supplement_output is None:
+                exit_condition = StepWritingExitCondition.SUPPLY_LLM_ERROR
+                break
+
+            # Fetch: memo get-report-generation-supply (skip if supply returned empty)
+            if not supplement_output.supplements_requests:
+                logger.warning(
+                    f"{loop_prefix} - supply returned empty request list for outline {target_outline!r}, skipping fetch"
+                )
+                supply_resp = GetReportGenerationSupplyResponse(
+                    paper_supplements={},
+                    report_supplements={},
+                )
+            else:
+                try:
+                    fetch_req = _writer_requests_to_supply_request(
+                        supplement_output.supplements_requests
+                    )
+                    supply_resp = await memo.get_report_generation_supply(
+                        fetch_req, cfg.memo
+                    )
+                except MemoGetReportGenerationSupplyError as e:
+                    logger.warning(
+                        f"{loop_prefix} - supply fetch failed for outline {target_outline!r}: {e}"
+                    )
+                    exit_condition = StepWritingExitCondition.SUPPLY_FETCH_ERROR
+                    break
+
+            # Write: LLM writes section with supplements
+            allowed_citations = _build_allowed_citations(materials, draft)
+            section_input = ReportWriterSectionInput(
+                materials=materials.model_dump(),
+                plan=plan.plan.model_dump(),
+                target_section=target_outline,
+                written_sections=[s.to_dict() for s in draft],
+                allowed_citations=allowed_citations,
+                supplements=supply_resp,
+            )
+            write_prompt = build_section_writing_prompt(
+                section_input,
+                template_name=wcfg.writer_section_writing_prompt_template,
+            )
+            writing_judge = WriterWritingJudgeWrapper(
+                outline_item=target_outline,
+                allowed_citations=allowed_citations,
+            )
+            section_output, write_status = await llm_client.call_structured_with_judge_retry(
+                prompt=write_prompt,
+                response_model=ReportWriterSectionOutput,
+                temperature=llm_cfg.temperature,
+                max_tokens=llm_cfg.max_tokens,
+                judge=writing_judge,
+                item_pk=cluster_pk_hash,
+                max_retries=wcfg.max_writer_writing_judge_retries,
+                retry_threshold=wcfg.writer_writing_judge_retry_threshold,
+                log_path=wcfg.writer_writing_output_log_path,
+            )
+            if write_status == JudgeLoopTerminationStatus.error or section_output is None:
+                exit_condition = StepWritingExitCondition.WRITING_LLM_ERROR
+                break
+
+            draft.append(DraftSection(
+                title=section_output.section_name,
+                body=section_output.section_text,
+            ))
+        else:
+            exit_condition = StepWritingExitCondition.COMPLETE
+    except Exception as e:
+        logger.warning(
+            f"{loop_prefix} - terminated due to an error: {e}",
+            exc_info=True,
+        )
+        exit_condition = StepWritingExitCondition.UNKNOWN_ERROR
+
+    # Map exit condition to LoopTerminationStatus
+    empty_draft = len(draft) == 0
+    if exit_condition == StepWritingExitCondition.COMPLETE:
+        status = LoopTerminationStatus.complete
+        if empty_draft:
+            logger.warning(
+                f"{loop_prefix} - concluded: all outline items processed but draft is empty."
+            )
+        else:
+            logger.info(
+                f"{loop_prefix} - concluded: all outline items processed."
+            )
+    elif exit_condition in _WRITING_LOOP_ERROR_CONDITIONS:
+        status = LoopTerminationStatus.partial
+        logger.warning(
+            f"{loop_prefix} - incomplete writing due to exit condition {exit_condition.value}, "
+            f"draft sections: {len(draft)} — writing partial."
+        )
+    elif exit_condition == StepWritingExitCondition.UNKNOWN_ERROR:
+        status = LoopTerminationStatus.error
+        if empty_draft:
+            logger.warning(
+                f"{loop_prefix} - terminated due to unknown error, no sections written."
+            )
+    else:
+        raise ValueError(f"{loop_prefix} - unexpected exit condition: {exit_condition}")
+
+    result_draft = None if (status == LoopTerminationStatus.error and empty_draft) else ReportWritingDraft(draft=draft)
+    logger.info(
+        f"{loop_prefix} - finished, reasons: {exit_condition}, status: {status.value}, empty draft: {empty_draft}"
+    )
+    return result_draft, status
+
+
+async def _generate_report_body(
+    cluster_pk_hash: str,
+    plan: LLMReportPlannerOutput,
+    materials: GetReportGenerationMetadataResponse,
+    llm_client: LLMClient,
+    cfg: ReportGenerationConfig,
+) -> Tuple[Optional[ReportWritingDraft], StepTerminationStatus]:
+    """
+    Generate report body via per-outline writing loop (supply -> fetch -> write for each outline item).
+
+    Returns:
+        (draft, step_status). draft is None on error; step_status is done or error.
+    """
+    step_prefix = f"[report body generation step] - [cluster {cluster_pk_hash}]"
+
+    try:
+        logger.info(f"{step_prefix} - start writing report body with per-outline loop")
+        draft, status = await _run_writing_loop(
+            cluster_pk_hash, plan, materials, llm_client, cfg
+        )
+    except Exception as e:
+        logger.warning(
+            f"{step_prefix} - per-outline writing loop failed: {e}",
+            exc_info=True,
+        )
+        return (None, StepTerminationStatus.error)
+
+
+    if status in (LoopTerminationStatus.complete, LoopTerminationStatus.partial):
+        if status == LoopTerminationStatus.partial:
+            logger.warning(
+                f"{step_prefix} - report body completion status is partial even though draft is not empty."
+            )
+        result_draft = draft
+        result_status = StepTerminationStatus.done
+    elif status == LoopTerminationStatus.error:
+        logger.error(f"{step_prefix} - failed to generate report body due to error")
+        result_draft = None
+        result_status = StepTerminationStatus.error
+    else:
+        raise ValueError(f"{step_prefix} - unexpected status: {status}")
+
+    logger.info(
+        f"{step_prefix} - finished, draft={'empty' if result_draft is None else 'present'}, "
+        f"status: {result_status.value}"
+    )
+    return (result_draft, result_status)
 
 
 async def _resolve_report_job_topic(cluster_pk_hash: str, cfg: ReportGenerationConfig) -> TopicResolveOutput:
@@ -543,7 +862,7 @@ async def _kick_off_report_job(cluster_pk_hash: str, user_intent: UserIntent, cf
     # fetch new topic metadata
     add_top_papers = user_intent != UserIntent.QUICK_BACKGROUND
     try:
-        new_topic_metadata = await memo.get_report_planner_metadata(
+        new_topic_metadata = await memo.get_report_generation_metadata(
             cluster_pk_hash=cluster_pk_hash,
             config=cfg.memo,
             topic_id=resolved_topic.merge_to_topic,
@@ -566,16 +885,21 @@ async def _kick_off_report_job(cluster_pk_hash: str, user_intent: UserIntent, cf
     plan, step_status = await _generate_report_plan(
         cluster_pk_hash, user_intent, new_topic_metadata, llm_client, cfg, planner_judge
     )
-    # !!!! placeholder[exit point]
     if step_status == StepTerminationStatus.error or plan is None:
         logger.warning(f"Report planner call failed for cluster {cluster_pk_hash}")
         # write to memo with error metadata
         # need to update the report job status to error
         raise
-        
-    # step 2 to write report by outline
 
-
+    draft_result, step_status = await _generate_report_body(
+        cluster_pk_hash, plan, new_topic_metadata, llm_client, cfg
+    )
+    if step_status == StepTerminationStatus.error or draft_result is None:
+        logger.warning(f"Report body writing failed for cluster {cluster_pk_hash}")
+        # write to memo with error metadata
+        # need to update the report job status to error
+        raise
+    
 
 
 async def create_report_job(cluster_pk_hash: str, user_intent: UserIntent, cfg: ReportGenerationConfig) -> Optional[Tuple[str, str]]:
