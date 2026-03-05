@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Union
 
+from reader.pipelines.report_generation.config.config import ReportGenerationConfig
 from reader.pipelines.report_generation.workflow_register.models import (
     LoopNodeRecord,
     LoopRunStatus,
@@ -98,8 +99,8 @@ class WorkflowRegister:
         rec.status = LoopRunStatus(status.value) if hasattr(status, "value") else LoopRunStatus(status)
         rec.output = _serialize_output(output) if output is not None else None
 
-    def get_trace_report(self, log_file_path: str) -> WorkflowTraceReport:
-        """Build full trace report including log_file_path."""
+    def get_trace_report(self, config: ReportGenerationConfig) -> WorkflowTraceReport:
+        """Build full trace report including config."""
         nodes: list[WorkflowTraceNode] = []
         for node_def in self._node_defs_ordered:
             rec = self.records.get(node_def.id)
@@ -119,13 +120,13 @@ class WorkflowRegister:
             workflow_id=self.workflow_id,
             cluster_pk_hash=self.cluster_pk_hash,
             timestamp=_local_iso_now(),
-            log_file_path=log_file_path,
+            config=config.model_dump(mode="json"),
             nodes=nodes,
         )
 
-    def write_trace_to_cache(self, log_file_path: str) -> Path:
+    def write_trace_to_cache(self, config: ReportGenerationConfig) -> Path:
         """Write trace to cache path. Creates parent dirs. Returns path written."""
-        report = self.get_trace_report(log_file_path)
+        report = self.get_trace_report(config)
         self.cache_path.parent.mkdir(parents=True, exist_ok=True)
         with open(self.cache_path, "w", encoding="utf-8") as f:
             json.dump(report.model_dump(mode="json"), f, indent=2, ensure_ascii=False)

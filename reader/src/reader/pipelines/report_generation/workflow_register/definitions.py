@@ -70,4 +70,9 @@ KICK_OFF_REPORT_JOB_NODES = [
         kind="step",
         display_name="Save report to local FS",
     ),
+    WorkflowNodeDef(
+        id="save_report_to_db",
+        kind="step",
+        display_name="Save report to database",
+    ),
 ]

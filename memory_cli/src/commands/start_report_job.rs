@@ -98,7 +98,7 @@ pub fn handle(dry_run: bool, db_path: &str, schema_path: Option<&str>, cluster_p
                     let resp = StartReportJobResponse {
                         status: ReportJobStatus::Done.as_str().to_string(),
                         new_job: false,
-                        report_id: report_id.clone(),
+                        report_id: report_id.map(|id| id.to_string()),
                         message: "a report is already generated.".to_string(),
                     };
                     let out = serde_json::to_string(&resp)?;

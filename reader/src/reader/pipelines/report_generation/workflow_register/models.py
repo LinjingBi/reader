@@ -70,5 +70,5 @@ class WorkflowTraceReport(BaseModel):
     workflow_id: str
     cluster_pk_hash: str
     timestamp: str
-    log_file_path: str
+    config: dict  # Serialized ReportGenerationConfig (model_dump(mode="json"))
     nodes: list[WorkflowTraceNode]

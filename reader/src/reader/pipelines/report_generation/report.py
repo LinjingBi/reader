@@ -76,7 +76,6 @@ HistoryReportSelector = Literal[
     "next_targets",
     "subthreads",
     "outline",
-    "evidence_gaps",
     "sufficiency",
     # "plan",
     # "full_text",  # unsupported for supplement lookup in v0 (no report table column; memo cmd rejects)
@@ -300,5 +299,29 @@ class ObservationReport(BaseModel):
 class SaveReportToFsOutput(BaseModel):
     """Output of save_report_to_fs step."""
 
-    report_dir: str = Field(..., description="Path to the history_reports directory.")
+    report_path: str = Field(..., description="Full path to the written report JSON file.")
     signature: str = Field(..., description="SHA256 hex digest of the written file.")
+
+
+# ----------------------------
+# Topic resolver config (EmbedConfig-style for new_memory)
+# ----------------------------
+
+class TopicResolverConfigPayload(BaseModel):
+    """Topic resolver configuration payload."""
+    topic_resolver_threshold: float = Field(..., description="Similarity threshold (0-1) for topic resolution")
+
+
+class TopicResolverConfig(BaseModel):
+    """Topic resolver configuration with dynamic config ID."""
+    json_payload: TopicResolverConfigPayload = Field(..., description="Topic resolver configuration payload")
+
+    @computed_field
+    @property
+    def topic_resolver_config_id(self) -> str:
+        """Get topic_resolver_config_id from algo_lib.topic_resolver version."""
+        try:
+            from algo_lib.topic_resolver import __version__ as topic_resolver_version
+            return f"algo_lib.topic_resolver|{topic_resolver_version}"
+        except ImportError:
+            raise ValueError("algo_lib.topic_resolver is not versioned")

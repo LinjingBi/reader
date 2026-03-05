@@ -1,5 +1,6 @@
 pub mod fresh_paper;
 pub mod get_best_run;
+pub mod new_memory;
 pub mod get_cluster_observation;
 pub mod get_report_generation_metadata;
 pub mod get_report_generation_supply;
@@ -39,6 +40,7 @@ pub use inject_papers_chunk::{
     PaperChunkData,
     ChunkEntry,
 };
+pub use new_memory::{NewMemoryRequest, NewMemoryResponse};
 pub use get_report_generation_supply::{
     GetReportGenerationSupplyRequest,
     GetReportGenerationSupplyResponse,

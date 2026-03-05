@@ -48,10 +48,10 @@ def with_workflow_register(
             token = _workflow_register_var.set(register)
             try:
                 result = await fn(*args, **kwargs)
-                register.write_trace_to_cache(cfg.run.log_file_path)
+                register.write_trace_to_cache(cfg)
                 return result
             except Exception:
-                register.write_trace_to_cache(cfg.run.log_file_path)
+                register.write_trace_to_cache(cfg)
                 raise
             finally:
                 _workflow_register_var.reset(token)

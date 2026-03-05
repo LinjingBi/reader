@@ -61,6 +61,11 @@ class MemoInjectPapersChunkError(Exception):
     pass
 
 
+class MemoNewMemoryError(Exception):
+    """Exception raised when new-memory subcommand fails."""
+    pass
+
+
 # Pydantic response models matching Rust CLI contracts
 
 # ============================================================================
@@ -128,6 +133,54 @@ class StartReportJobResponse(BaseModel):
     new_job: bool
     report_id: Optional[str] = None  # Only present when status is 'done'
     message: str
+
+
+# ============================================================================
+# new-memory command models
+# ============================================================================
+
+class ResolvedTopicInput(BaseModel):
+    """Resolved topic from _resolve_report_topic step."""
+    action: str  # 'create' | 'merge'
+    merge_to_topic: Optional[str] = None
+    new_topic_centroid_b64: str
+    new_topic_weight: float
+    score: float
+
+
+class FrontMatterInput(BaseModel):
+    """Front matter from _generate_report_front_matter step."""
+    title: str
+    summary: str
+    keywords: List[str]
+
+
+class SaveMemoryInput(BaseModel):
+    """Output from _save_report_to_fs step, input for save_report_to_db."""
+    report_path: str
+    signature: str
+
+
+class TopicResolverConfigInput(BaseModel):
+    """Topic resolver config (EmbedConfig-style)."""
+    topic_resolver_config_id: str
+    json_payload: Dict[str, Any]
+
+
+class NewMemoryRequest(BaseModel):
+    """Request for new-memory command."""
+    cluster_pk_hash: str
+    intent_mode: str
+    resolved_topic: ResolvedTopicInput
+    plan: Dict[str, Any]
+    front_matter: FrontMatterInput
+    save_output: SaveMemoryInput
+    topic_resolver_config: TopicResolverConfigInput
+
+
+class NewMemoryResponse(BaseModel):
+    """Response from new-memory command."""
+    report_id: int
 
 
 # ============================================================================
@@ -649,6 +702,78 @@ async def start_report_job(
     except Exception as e:
         logger.error(f"Unexpected error in memo start-report-job: {e}", exc_info=True)
         raise MemoStartReportJobError(f"Unexpected error in memo start-report-job: {e}") from e
+
+
+async def new_memory(
+    payload: NewMemoryRequest,
+    config: MemoConfig,
+) -> NewMemoryResponse:
+    """
+    Call memo CLI new-memory command to persist report generation results to the database.
+
+    Args:
+        payload: NewMemoryRequest with cluster_pk_hash, resolved_topic, plan, front_matter, save_output, etc.
+        config: MemoConfig instance
+
+    Returns:
+        NewMemoryResponse with report_id
+
+    Raises:
+        MemoNewMemoryError: If the subcommand execution fails
+    """
+    try:
+        payload_json = payload.model_dump_json(exclude_none=True)
+
+        cmd = [
+            config.bin,
+        ]
+        if config.db_path:
+            cmd.append('--db')
+            cmd.append(config.db_path)
+        if config.db_schema_path:
+            cmd.append('--schema')
+            cmd.append(config.db_schema_path)
+        cmd.extend(['new-memory', '--input', '-'])
+
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(input=payload_json.encode('utf-8')),
+                timeout=config.timeout_sec
+            )
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            logger.warning(f"memo new-memory timed out after {config.timeout_sec}s")
+            raise MemoNewMemoryError(f"memo new-memory timed out after {config.timeout_sec}s")
+        except asyncio.CancelledError:
+            process.kill()
+            await process.wait()
+            raise
+
+        stdout_text = stdout.decode('utf-8')
+        stderr_text = stderr.decode('utf-8')
+
+        if process.returncode != 0:
+            logger.error(f"Error calling memo new-memory: {stderr_text}")
+            raise MemoNewMemoryError(f"Error calling memo new-memory: {stderr_text}")
+
+        return NewMemoryResponse.model_validate_json(stdout_text)
+
+    except MemoNewMemoryError:
+        raise
+    except pydantic.ValidationError as e:
+        logger.error(f"Error validating memo output: {e}")
+        raise MemoNewMemoryError(f"Error validating memo output: {e}") from e
+    except Exception as e:
+        logger.error(f"Unexpected error in memo new-memory: {e}", exc_info=True)
+        raise MemoNewMemoryError(f"Unexpected error in memo new-memory: {e}") from e
 
 
 async def get_topic_resolver_metadata(

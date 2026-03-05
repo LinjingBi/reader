@@ -5,13 +5,14 @@ use crate::contracts::{
     ReportJobStatus,
     GetTopicResolverMetadataResponse, TopicCentroid, ClusterMetadata,
     GetReportGenerationMetadataResponse, NewObservation, TopPaper, HistoryReport,
+    NewMemoryRequest,
     PaperOutput,
     InjectPapersChunkRequest,
     PaperSupplement, PaperChunk, ReportSupplement,
 };
 use anyhow::{Context, Result};
 use chrono::Utc;
-use rusqlite::{params, Connection, Transaction};
+use rusqlite::{params, Connection, OptionalExtension, Transaction};
 use sha2::{Sha256, Digest};
 use hex;
 use std::collections::HashMap;
@@ -320,6 +321,16 @@ impl<'a> Store<'a> {
         Ok(())
     }
 
+    fn upsert_topic_resolver_config(&self, tx: &Transaction, id: &str, json_payload: &str, now: &str) -> Result<()> {
+        tx.execute(
+            "INSERT INTO topic_resolver_config(topic_resolver_config_id, json_payload, created_at)
+             VALUES(?1, ?2, ?3)
+             ON CONFLICT(topic_resolver_config_id) DO UPDATE SET json_payload=excluded.json_payload",
+            params![id, json_payload, now],
+        )?;
+        Ok(())
+    }
+
     fn upsert_snapshot(&self, tx: &Transaction, source: &str, start: &str, end: &str, raw_json: &str, now: &str) -> Result<()> {
         tx.execute(
             "INSERT INTO source_snapshot(source, period_start, period_end, raw_json, created_at)
@@ -521,7 +532,7 @@ impl<'a> Store<'a> {
     /// Get existing report job by cluster_pk_hash.
     /// Returns (status, report_id, updated_at) if found, None otherwise.
     /// Returns an error if the cluster does not exist.
-    pub fn get_report_job(&self, cluster_pk_hash: &str) -> Result<Option<(ReportJobStatus, Option<String>, String)>> {
+    pub fn get_report_job(&self, cluster_pk_hash: &str) -> Result<Option<(ReportJobStatus, Option<i64>, String)>> {
         // First check if cluster exists
         let cluster_exists: bool = self.conn.query_row(
             "SELECT COUNT(*) > 0 FROM cluster WHERE pk_hash = ?1",
@@ -546,7 +557,7 @@ impl<'a> Store<'a> {
                     ))?;
                 Ok((
                     status,
-                    row.get::<_, Option<String>>(1)?,
+                    row.get::<_, Option<i64>>(1)?,
                     row.get::<_, String>(2)?,
                 ))
             },
@@ -574,6 +585,232 @@ impl<'a> Store<'a> {
             params![ReportJobStatus::Running.as_str(), now, cluster_pk_hash],
         )?;
         Ok(())
+    }
+
+    /// Update report job status to done and set report_id.
+    pub fn update_report_job_to_done(&self, cluster_pk_hash: &str, report_id: i64, now: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE report_job SET status=?1, report_id=?2, updated_at=?3 WHERE cluster_pk_hash=?4",
+            params![ReportJobStatus::Done.as_str(), report_id, now, cluster_pk_hash],
+        )?;
+        Ok(())
+    }
+
+    /// Persist report generation results in a single transaction.
+    /// Performs validations then updates cluster_observation, topic, topic_cluster_link, report, report_topic_link, report_job.
+    pub fn new_memory(&self, req: &NewMemoryRequest) -> Result<i64> {
+        let now = Utc::now().to_rfc3339();
+        let tx = self.conn.unchecked_transaction()?;
+
+        let cluster_pk_hash = &req.cluster_pk_hash;
+        let action = req.resolved_topic.action.as_str();
+
+        // Validation 1: No existing report for cluster
+        let existing_report: Option<i64> = tx.query_row(
+            "SELECT report_id FROM report WHERE cluster_pk_hash = ?1",
+            params![cluster_pk_hash],
+            |row| row.get(0),
+        ).optional()?;
+        if let Some(rid) = existing_report {
+            return Err(anyhow::anyhow!(
+                "this cluster already links to a report (report_id={})",
+                rid
+            ));
+        }
+
+        // Validation 2: Topic action is create or merge
+        if action != "create" && action != "merge" {
+            return Err(anyhow::anyhow!(
+                "topic action must be 'create' or 'merge', got '{}'",
+                action
+            ));
+        }
+
+        // Validation 3: Cluster and cluster_observation exist
+        let cluster_exists: bool = tx.query_row(
+            "SELECT COUNT(*) > 0 FROM cluster WHERE pk_hash = ?1",
+            params![cluster_pk_hash],
+            |row| row.get(0),
+        )?;
+        if !cluster_exists {
+            return Err(anyhow::anyhow!("cluster with pk_hash '{}' not found", cluster_pk_hash));
+        }
+        let obs_exists: bool = tx.query_row(
+            "SELECT COUNT(*) > 0 FROM cluster_observation WHERE pk_hash = ?1",
+            params![cluster_pk_hash],
+            |row| row.get(0),
+        )?;
+        if !obs_exists {
+            return Err(anyhow::anyhow!("cluster_observation for pk_hash '{}' not found", cluster_pk_hash));
+        }
+
+        // Validation 4: Topic exists when merge
+        if action == "merge" {
+            let merge_to: &str = req.resolved_topic.merge_to_topic.as_ref()
+                .ok_or_else(|| anyhow::anyhow!("merge_to_topic required when action is merge"))?;
+            let topic_id: i64 = merge_to.parse()
+                .map_err(|_| anyhow::anyhow!("merge_to_topic must be numeric topic_id"))?;
+            let topic_exists: bool = tx.query_row(
+                "SELECT COUNT(*) > 0 FROM topic WHERE topic_id = ?1",
+                params![topic_id],
+                |row| row.get(0),
+            )?;
+            if !topic_exists {
+                return Err(anyhow::anyhow!("topic with topic_id '{}' not found", topic_id));
+            }
+        }
+
+        // Validation 5: Report job is running
+        let job_status: Option<String> = tx.query_row(
+            "SELECT status FROM report_job WHERE cluster_pk_hash = ?1",
+            params![cluster_pk_hash],
+            |row| row.get(0),
+        ).optional()?;
+        match job_status.as_deref() {
+            Some("running") => {}
+            Some(s) => return Err(anyhow::anyhow!(
+                "report_job for cluster '{}' is not running (status={})",
+                cluster_pk_hash,
+                s
+            )),
+            None => return Err(anyhow::anyhow!(
+                "report_job for cluster '{}' not found",
+                cluster_pk_hash
+            )),
+        }
+
+        // Update 1: cluster_observation.consumed = 1
+        tx.execute(
+            "UPDATE cluster_observation SET consumed = 1 WHERE pk_hash = ?1",
+            params![cluster_pk_hash],
+        )?;
+
+        // Update 2: Topic handling
+        let topic_id: i64 = if action == "merge" {
+            let merge_to: &str = req.resolved_topic.merge_to_topic.as_ref().unwrap();
+            let tid: i64 = merge_to.parse()?;
+            tx.execute(
+                "UPDATE topic SET centroid_b64 = ?1, centroid_weight = ?2, centroid_updated_at = ?3 WHERE topic_id = ?4",
+                params![
+                    req.resolved_topic.new_topic_centroid_b64,
+                    req.resolved_topic.new_topic_weight,
+                    &now,
+                    tid,
+                ],
+            )?;
+            tid
+        } else {
+            // Create: get cluster_observation fields
+            let (title, summary, keywords_json): (String, String, String) = tx.query_row(
+                "SELECT title, summary, keywords_json FROM cluster_observation WHERE pk_hash = ?1",
+                params![cluster_pk_hash],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )?;
+            tx.execute(
+                "INSERT INTO topic(canonical_name, canonical_summary, labels_json, status, created_at, updated_at, centroid_b64, centroid_weight, centroid_updated_at)
+                 VALUES(?1, ?2, ?3, 'active', ?4, ?4, ?5, ?6, ?4)",
+                params![
+                    title,
+                    summary,
+                    keywords_json,
+                    &now,
+                    req.resolved_topic.new_topic_centroid_b64,
+                    req.resolved_topic.new_topic_weight,
+                ],
+            )?;
+            tx.last_insert_rowid()
+        };
+
+        // Update 3: topic_resolver_config upsert
+        let tr_config_json = serde_json::to_string(&req.topic_resolver_config.json_payload)
+            .context("failed to serialize topic_resolver_config json_payload")?;
+        self.upsert_topic_resolver_config(
+            &tx,
+            &req.topic_resolver_config.topic_resolver_config_id,
+            &tr_config_json,
+            &now,
+        )?;
+
+        // Update 4: topic_cluster_link insert
+        let decision = if action == "merge" { "merged" } else { "created" };
+        tx.execute(
+            "INSERT INTO topic_cluster_link(topic_id, cluster_pk_hash, topic_resolver_config_id, decision, match_score, created_at)
+             VALUES(?1, ?2, ?3, ?4, ?5, ?6)",
+            params![
+                topic_id,
+                cluster_pk_hash,
+                req.topic_resolver_config.topic_resolver_config_id,
+                decision,
+                req.resolved_topic.score,
+                &now,
+            ],
+        )?;
+
+        // Update 5: report insert
+        let plan = &req.plan;
+        let declared_level = plan.get("declared_level_final")
+            .and_then(|v| v.as_str())
+            .unwrap_or("intermediate");
+        let depth_mode = plan.get("depth_mode_final")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Continue");
+        let outline = plan.get("outline")
+            .and_then(|v| serde_json::to_string(v).ok())
+            .unwrap_or_else(|| "[]".to_string());
+        let next_targets = plan.get("next_targets")
+            .and_then(|v| serde_json::to_string(v).ok())
+            .unwrap_or_else(|| "[]".to_string());
+        let subthreads = plan.get("subthreads_final")
+            .and_then(|v| serde_json::to_string(v).ok())
+            .unwrap_or_else(|| "[]".to_string());
+        let sufficiency = plan.get("sufficiency")
+            .and_then(|v| v.as_str())
+            .unwrap_or("sufficient");
+        let plan_json = serde_json::to_string(plan).context("failed to serialize plan")?;
+        let covered_bullets = outline.clone();
+
+        let keywords_json = serde_json::to_string(&req.front_matter.keywords)
+            .context("failed to serialize keywords")?;
+
+        tx.execute(
+            "INSERT INTO report(cluster_pk_hash, created_at, intent_mode, report_url, title, summary, keywords_json, signature, declared_level, depth_mode, covered_bullets, next_targets, subthreads, outline, sufficiency, plan)
+             VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
+            params![
+                cluster_pk_hash,
+                &now,
+                &req.intent_mode,
+                &req.save_output.report_path,
+                &req.front_matter.title,
+                &req.front_matter.summary,
+                &keywords_json,
+                &req.save_output.signature,
+                declared_level,
+                depth_mode,
+                &covered_bullets,
+                &next_targets,
+                &subthreads,
+                &outline,
+                sufficiency,
+                &plan_json,
+            ],
+        )?;
+        let report_id = tx.last_insert_rowid();
+
+        // Update 6: report_topic_link insert
+        tx.execute(
+            "INSERT INTO report_topic_link(report_id, topic_id, role, created_at)
+             VALUES(?1, ?2, 'primary', ?3)",
+            params![report_id, topic_id, &now],
+        )?;
+
+        // Update 7: report_job update
+        tx.execute(
+            "UPDATE report_job SET status='done', report_id=?1, updated_at=?2 WHERE cluster_pk_hash=?3",
+            params![report_id, &now, cluster_pk_hash],
+        )?;
+
+        tx.commit()?;
+        Ok(report_id)
     }
 
     /// Get topic resolver metadata (topics and cluster data).
@@ -746,7 +983,7 @@ impl<'a> Store<'a> {
             let mut stmt_reports = self.conn.prepare(
                 "SELECT r.report_id, r.title, r.summary, r.keywords_json, r.intent_mode, r.declared_level, r.depth_mode
                  FROM report_topic_link rtl
-                 JOIN report r ON CAST(rtl.report_id AS INTEGER) = r.report_id
+                 JOIN report r ON rtl.report_id = r.report_id
                  WHERE rtl.topic_id = ?1
                  ORDER BY r.created_at DESC
                  LIMIT 3"

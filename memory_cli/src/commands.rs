@@ -1,5 +1,6 @@
 mod fresh_paper;
 mod get_best_run;
+mod new_memory;
 mod get_cluster_observation;
 mod get_report_generation_metadata;
 mod get_report_generation_supply;
@@ -42,6 +43,9 @@ pub fn dispatch(args: Args) -> Result<()> {
         }
         Command::GetReportGenerationSupply { input } => {
             get_report_generation_supply::handle(args.dry_run, &args.db, args.schema.as_deref(), &input)
+        }
+        Command::NewMemory { input } => {
+            new_memory::handle(args.dry_run, &args.db, args.schema.as_deref(), &input)
         }
     }
 }

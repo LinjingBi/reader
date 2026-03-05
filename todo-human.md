@@ -107,9 +107,12 @@ sub(issue, bug level)
 [x] - [reader] implement step 2.  
 [x] - [reader] implement step 3.    
 [x] - [reader] design and implement a workflow register to cache each step's artifact and status to local fs(cache) for error runtime retry.  
-[ ] - [reader,memo] design the report generation db update workflow.note. resolve the one cluster event has more than one reports, or report regeneration issue.      
+[x] - [reader,memo] design the report generation db update workflow.note. resolve the one cluster event has more than one reports, or report regeneration issue. [comment] once a cluster is consumed(tights to one report in db), it's done, no report regeneration for it.  
+[ ] - [reader] design resume failure job from cache.        
 
-[ ] - [reader] test report generation in one.       
+[ ] - [reader] test report generation in one.  
+
+[ ] - [ci/cd] add agent job to dymically update RULES.md and README like doc before each push.  
  
 
 [ ] - [paper-chunk] test training mode and remove duplicate code under paper_chunk dir.  

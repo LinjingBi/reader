@@ -170,6 +170,20 @@ EXAMPLES:
         input: String,
     },
 
+    /// Persist report generation results to the database.
+    #[command(
+        long_about = "Persist report generation results (topic, report, links) in a single transaction.
+
+EXAMPLES:
+  memo new-memory --input payload.json
+  cat payload.json | memo new-memory --input -"
+    )]
+    NewMemory {
+        /// JSON payload path. Use '-' to read from stdin.
+        #[arg(long)]
+        input: String,
+    },
+
     /// Get report generation supply (paper chunks and history report fields for evidence gaps).
     #[command(
         long_about = "Fetch evidence (paper chunks and history report fields) to fill evidence gaps from planner output.

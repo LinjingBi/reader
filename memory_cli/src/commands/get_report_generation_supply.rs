@@ -30,7 +30,6 @@ fn report_selector_to_db_map() -> HashMap<&'static str, &'static str> {
         ("next_targets", "next_targets"),
         ("subthreads", "subthreads"),
         ("outline", "outline"),
-        ("evidence_gaps", "evidence_gaps"),
         ("sufficiency", "sufficiency"),
     ]
     .into_iter()

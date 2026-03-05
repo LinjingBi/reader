@@ -10,17 +10,22 @@ from pydantic import BaseModel, Field, PrivateAttr
 class CacheConfig(BaseModel):
     """Cache directory configuration."""
 
-    dir: str = Field(..., description="Root cache directory")
+    root: str = Field(..., description="Cache root directory (relative or absolute)")
+
+    @property
+    def abs_root(self) -> Path:
+        """Absolute path of cache root. Resolves relative paths to absolute."""
+        return Path(self.root).resolve()
 
     @property
     def report_generation_cache(self) -> Path:
-        """Directory for report generation workflow traces. Derived from cache.dir."""
-        return Path(self.dir) / "workflow_traces" / "report_generation"
+        """Directory for report generation workflow traces. Derived from abs_root."""
+        return self.abs_root / "workflow_traces" / "report_generation"
 
     @property
     def history_reports(self) -> Path:
-        """Directory for saved report history. Derived from cache.dir."""
-        return Path(self.dir) / "history_reports"
+        """Directory for saved report history. Derived from abs_root."""
+        return self.abs_root / "history_reports"
 
 
 class RunConfig(BaseModel):

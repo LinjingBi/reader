@@ -12,7 +12,7 @@
   "report_requests": [
     {
       "report_id": 1,
-      "selectors": ["outline", "evidence_gaps", "sufficiency"]
+      "selectors": ["outline", "sufficiency"]
     },
     {
       "report_id": 2,

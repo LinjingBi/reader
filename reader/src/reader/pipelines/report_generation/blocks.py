@@ -10,7 +10,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
-from algo_lib.topic_resolver.models import TopicInput, ClusterInput as TopicResolverClusterInput, TopicResolveOutput
+from algo_lib.topic_resolver.models import TopicInput, ClusterInput as TopicResolverClusterInput, TopicResolveOutput, TopicResolveAction
 from algo_lib.topic_resolver.resolver import resolve_topic
 from algo_lib.topic_resolver.errors import TopicResolverError
 
@@ -18,12 +18,19 @@ from reader.pipelines.report_generation.config.config import ReportGenerationCon
 from reader.adapters import memo
 from reader.adapters.memo import (
     ClusterObservationData,
+    FrontMatterInput,
     GetReportGenerationMetadataResponse,
     GetReportGenerationSupplyRequest,
     GetReportGenerationSupplyResponse,
     MemoGetReportGenerationSupplyError,
+    MemoNewMemoryError,
+    NewMemoryRequest,
+    NewMemoryResponse,
     PaperSupplementRequest,
     ReportSupplementRequest,
+    ResolvedTopicInput,
+    SaveMemoryInput,
+    TopicResolverConfigInput,
 )
 from reader.adapters.llm import (
     LLMClient,
@@ -42,6 +49,8 @@ from reader.pipelines.report_generation.report import (
     ReportWriterSupplementInput,
     ReportWriterSupplementOutput,
     SaveReportToFsOutput,
+    TopicResolverConfig,
+    TopicResolverConfigPayload,
     WriterSupplementRequest,
 )
 from reader.pipelines.report_generation.judges import (
@@ -361,13 +370,12 @@ async def select_cluster_and_intent(
 # LLM client initialization (used by report generation)
 # ============================================================================
 
-def _initialize_llm_client(llm_config: LLMGeminiConfig, model: str) -> LLMClient:
+def _initialize_llm_client(llm_config: LLMGeminiConfig) -> LLMClient:
     """
     Initialize LLM client with rate limiting buckets.
 
     Args:
-        llm_config: LLMGeminiConfig instance
-        model: Model name to use for the LLM client
+        llm_config: LLMGeminiConfig instance (model is read from config)
 
     Returns:
         Initialized LLMClient instance
@@ -397,7 +405,7 @@ def _initialize_llm_client(llm_config: LLMGeminiConfig, model: str) -> LLMClient
     executor = getattr(llm_config, 'gemini_call_executor', None)
     max_retry = llm_config.max_retry
     llm_client = LLMClient(
-        model=model,
+        model=llm_config.model,
         api_key=api_key,
         rpm_bucket=rpm_bucket,
         tpm_bucket=tpm_bucket,
@@ -405,7 +413,7 @@ def _initialize_llm_client(llm_config: LLMGeminiConfig, model: str) -> LLMClient
         max_retry=max_retry,
     )
 
-    logger.info(f"Initialized LLM client with model: {model}")
+    logger.info(f"Initialized LLM client with model: {llm_config.model}")
     return llm_client
 
 
@@ -1155,7 +1163,6 @@ async def _save_report_to_fs(
         observation_report = ObservationReport(body=sections_result, front_matter=front_matter)
         history_dir = cfg.cache.history_reports
         history_dir.mkdir(parents=True, exist_ok=True)
-
         sanitized_title = _sanitize_filename(front_matter.title)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{sanitized_title}_{timestamp}.json"
@@ -1171,11 +1178,11 @@ async def _save_report_to_fs(
         signature = hashlib.sha256(json_bytes).hexdigest()
 
         output = SaveReportToFsOutput(
-            report_dir=str(history_dir),
+            report_path=str(file_path),
             signature=signature,
         )
         logger.info(
-            f"{step_prefix} - finished, report_dir={output.report_dir}, "
+            f"{step_prefix} - finished, report_path={output.report_path}, "
             f"status: {StepTerminationStatus.done.value}"
         )
         return (output, StepTerminationStatus.done)
@@ -1184,6 +1191,73 @@ async def _save_report_to_fs(
             f"{step_prefix} - save report to FS failed: {e}",
             exc_info=True,
         )
+        logger.info(f"{step_prefix} - finished, status: {StepTerminationStatus.error.value}")
+        return (None, StepTerminationStatus.error)
+
+
+def _user_intent_to_intent_mode(user_intent: UserIntent) -> str:
+    """Map UserIntent enum to DB intent_mode string."""
+    return user_intent.name.lower()
+
+
+@record_step("save_report_to_db")
+async def _save_report_to_db(
+    cluster_pk_hash: str,
+    user_intent: UserIntent,
+    resolved_topic: TopicResolveOutput,
+    plan: LLMReportPlannerOutput,
+    front_matter: ReportWriterFrontMatterOutput,
+    save_output: SaveReportToFsOutput,
+    cfg: ReportGenerationConfig,
+) -> Tuple[Optional[NewMemoryResponse], StepTerminationStatus]:
+    """
+    Persist report generation results to the database via memo new-memory command.
+
+    Returns:
+        (NewMemoryResponse, step_status). output is None on error; step_status is done or error.
+    """
+    step_prefix = f"[save report to DB step] - [cluster {cluster_pk_hash}]"
+    logger.info(f"{step_prefix} - start persisting report to database")
+    try:
+        topic_resolver_config = TopicResolverConfig(
+            json_payload=TopicResolverConfigPayload(
+                topic_resolver_threshold=cfg.report_generation.topic_resolver_threshold
+            )
+        )
+        payload = NewMemoryRequest(
+            cluster_pk_hash=cluster_pk_hash,
+            intent_mode=_user_intent_to_intent_mode(user_intent),
+            resolved_topic=ResolvedTopicInput(
+                action=resolved_topic.action.value,
+                merge_to_topic=resolved_topic.merge_to_topic,
+                new_topic_centroid_b64=resolved_topic.new_topic_centroid_b64,
+                new_topic_weight=resolved_topic.new_topic_weight,
+                score=resolved_topic.score,
+            ),
+            plan=plan.plan.model_dump(mode="json"),
+            front_matter=FrontMatterInput(
+                title=front_matter.title,
+                summary=front_matter.summary,
+                keywords=list(front_matter.keywords),
+            ),
+            save_output=SaveMemoryInput(
+                report_path=save_output.report_path,
+                signature=save_output.signature,
+            ),
+            topic_resolver_config=TopicResolverConfigInput(
+                topic_resolver_config_id=topic_resolver_config.topic_resolver_config_id,
+                json_payload={"topic_resolver_threshold": cfg.report_generation.topic_resolver_threshold},
+            ),
+        )
+        response = await memo.new_memory(payload, cfg.memo)
+        logger.info(f"{step_prefix} - finished, report_id={response.report_id}, status: {StepTerminationStatus.done.value}")
+        return (response, StepTerminationStatus.done)
+    except MemoNewMemoryError as e:
+        logger.warning(f"{step_prefix} - memo new-memory failed: {e}", exc_info=True)
+        logger.info(f"{step_prefix} - finished, status: {StepTerminationStatus.error.value}")
+        return (None, StepTerminationStatus.error)
+    except Exception as e:
+        logger.warning(f"{step_prefix} - save report to DB failed: {e}", exc_info=True)
         logger.info(f"{step_prefix} - finished, status: {StepTerminationStatus.error.value}")
         return (None, StepTerminationStatus.error)
 
@@ -1237,16 +1311,18 @@ async def _resolve_report_topic(
         # Resolve topic
         resolved_topic = resolve_topic(topics, cluster, resolve_threshold)
 
-        if resolved_topic.action.value == "merge":
+        if resolved_topic.action == TopicResolveAction.MERGE:
             logger.info(
-                f"Topic resolution for cluster {cluster_pk_hash}: MERGE to topic {resolved_topic.merge_to_topic} "
+                f"{step_prefix} - Topic resolution for cluster {cluster_pk_hash}: MERGE to topic {resolved_topic.merge_to_topic} "
                 f"(similarity score: {resolved_topic.score:.4f}, new weight: {resolved_topic.new_topic_weight:.2f})"
             )
-        else:
+        elif resolved_topic.action == TopicResolveAction.CREATE:
             logger.info(
-                f"Topic resolution for cluster {cluster_pk_hash}: CREATE new topic "
+                f"{step_prefix} - Topic resolution for cluster {cluster_pk_hash}: CREATE new topic "
                 f"(new weight: {resolved_topic.new_topic_weight:.2f})"
             )
+        else:
+            raise ValueError(f"{step_prefix} - unexpected topic resolution action: {resolved_topic.action}")
 
         logger.info(f"{step_prefix} - finished, action={resolved_topic.action.value}, status: {StepTerminationStatus.done.value}")
         return (resolved_topic, StepTerminationStatus.done)
@@ -1309,7 +1385,7 @@ async def _initialize_report_generation_llm_client(
     logger.info(f"{step_prefix} - start initializing LLM client")
     try:
         llm_cfg = cfg.report_generation.llm_gemini
-        llm_client = _initialize_llm_client(llm_cfg, llm_cfg.model)
+        llm_client = _initialize_llm_client(llm_cfg)
     except Exception as e:
         logger.warning(
             f"LLM client initialization failed for cluster {cluster_pk_hash}: {e}",
@@ -1383,6 +1459,13 @@ async def _kick_off_report_job(cluster_pk_hash: str, user_intent: UserIntent, cf
         logger.warning(f"Save report to FS failed for cluster {cluster_pk_hash}")
         raise RuntimeError(f"Save report to FS failed for cluster {cluster_pk_hash}")
 
+    # step: write to db
+    _, step_status = await _save_report_to_db(
+        cluster_pk_hash, user_intent, resolved_topic, plan, front_matter, save_output, cfg
+    )
+    if step_status == StepTerminationStatus.error:
+        logger.warning(f"Save report to DB failed for cluster {cluster_pk_hash}")
+        raise RuntimeError(f"Save report to DB failed for cluster {cluster_pk_hash}")
 
 
 async def create_report_job(cluster_pk_hash: str, user_intent: UserIntent, cfg: ReportGenerationConfig) -> Optional[Tuple[str, str]]:
@@ -1430,7 +1513,7 @@ async def create_report_job(cluster_pk_hash: str, user_intent: UserIntent, cfg: 
     elif start_report_job_response.status == 'error':
         # Case 2: Recent error, need to wait
         logger.warning(f"Memo start-report-job: Recent error occurred. message={start_report_job_response.message}")
-        return ('wait_for_report_job_to_finish', f"Recent error occurred, need to wait. {start_report_job_response.message}")
+        return ('wait_for_report_job_to_recover', f"Recent error occurred, need to wait. {start_report_job_response.message}")
     # move to fetch the report and print the report url
     elif start_report_job_response.status == 'done':
         # Case 1: Report already done

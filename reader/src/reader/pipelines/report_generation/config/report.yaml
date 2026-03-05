@@ -45,4 +45,4 @@ report_generation:
     max_retry: 5                   # Max retry attempts for LLM API calls
 
 cache:
-  dir: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/artifacts"
+  root: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/artifacts"

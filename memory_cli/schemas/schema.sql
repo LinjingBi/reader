@@ -29,6 +29,11 @@ CREATE TABLE IF NOT EXISTS llm_config (
   created_at    TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS topic_resolver_config (
+  topic_resolver_config_id TEXT PRIMARY KEY,
+  json_payload             TEXT NOT NULL,  -- algo name, params, threshold, etc.
+  created_at               TEXT NOT NULL
+);
 
 -- -----------------------------
 -- Source snapshots (HF pulls)
@@ -182,22 +187,23 @@ CREATE TABLE IF NOT EXISTS topic (
   status             TEXT NOT NULL,  -- 'active' | 'merged' | 'deprecated'
   created_at         TEXT NOT NULL,
   updated_at         TEXT NOT NULL,
-  embed_config_id    TEXT,                  -- embedding space used for topic_centroid_b64
-  centroid_b64 TEXT NOT NULL,                  -- base64 float32 bytes (same dim as cluster centroid). normalized
-  centroid_weight REAL NOT NULL,     -- centroid weight used in cluster centroid computation
-  centroid_updated_at TEXT            -- ISO timestamp when centroid last updated
+  centroid_b64       TEXT NOT NULL,  -- base64 float32 bytes (same dim as cluster centroid). normalized
+  centroid_weight    REAL NOT NULL,  -- centroid weight used in cluster centroid computation
+  centroid_updated_at TEXT           -- ISO timestamp when centroid last updated
 );
 
 -- Link clusters (from runs) to topics; captures add/create decision + matching provenance
 CREATE TABLE IF NOT EXISTS topic_cluster_link (
-  topic_id          INTEGER NOT NULL,
-  cluster_pk_hash    TEXT NOT NULL UNIQUE,
-  decision          TEXT NOT NULL,  -- 'created' | 'merged'
-  match_score       REAL NOT NULL,  -- cosine sim between topic vector and cluster/topic card
-  created_at        TEXT NOT NULL,
+  topic_id                 INTEGER NOT NULL,
+  cluster_pk_hash           TEXT NOT NULL UNIQUE,
+  topic_resolver_config_id TEXT,  -- config used for resolution (nullable)
+  decision                 TEXT NOT NULL,  -- 'created' | 'merged'
+  match_score              REAL NOT NULL,  -- cosine sim between topic vector and cluster/topic card
+  created_at               TEXT NOT NULL,
   PRIMARY KEY (topic_id, cluster_pk_hash),
-  FOREIGN KEY (topic_id)       REFERENCES topic(topic_id)   ON DELETE CASCADE,
-  FOREIGN KEY (cluster_pk_hash) REFERENCES cluster(pk_hash) ON DELETE CASCADE
+  FOREIGN KEY (topic_id)                 REFERENCES topic(topic_id)                 ON DELETE CASCADE,
+  FOREIGN KEY (cluster_pk_hash)         REFERENCES cluster(pk_hash)                 ON DELETE CASCADE,
+  FOREIGN KEY (topic_resolver_config_id) REFERENCES topic_resolver_config(topic_resolver_config_id) ON DELETE SET NULL
 );
 
 -- TBD for evlution pipeline
@@ -238,39 +244,40 @@ CREATE TABLE IF NOT EXISTS report_job (
   status          TEXT NOT NULL,             -- 'running'|'done'|'error'
   created_at      TEXT NOT NULL,
   updated_at      TEXT NOT NULL,
-  report_id       TEXT,                       -- set when done; NULL otherwise
+  report_id       INTEGER,                    -- set when done; NULL otherwise
   FOREIGN KEY (cluster_pk_hash) REFERENCES cluster(pk_hash) ON DELETE CASCADE,
   FOREIGN KEY (report_id) REFERENCES report(report_id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS report (
   report_id        INTEGER PRIMARY KEY,   -- rowid-backed, auto assigns
+  cluster_pk_hash  TEXT UNIQUE,                        -- nullable reference to cluster
   created_at       TEXT NOT NULL,
-  report_url       TEXT NOT NULL,
   intent_mode      TEXT NOT NULL,                    -- quick_background|research_briefing|brainstorm_directions|implementation_angle
-  declared_level   TEXT NOT NULL,                    -- intro|intermediate|deep-dive
+  report_url       TEXT NOT NULL,
+  -- report summary-level fields
   title            TEXT NOT NULL,
   summary          TEXT NOT NULL,                    -- 80-120 words target (enforce in app)
   keywords_json    TEXT NOT NULL DEFAULT '[]',        -- JSON list of strings
+  signature        TEXT NOT NULL,
   -- Fields from report plan (not actual report content)
+  declared_level   TEXT NOT NULL,                    -- intro|intermediate|deep-dive
+  depth_mode       TEXT NOT NULL,                      -- Onboard|Continue|Deepen|Restructure
   covered_bullets  TEXT NOT NULL,                      -- JSON array of strings
   next_targets     TEXT NOT NULL,                      -- JSON array of strings
   subthreads       TEXT NOT NULL,                      -- JSON array of {name, paper_ids}
   outline          TEXT NOT NULL,                      -- JSON array of strings
-  evidence_gaps    TEXT NOT NULL,                      -- JSON array
-  plan             TEXT NOT NULL,                      -- JSON object (LLMReportPlannerPlan)
-  depth_mode       TEXT NOT NULL,                      -- Onboard|Continue|Deepen|Restructure
   sufficiency      TEXT NOT NULL,                      -- sufficient|borderline|insufficient
-  cluster_pk_hash  TEXT,                              -- nullable reference to cluster
+  plan             TEXT NOT NULL,                      -- JSON object (LLMReportPlannerPlan)
+  --
   FOREIGN KEY (cluster_pk_hash) REFERENCES cluster(pk_hash) ON DELETE SET NULL
 );
 
 -- Reports can link to multiple topics (primary/secondary/related)
 CREATE TABLE IF NOT EXISTS report_topic_link (
-  report_id      TEXT NOT NULL,
+  report_id      INTEGER NOT NULL,
   topic_id       INTEGER NOT NULL,
   role           TEXT NOT NULL,   -- 'primary'|'secondary'|'related'
-  match_score    REAL,            -- optional
   created_at     TEXT NOT NULL,
   PRIMARY KEY (report_id, topic_id),
   FOREIGN KEY (report_id) REFERENCES report(report_id) ON DELETE CASCADE,
