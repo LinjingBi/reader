@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
+import re
+from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
@@ -25,17 +29,19 @@ from reader.adapters.llm import (
     LLMClient,
     TokenBucket,
     LLMGenerationError,
-    JudgeLoopTerminationStatus,
 )
+from reader.pipelines.report_generation.judges.protocol import JudgeLoopExitCondition
 from reader.pipelines.report_generation.report import (
     LLMReportPlannerOutput,
     EvidenceCollectionTerminationSufficiency,
     EvidenceGap,
+    ObservationReport,
     ReportWriterFrontMatterOutput,
     ReportWriterSectionInput,
     ReportWriterSectionOutput,
     ReportWriterSupplementInput,
     ReportWriterSupplementOutput,
+    SaveReportToFsOutput,
     WriterSupplementRequest,
 )
 from reader.pipelines.report_generation.judges import (
@@ -53,8 +59,265 @@ from reader.pipelines.report_generation.prompts.writer.build import (
     build_summary_writing_prompt,
 )
 from reader.tui.clusters_observation import display_clusters_observation
+from reader.pipelines.report_generation.workflow_register import (
+    KICK_OFF_REPORT_JOB_NODES,
+    LoopRunStatus,
+    record_loop,
+    record_step,
+    with_workflow_register,
+)
 
 logger = get_logger()
+
+
+# ---------- Judge retry helper (moved from llm adapter) ----------
+
+
+def _should_exit_judge_loop(
+    judge_result,
+    attempt: int,
+    max_retries: int,
+    retry_threshold: float,
+) -> Optional[JudgeLoopExitCondition]:
+    """Decide whether the judge retry loop should conclude."""
+    if judge_result.overall > retry_threshold:
+        return JudgeLoopExitCondition.JUDGE_ACCEPTED
+    if attempt >= max_retries:
+        return JudgeLoopExitCondition.RETRIES_EXHAUSTED
+    return None
+
+
+async def _call_llm_with_judge_retry(
+    llm_client: LLMClient,
+    prompt: str,
+    response_model,
+    temperature: float,
+    max_tokens: int,
+    judge,
+    item_pk: str,
+    max_retries: int,
+    retry_threshold: float,
+    log_path: Optional[str] = None,
+):
+    """
+    Call LLM with structured output and judge retry logic.
+    Retries until judge accepts (overall > retry_threshold) or max_retries exhausted.
+    Returns (best_output, status).
+    """
+    loop_prefix = f"[judge {judge.name}] - [cluster {item_pk}]"
+    logger.info(f"{loop_prefix} - start")
+
+    prompt_base = prompt
+    best_output = None
+    best_score = float("-inf")
+    exit_reason: Optional[JudgeLoopExitCondition] = None
+
+    for attempt in range(max_retries + 1):
+        try:
+            output = await llm_client.call_structured_async(
+                prompt=prompt,
+                response_model=response_model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+            judge_result = judge.judge(output)
+            if log_path and item_pk:
+                judge.log_to_jsonl(log_path, item_pk, output, judge_result)
+
+            if judge_result.overall > best_score:
+                best_score = judge_result.overall
+                best_output = output
+
+            exit_reason = _should_exit_judge_loop(
+                judge_result, attempt, max_retries, retry_threshold
+            )
+            if exit_reason is not None:
+                if exit_reason == JudgeLoopExitCondition.JUDGE_ACCEPTED:
+                    logger.info(
+                        f"{loop_prefix} - attempt {attempt + 1}/{max_retries + 1}: "
+                        f"overall score {best_score:.2f} > {retry_threshold}, accepted"
+                    )
+                elif exit_reason == JudgeLoopExitCondition.RETRIES_EXHAUSTED:
+                    logger.warning(
+                        f"{loop_prefix} - attempt {attempt + 1}/{max_retries + 1}: "
+                        f"judge retries exhausted, returning best output (overall score: {best_score:.2f})"
+                    )
+                break
+
+            if attempt < max_retries:
+                prompt, num_warnings = judge.inject_warnings_into_prompt(
+                    prompt_base, judge_result
+                )
+                logger.warning(
+                    f"{loop_prefix} - attempt {attempt + 1}/{max_retries + 1}: "
+                    f"overall score {judge_result.overall:.2f} <= {retry_threshold}, "
+                    f"injecting {num_warnings} warning(s), retrying"
+                )
+            else:
+                num_warnings = judge.count_warnings(judge_result)
+                logger.warning(
+                    f"{loop_prefix} - attempt {attempt + 1}/{max_retries + 1}: "
+                    f"overall score {judge_result.overall:.2f} <= {retry_threshold}, "
+                    f"{num_warnings} warning(s) (last judge retry, returning best)"
+                )
+
+        except LLMGenerationError as e:
+            logger.warning(
+                f"{loop_prefix} - attempt {attempt + 1}/{max_retries + 1}: llm call failed, breaking retry: {e}"
+            )
+            exit_reason = JudgeLoopExitCondition.LLM_ERROR
+            break
+        except Exception as e:
+            logger.warning(
+                f"{loop_prefix} - attempt {attempt + 1}/{max_retries + 1}: unexpected error, breaking retry: {e}",
+                exc_info=True,
+            )
+            exit_reason = JudgeLoopExitCondition.ERROR
+            break
+
+    none_output = best_output is None
+    if not none_output and exit_reason == JudgeLoopExitCondition.JUDGE_ACCEPTED:
+        status = LoopRunStatus.complete
+    elif not none_output and exit_reason == JudgeLoopExitCondition.RETRIES_EXHAUSTED:
+        status = LoopRunStatus.partial
+    elif not none_output and exit_reason in (
+        JudgeLoopExitCondition.LLM_ERROR,
+        JudgeLoopExitCondition.ERROR,
+    ):
+        status = LoopRunStatus.partial
+        logger.warning(
+            f"{loop_prefix} - terminated due to an error. The returned result is from the best overall score llm call."
+        )
+    elif none_output and exit_reason in (
+        JudgeLoopExitCondition.LLM_ERROR,
+        JudgeLoopExitCondition.ERROR,
+    ):
+        status = LoopRunStatus.error
+    else:
+        error_msg = (
+            f"{loop_prefix} - undefined exit reason({exit_reason}) and best_output(none:{none_output}) "
+            "condition for exit status resolution."
+        )
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
+    logger.info(
+        f"{loop_prefix} - finished, reasons: {exit_reason}, status: {status.value}, empty result: {none_output}"
+    )
+    return (best_output, status)
+
+
+@record_loop("planner_judge_loop")
+async def _call_planner_judge_retry(
+    llm_client: LLMClient,
+    prompt: str,
+    response_model,
+    temperature: float,
+    max_tokens: int,
+    judge,
+    item_pk: str,
+    max_retries: int,
+    retry_threshold: float,
+    log_path: Optional[str] = None,
+):
+    """Wrapper for planner judge retry; records as planner_judge_loop."""
+    return await _call_llm_with_judge_retry(
+        llm_client,
+        prompt=prompt,
+        response_model=response_model,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        judge=judge,
+        item_pk=item_pk,
+        max_retries=max_retries,
+        retry_threshold=retry_threshold,
+        log_path=log_path,
+    )
+
+
+@record_loop("writer_supply_judge_loop")
+async def _call_writer_supply_judge_retry(
+    llm_client: LLMClient,
+    prompt: str,
+    response_model,
+    temperature: float,
+    max_tokens: int,
+    judge,
+    item_pk: str,
+    max_retries: int,
+    retry_threshold: float,
+    log_path: Optional[str] = None,
+):
+    """Wrapper for writer supply judge retry; records as writer_supply_judge_loop."""
+    return await _call_llm_with_judge_retry(
+        llm_client,
+        prompt=prompt,
+        response_model=response_model,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        judge=judge,
+        item_pk=item_pk,
+        max_retries=max_retries,
+        retry_threshold=retry_threshold,
+        log_path=log_path,
+    )
+
+
+@record_loop("writer_writing_judge_loop")
+async def _call_writer_writing_judge_retry(
+    llm_client: LLMClient,
+    prompt: str,
+    response_model,
+    temperature: float,
+    max_tokens: int,
+    judge,
+    item_pk: str,
+    max_retries: int,
+    retry_threshold: float,
+    log_path: Optional[str] = None,
+):
+    """Wrapper for writer writing judge retry; records as writer_writing_judge_loop."""
+    return await _call_llm_with_judge_retry(
+        llm_client,
+        prompt=prompt,
+        response_model=response_model,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        judge=judge,
+        item_pk=item_pk,
+        max_retries=max_retries,
+        retry_threshold=retry_threshold,
+        log_path=log_path,
+    )
+
+
+@record_loop("front_matter_judge_loop")
+async def _call_front_matter_judge_retry(
+    llm_client: LLMClient,
+    prompt: str,
+    response_model,
+    temperature: float,
+    max_tokens: int,
+    judge,
+    item_pk: str,
+    max_retries: int,
+    retry_threshold: float,
+    log_path: Optional[str] = None,
+):
+    """Wrapper for front matter judge retry; records as front_matter_judge_loop."""
+    return await _call_llm_with_judge_retry(
+        llm_client,
+        prompt=prompt,
+        response_model=response_model,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        judge=judge,
+        item_pk=item_pk,
+        max_retries=max_retries,
+        retry_threshold=retry_threshold,
+        log_path=log_path,
+    )
+
 
 # ============================================================================
 # Cluster and intent selection (TUI)
@@ -162,14 +425,6 @@ class EvidenceLoopExitCondition(str, Enum):
     ERROR = "error"
 
 
-class LoopTerminationStatus(str, Enum):
-    """Enum for loop-like operations termination status (used by evidence collection and judge retry loops)."""
-
-    complete = "complete"
-    partial = "partial"
-    error = "error"
-
-
 class StepTerminationStatus(str, Enum):
     """Termination status for step-like operations (e.g. report plan generation), steps have to return binary status(done or error)"""
 
@@ -192,10 +447,11 @@ def _deduplicate_evidence_gap_requests(
 ) -> Tuple[List[PaperSupplementRequest], List[ReportSupplementRequest]]:
     """
     Merge evidence gaps into unique (id, selectors) requests.
-    Returns (paper_requests, report_requests, duplicate_count).
+    Selector deduplication is case-insensitive exact match.
+    Returns (paper_requests, report_requests).
     """
-    paper_merge: Dict[str, set] = {}  # paper_id -> set of selector
-    report_merge: Dict[int, set] = {}  # report_id -> set of selector
+    paper_merge: Dict[str, set] = {}  # paper_id -> set of selector (lowercased for dedupe)
+    report_merge: Dict[int, set] = {}  # report_id -> set of selector (lowercased for dedupe)
     total_gaps = len(evidence_gaps)
 
     for gap in evidence_gaps:
@@ -203,13 +459,15 @@ def _deduplicate_evidence_gap_requests(
             continue
         if gap.target_kind == "paper" and gap.paper_id:
             key = gap.paper_id
-            paper_merge.setdefault(key, set()).update(gap.paper_selectors)
+            paper_merge.setdefault(key, set()).update(s.lower() for s in (gap.paper_selectors or []))
         elif gap.target_kind == "history" and gap.history_report_id:
             try:
                 report_id = int(gap.history_report_id)
             except (ValueError, TypeError):
                 continue
-            report_merge.setdefault(report_id, set()).update(gap.history_selectors)
+            report_merge.setdefault(report_id, set()).update(
+                s.lower() for s in (gap.history_selectors or [])
+            )
 
     paper_requests = [
         PaperSupplementRequest(paper_id=pid, selectors=sorted(sels))
@@ -247,6 +505,26 @@ def _writer_requests_to_supply_request(
     supplements_requests: List[WriterSupplementRequest],
 ) -> GetReportGenerationSupplyRequest:
     """Convert WriterSupplementRequest list to GetReportGenerationSupplyRequest (deduplicated)."""
+    # Before deduplication: count requests and selectors
+    before_paper_reqs = sum(
+        1 for r in supplements_requests
+        if r.has_valid_selectors and r.target_kind == "paper" and r.paper_id
+    )
+    before_report_reqs = sum(
+        1 for r in supplements_requests
+        if r.has_valid_selectors and r.target_kind == "history" and r.history_report_id
+    )
+    before_paper_selectors = sum(
+        len(r.paper_selectors or [])
+        for r in supplements_requests
+        if r.has_valid_selectors and r.target_kind == "paper"
+    )
+    before_report_selectors = sum(
+        len(r.history_selectors or [])
+        for r in supplements_requests
+        if r.has_valid_selectors and r.target_kind == "history"
+    )
+
     paper_merge: Dict[str, set] = {}
     report_merge: Dict[int, set] = {}
     for req in supplements_requests:
@@ -272,6 +550,19 @@ def _writer_requests_to_supply_request(
         ReportSupplementRequest(report_id=rid, selectors=sorted(sels))
         for rid, sels in report_merge.items()
     ]
+
+    after_paper_reqs = len(paper_requests)
+    after_report_reqs = len(report_requests)
+    after_paper_selectors = sum(len(sels) for sels in paper_merge.values())
+    after_report_selectors = sum(len(sels) for sels in report_merge.values())
+    logger.info(
+        "Writer supply deduplication: paper_requests %d->%d, report_requests %d->%d, "
+        "paper_selectors %d->%d, report_selectors %d->%d",
+        before_paper_reqs, after_paper_reqs,
+        before_report_reqs, after_report_reqs,
+        before_paper_selectors, after_paper_selectors,
+        before_report_selectors, after_report_selectors,
+    )
     return GetReportGenerationSupplyRequest(
         paper_requests=paper_requests,
         report_requests=report_requests,
@@ -295,14 +586,14 @@ def _build_allowed_citations(
 
 
 # Statuses that force evidence loop to exit with ERROR (extensible)
-_EVIDENCE_LOOP_JUDGE_ERROR_STATUSES: Tuple[LoopTerminationStatus, ...] = (LoopTerminationStatus.error,)
+_EVIDENCE_LOOP_JUDGE_ERROR_STATUSES: Tuple[LoopRunStatus, ...] = (LoopRunStatus.error,)
 
 # TODO: add unit test to enforce output must be all None or all not None at the same time
 def _should_exit_evidence_loop(
     planner_output: Optional[LLMReportPlannerOutput],
     loop_turn: int,
     cfg: ReportGenerationConfig,
-    judge_status: LoopTerminationStatus,
+    judge_status: LoopRunStatus,
     last_planner_output: Optional[LLMReportPlannerOutput],
 ) -> Tuple[Optional[EvidenceLoopExitCondition], Optional[LLMReportPlannerOutput]]:
     """
@@ -348,21 +639,27 @@ def _filter_already_provided_selectors(
     report_reqs: List[ReportSupplementRequest],
     phase2_supplement: Dict,
 ) -> Tuple[List[PaperSupplementRequest], List[ReportSupplementRequest]]:
-    """Filter out selectors already in phase2_supplement. Returns same format."""
+    """
+    Filter out selectors already in phase2_supplement.
+    Selector comparison is case-insensitive exact match.
+    Returns same format.
+    """
     before_paper = len(paper_reqs)
     before_report = len(report_reqs)
 
     uncached_paper = []
     for pr in paper_reqs:
         provided = phase2_supplement["paper_supplements"].get(pr.paper_id, {})
-        new_selectors = [s for s in pr.selectors if s not in provided]
+        provided_lower = {k.lower() for k in provided}
+        new_selectors = [s for s in pr.selectors if s.lower() not in provided_lower]
         if new_selectors:
             uncached_paper.append(PaperSupplementRequest(paper_id=pr.paper_id, selectors=new_selectors))
 
     uncached_report = []
     for rr in report_reqs:
         provided = phase2_supplement["report_supplements"].get(str(rr.report_id), {})
-        new_selectors = [s for s in rr.selectors if s not in provided]
+        provided_lower = {k.lower() for k in provided}
+        new_selectors = [s for s in rr.selectors if s.lower() not in provided_lower]
         if new_selectors:
             uncached_report.append(ReportSupplementRequest(report_id=rr.report_id, selectors=new_selectors))
 
@@ -375,6 +672,7 @@ def _filter_already_provided_selectors(
     return (uncached_paper, uncached_report)
 
 
+@record_loop("run_evidence_completion_loop")
 async def _run_evidence_completion_loop(
     cluster_pk_hash: str,
     phase1_metadata: GetReportGenerationMetadataResponse,
@@ -382,7 +680,7 @@ async def _run_evidence_completion_loop(
     llm_client: LLMClient,
     cfg: ReportGenerationConfig,
     planner_judge: LLMJudge,
-) -> Tuple[Optional[LLMReportPlannerOutput], LoopTerminationStatus]:
+) -> Tuple[Optional[LLMReportPlannerOutput], LoopRunStatus]:
     """
     Run the report planner evidence collection (call 1) until a conclusion condition is met.
 
@@ -435,7 +733,8 @@ async def _run_evidence_completion_loop(
                 plan_guidance=plan_guidance,
                 phase2_supplement=phase2_supplement if has_supplement else None,
             )
-            planner_output, judge_status_raw = await llm_client.call_structured_with_judge_retry(
+            planner_output, judge_status_raw = await _call_planner_judge_retry(
+                llm_client,
                 prompt=planner_prompt,
                 response_model=LLMReportPlannerOutput,
                 temperature=cfg.report_generation.llm_gemini.temperature,
@@ -446,7 +745,7 @@ async def _run_evidence_completion_loop(
                 retry_threshold=cfg.report_generation.planner_judge_retry_threshold,
                 log_path=cfg.report_generation.planner_output_log_path,
             )
-            judge_status = LoopTerminationStatus(judge_status_raw.value)
+            judge_status = judge_status_raw
 
             exit_condition, exit_planner_output = _should_exit_evidence_loop(
                 planner_output, loop_turn, cfg, judge_status, last_planner_output
@@ -468,30 +767,30 @@ async def _run_evidence_completion_loop(
     # Map exit condition to status and log
     empty_plan = last_planner_output is None
     if not empty_plan and exit_condition == EvidenceLoopExitCondition.SUFFICIENCY_TERMINAL:
-        status = LoopTerminationStatus.complete
+        status = LoopRunStatus.complete
         logger.info(
             f"{loop_prefix} - concluded: plan sufficiency is sufficient or borderline — evidence collection complete."
         )
     elif not empty_plan and exit_condition == EvidenceLoopExitCondition.EVIDENCE_GAPS_BELOW_THRESHOLD:
-        status = LoopTerminationStatus.complete
+        status = LoopRunStatus.complete
         count = len(last_planner_output.evidence_gaps) if last_planner_output else 0
         threshold = cfg.report_generation.max_evidence_gaps_threshold
         logger.info(
             f"{loop_prefix} - concluded: evidence gaps remaining ({count}) below threshold ({threshold}) — evidence collection complete."
         )
     elif not empty_plan and exit_condition == EvidenceLoopExitCondition.MAX_ITERATIONS_REACHED:
-        status = LoopTerminationStatus.partial
+        status = LoopRunStatus.partial
         max_iter = cfg.report_generation.max_evidence_loop_iterations
         logger.info(
             f"{loop_prefix} - concluded: reached maximum iterations ({max_iter}) — evidence collection partial."
         )
     elif not empty_plan and exit_condition in (EvidenceLoopExitCondition.ERROR):
-        status = LoopTerminationStatus.partial
+        status = LoopRunStatus.partial
         logger.warning(
             f"{loop_prefix} - terminated due to an error. The returned plan is from the last successful planner call."
         )
     elif empty_plan and exit_condition in (EvidenceLoopExitCondition.ERROR):
-        status = LoopTerminationStatus.error
+        status = LoopRunStatus.error
         logger.warning(
             f"{loop_prefix} - call failed (no successful pass)."
         )
@@ -504,6 +803,7 @@ async def _run_evidence_completion_loop(
     return last_planner_output, status
 
 
+@record_step("generate_report_plan")
 async def _generate_report_plan(
     cluster_pk_hash: str,
     user_intent: UserIntent,
@@ -535,14 +835,14 @@ async def _generate_report_plan(
         return (None, StepTerminationStatus.error)
 
     # Handle (plan, status)
-    if status in (LoopTerminationStatus.complete, LoopTerminationStatus.partial):
-        if status == LoopTerminationStatus.partial:
+    if status in (LoopRunStatus.complete, LoopRunStatus.partial):
+        if status == LoopRunStatus.partial:
             logger.warning(
                 f"{step_prefix} - report plan completion status is partial even it is not empty."
             )
         result_plan = plan
         result_status = StepTerminationStatus.done
-    elif status == LoopTerminationStatus.error:
+    elif status == LoopRunStatus.error:
         logger.error(f"{step_prefix} - failed to generate report plan due to error")
         result_plan = None
         result_status = StepTerminationStatus.error
@@ -556,13 +856,14 @@ async def _generate_report_plan(
     return (result_plan, result_status)
 
 
+@record_loop("run_writing_loop")
 async def _run_writing_loop(
     cluster_pk_hash: str,
     plan: LLMReportPlannerOutput,
     materials: GetReportGenerationMetadataResponse,
     llm_client: LLMClient,
     cfg: ReportGenerationConfig,
-) -> Tuple[Optional[List[ReportWriterSectionOutput]], LoopTerminationStatus]:
+) -> Tuple[Optional[List[ReportWriterSectionOutput]], LoopRunStatus]:
     """
     Run the per-outline writing loop: supply -> fetch -> write for each outline item.
 
@@ -600,7 +901,8 @@ async def _run_writing_loop(
                 available_paper_ids=available_ids["paper_id"],
                 available_history_report_ids=available_ids["report_id"],
             )
-            supplement_output, supply_status = await llm_client.call_structured_with_judge_retry(
+            supplement_output, supply_status = await _call_writer_supply_judge_retry(
+                llm_client,
                 prompt=supply_prompt,
                 response_model=ReportWriterSupplementOutput,
                 temperature=llm_cfg.temperature,
@@ -611,7 +913,7 @@ async def _run_writing_loop(
                 retry_threshold=wcfg.writer_supplement_judge_retry_threshold,
                 log_path=wcfg.writer_supplement_output_log_path,
             )
-            if supply_status == JudgeLoopTerminationStatus.error or supplement_output is None:
+            if supply_status == LoopRunStatus.error or supplement_output is None:
                 exit_condition = StepWritingExitCondition.SUPPLY_LLM_ERROR
                 break
 
@@ -657,7 +959,8 @@ async def _run_writing_loop(
                 outline_item=target_outline,
                 allowed_citations=allowed_citations,
             )
-            section_output, write_status = await llm_client.call_structured_with_judge_retry(
+            section_output, write_status = await _call_writer_writing_judge_retry(
+                llm_client,
                 prompt=write_prompt,
                 response_model=ReportWriterSectionOutput,
                 temperature=llm_cfg.temperature,
@@ -668,7 +971,7 @@ async def _run_writing_loop(
                 retry_threshold=wcfg.writer_writing_judge_retry_threshold,
                 log_path=wcfg.writer_writing_output_log_path,
             )
-            if write_status == JudgeLoopTerminationStatus.error or section_output is None:
+            if write_status == LoopRunStatus.error or section_output is None:
                 exit_condition = StepWritingExitCondition.WRITING_LLM_ERROR
                 break
 
@@ -682,10 +985,10 @@ async def _run_writing_loop(
         )
         exit_condition = StepWritingExitCondition.UNKNOWN_ERROR
 
-    # Map exit condition to LoopTerminationStatus
+    # Map exit condition to LoopRunStatus
     empty_sections = len(sections) == 0
     if exit_condition == StepWritingExitCondition.COMPLETE:
-        status = LoopTerminationStatus.complete
+        status = LoopRunStatus.complete
         if empty_sections:
             logger.warning(
                 f"{loop_prefix} - concluded: all outline items processed but sections is empty."
@@ -695,13 +998,13 @@ async def _run_writing_loop(
                 f"{loop_prefix} - concluded: all outline items processed."
             )
     elif exit_condition in _WRITING_LOOP_ERROR_CONDITIONS:
-        status = LoopTerminationStatus.partial
+        status = LoopRunStatus.partial
         logger.warning(
             f"{loop_prefix} - incomplete writing due to exit condition {exit_condition.value}, "
             f"sections: {len(sections)} — writing partial."
         )
     elif exit_condition == StepWritingExitCondition.UNKNOWN_ERROR:
-        status = LoopTerminationStatus.error
+        status = LoopRunStatus.error
         if empty_sections:
             logger.warning(
                 f"{loop_prefix} - terminated due to unknown error, no sections written."
@@ -709,13 +1012,14 @@ async def _run_writing_loop(
     else:
         raise ValueError(f"{loop_prefix} - unexpected exit condition: {exit_condition}")
 
-    result_sections = None if (status == LoopTerminationStatus.error and empty_sections) else sections
+    result_sections = None if (status == LoopRunStatus.error and empty_sections) else sections
     logger.info(
         f"{loop_prefix} - finished, reasons: {exit_condition}, status: {status.value}, empty sections: {empty_sections}"
     )
     return result_sections, status
 
 
+@record_step("generate_report_body")
 async def _generate_report_body(
     cluster_pk_hash: str,
     plan: LLMReportPlannerOutput,
@@ -744,10 +1048,10 @@ async def _generate_report_body(
         return (None, StepTerminationStatus.error)
 
 
-    if status == LoopTerminationStatus.complete:
+    if status == LoopRunStatus.complete:
         result_sections = sections
         result_status = StepTerminationStatus.done
-    elif status in (LoopTerminationStatus.partial, LoopTerminationStatus.error):
+    elif status in (LoopRunStatus.partial, LoopRunStatus.error):
         logger.warning(
             f"{step_prefix} - report body generation ended with status {status.value}, returning {len(sections)} sections."
         )
@@ -763,6 +1067,7 @@ async def _generate_report_body(
     return (result_sections, result_status)
 
 
+@record_step("generate_report_front_matter")
 async def _generate_report_front_matter(
     cluster_pk_hash: str,
     sections_result: List[ReportWriterSectionOutput],
@@ -779,11 +1084,13 @@ async def _generate_report_front_matter(
     wcfg = cfg.report_generation
     llm_cfg = wcfg.llm_gemini
 
+    logger.info(f"{step_prefix} - start generating report front matter (title, summary, keywords)")
     prompt = build_summary_writing_prompt(
         sections_result,
         template_name=wcfg.writer_summary_prompt_template,
     )
-    front_matter_output, judge_status = await llm_client.call_structured_with_judge_retry(
+    front_matter_output, judge_status = await _call_front_matter_judge_retry(
+        llm_client,
         prompt=prompt,
         response_model=ReportWriterFrontMatterOutput,
         temperature=llm_cfg.temperature,
@@ -795,14 +1102,14 @@ async def _generate_report_front_matter(
         log_path=wcfg.writer_summary_output_log_path,
     )
 
-    if judge_status in (JudgeLoopTerminationStatus.complete, JudgeLoopTerminationStatus.partial):
+    if judge_status in (LoopRunStatus.complete, LoopRunStatus.partial):
         result_status = StepTerminationStatus.done
         result_output = front_matter_output
-        if judge_status == JudgeLoopTerminationStatus.partial:
+        if judge_status == LoopRunStatus.partial:
             logger.warning(
                 f"{step_prefix} - front matter completion status is partial, marking as done."
             )
-    elif judge_status == JudgeLoopTerminationStatus.error:
+    elif judge_status == LoopRunStatus.error:
         result_status = StepTerminationStatus.error
         result_output = None
     else:
@@ -817,11 +1124,78 @@ async def _generate_report_front_matter(
     return (result_output, result_status)
 
 
-async def _resolve_report_job_topic(cluster_pk_hash: str, cfg: ReportGenerationConfig) -> TopicResolveOutput:
+# Union of forbidden filename chars: Windows + macOS + Linux
+_FORBIDDEN_FILENAME_CHARS = re.compile(r'[/\\:*?"<>|\x00\s]+')
+
+
+def _sanitize_filename(title: str) -> str:
+    """Sanitize title for use as filename. Replaces forbidden chars on Windows, macOS, Linux."""
+    s = _FORBIDDEN_FILENAME_CHARS.sub('_', title)
+    s = s.strip('_')
+    s = re.sub(r'_+', '_', s)
+    return s or "report"
+
+
+@record_step("save_report_to_fs")
+async def _save_report_to_fs(
+    cluster_pk_hash: str,
+    sections_result: List[ReportWriterSectionOutput],
+    front_matter: ReportWriterFrontMatterOutput,
+    cfg: ReportGenerationConfig,
+) -> Tuple[Optional[SaveReportToFsOutput], StepTerminationStatus]:
+    """
+    Save report (body + front matter) to local FS as JSON under history_reports.
+
+    Returns:
+        (SaveReportToFsOutput, step_status). output is None on error; step_status is done or error.
+    """
+    step_prefix = f"[save report to FS step] - [cluster {cluster_pk_hash}]"
+    logger.info(f"{step_prefix} - start saving report to local FS")
+    try:
+        observation_report = ObservationReport(body=sections_result, front_matter=front_matter)
+        history_dir = cfg.cache.history_reports
+        history_dir.mkdir(parents=True, exist_ok=True)
+
+        sanitized_title = _sanitize_filename(front_matter.title)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{sanitized_title}_{timestamp}.json"
+        file_path = history_dir / filename
+
+        json_bytes = json.dumps(
+            observation_report.model_dump(mode="json"),
+            indent=2,
+            ensure_ascii=False,
+        ).encode("utf-8")
+        file_path.write_bytes(json_bytes)
+
+        signature = hashlib.sha256(json_bytes).hexdigest()
+
+        output = SaveReportToFsOutput(
+            report_dir=str(history_dir),
+            signature=signature,
+        )
+        logger.info(
+            f"{step_prefix} - finished, report_dir={output.report_dir}, "
+            f"status: {StepTerminationStatus.done.value}"
+        )
+        return (output, StepTerminationStatus.done)
+    except Exception as e:
+        logger.warning(
+            f"{step_prefix} - save report to FS failed: {e}",
+            exc_info=True,
+        )
+        logger.info(f"{step_prefix} - finished, status: {StepTerminationStatus.error.value}")
+        return (None, StepTerminationStatus.error)
+
+
+@record_step("resolve_report_topic")
+async def _resolve_report_topic(
+    cluster_pk_hash: str, cfg: ReportGenerationConfig
+) -> Tuple[Optional[TopicResolveOutput], StepTerminationStatus]:
     """
     Resolve a cluster to a topic using the topic resolver.
 
-    This helper function handles the topic resolution logic:
+    This step handles the topic resolution logic:
     - Fetches topic resolver metadata from memo
     - Converts metadata to TopicInput and ClusterInput formats
     - Calls resolve_topic with the threshold from config
@@ -831,14 +1205,15 @@ async def _resolve_report_job_topic(cluster_pk_hash: str, cfg: ReportGenerationC
         cluster_pk_hash: Cluster pk_hash (primary key hash from cluster table)
         cfg: ReportGenerationConfig instance
 
-    Raises:
-        TopicResolverError: If topic resolution fails
-        Exception: For any other unexpected errors
+    Returns:
+        (resolved_topic, step_status). resolved_topic is None on error; step_status is done or error.
     """
-    # Get topic resolver metadata from memo
-    metadata = await memo.get_topic_resolver_metadata(cluster_pk_hash, cfg.memo)
-
+    step_prefix = f"[resolve report topic step] - [cluster {cluster_pk_hash}]"
+    logger.info(f"{step_prefix} - start resolving cluster to topic")
     try:
+        # Get topic resolver metadata from memo
+        metadata = await memo.get_topic_resolver_metadata(cluster_pk_hash, cfg.memo)
+
         # Convert TopicCentroid list to TopicInput list
         topics = [
             TopicInput(
@@ -860,16 +1235,94 @@ async def _resolve_report_job_topic(cluster_pk_hash: str, cfg: ReportGenerationC
         resolve_threshold = cfg.report_generation.topic_resolver_threshold
 
         # Resolve topic
-        return resolve_topic(topics, cluster, resolve_threshold)
+        resolved_topic = resolve_topic(topics, cluster, resolve_threshold)
+
+        if resolved_topic.action.value == "merge":
+            logger.info(
+                f"Topic resolution for cluster {cluster_pk_hash}: MERGE to topic {resolved_topic.merge_to_topic} "
+                f"(similarity score: {resolved_topic.score:.4f}, new weight: {resolved_topic.new_topic_weight:.2f})"
+            )
+        else:
+            logger.info(
+                f"Topic resolution for cluster {cluster_pk_hash}: CREATE new topic "
+                f"(new weight: {resolved_topic.new_topic_weight:.2f})"
+            )
+
+        logger.info(f"{step_prefix} - finished, action={resolved_topic.action.value}, status: {StepTerminationStatus.done.value}")
+        return (resolved_topic, StepTerminationStatus.done)
 
     except TopicResolverError as e:
         logger.error(f"Topic resolver error for cluster {cluster_pk_hash}: {e}", exc_info=True)
-        raise
+        logger.info(f"{step_prefix} - finished, status: {StepTerminationStatus.error.value}")
+        return (None, StepTerminationStatus.error)
     except Exception as e:
         logger.error(f"Unexpected error during topic resolution for cluster {cluster_pk_hash}: {e}", exc_info=True)
-        raise
+        logger.info(f"{step_prefix} - finished, status: {StepTerminationStatus.error.value}")
+        return (None, StepTerminationStatus.error)
 
 
+@record_step("fetch_report_generation_metadata")
+async def _fetch_report_generation_metadata(
+    cluster_pk_hash: str,
+    resolved_topic: TopicResolveOutput,
+    cfg: ReportGenerationConfig,
+) -> Tuple[Optional[GetReportGenerationMetadataResponse], StepTerminationStatus]:
+    """
+    Fetch report generation metadata from memo.
+
+    Returns:
+        (metadata, step_status). metadata is None on error; step_status is done or error.
+    """
+    step_prefix = f"[fetch report generation metadata step] - [cluster {cluster_pk_hash}]"
+    logger.info(f"{step_prefix} - start fetching report generation metadata")
+    try:
+        new_topic_metadata = await memo.get_report_generation_metadata(
+            cluster_pk_hash=cluster_pk_hash,
+            config=cfg.memo,
+            topic_id=resolved_topic.merge_to_topic,
+            add_top_papers=True,
+        )
+    except Exception as e:
+        logger.warning(
+            f"Report generation metadata fetch failed for cluster {cluster_pk_hash}: {e}",
+            exc_info=True,
+        )
+        logger.info(f"{step_prefix} - finished, metadata=none, status: {StepTerminationStatus.error.value}")
+        return (None, StepTerminationStatus.error)
+
+    logger.info(f"{step_prefix} - finished, metadata=present, status: {StepTerminationStatus.done.value}")
+    return (new_topic_metadata, StepTerminationStatus.done)
+
+
+@record_step("initialize_report_generation_llm_client")
+async def _initialize_report_generation_llm_client(
+    cluster_pk_hash: str,
+    cfg: ReportGenerationConfig,
+) -> Tuple[Optional[LLMClient], StepTerminationStatus]:
+    """
+    Initialize LLM client for report generation.
+
+    Returns:
+        (llm_client, step_status). llm_client is None on error; step_status is done or error.
+    """
+    step_prefix = f"[initialize report generation LLM client step] - [cluster {cluster_pk_hash}]"
+    logger.info(f"{step_prefix} - start initializing LLM client")
+    try:
+        llm_cfg = cfg.report_generation.llm_gemini
+        llm_client = _initialize_llm_client(llm_cfg, llm_cfg.model)
+    except Exception as e:
+        logger.warning(
+            f"LLM client initialization failed for cluster {cluster_pk_hash}: {e}",
+            exc_info=True,
+        )
+        logger.info(f"{step_prefix} - finished, llm_client=none, status: {StepTerminationStatus.error.value}")
+        return (None, StepTerminationStatus.error)
+
+    logger.info(f"{step_prefix} - finished, llm_client=initialized, status: {StepTerminationStatus.done.value}")
+    return (llm_client, StepTerminationStatus.done)
+
+
+@with_workflow_register("kick_off_report_job", KICK_OFF_REPORT_JOB_NODES)
 async def _kick_off_report_job(cluster_pk_hash: str, user_intent: UserIntent, cfg: ReportGenerationConfig) -> None:
     """
     Kick off a report generation job by resolving the cluster to a topic.
@@ -880,69 +1333,56 @@ async def _kick_off_report_job(cluster_pk_hash: str, user_intent: UserIntent, cf
         user_intent: User intent enum
         cfg: ReportGenerationConfig instance
     """
-    # new topic resolution
-    resolved_topic = await _resolve_report_job_topic(cluster_pk_hash, cfg)
-    if resolved_topic.action.value == "merge":
-        logger.info(
-            f"Topic resolution for cluster {cluster_pk_hash}: MERGE to topic {resolved_topic.merge_to_topic} "
-            f"(similarity score: {resolved_topic.score:.4f}, new weight: {resolved_topic.new_topic_weight:.2f})"
-        )
-    else:
-        logger.info(
-            f"Topic resolution for cluster {cluster_pk_hash}: CREATE new topic "
-            f"(new weight: {resolved_topic.new_topic_weight:.2f})"
-        )
-    # fetch new topic metadata
-    add_top_papers = user_intent != UserIntent.QUICK_BACKGROUND
-    try:
-        new_topic_metadata = await memo.get_report_generation_metadata(
-            cluster_pk_hash=cluster_pk_hash,
-            config=cfg.memo,
-            topic_id=resolved_topic.merge_to_topic,
-            add_top_papers=add_top_papers,
-        )
-    except Exception as e:
-        logger.warning(
-            f"New topic metadata fetch failed for cluster {cluster_pk_hash}: {e}",
-            exc_info=True,
-        )
-        # write to memo with error metadata
-        # need to update the report job status to error
-        return
+    # step: resolve report topic
+    resolved_topic, step_status = await _resolve_report_topic(cluster_pk_hash, cfg)
+    if step_status == StepTerminationStatus.error or resolved_topic is None:
+        logger.warning(f"Report topic resolution failed for cluster {cluster_pk_hash}")
+        raise RuntimeError(f"Report topic resolution failed for cluster {cluster_pk_hash}")
 
-    # Initialize LLM client
-    llm_cfg = cfg.report_generation.llm_gemini
-    llm_client = _initialize_llm_client(llm_cfg, llm_cfg.model)
+    # step: fetch report generation metadata
+    new_topic_metadata, step_status = await _fetch_report_generation_metadata(cluster_pk_hash, resolved_topic, cfg)
+    if step_status == StepTerminationStatus.error or new_topic_metadata is None:
+        logger.warning(f"Report generation metadata fetch failed for cluster {cluster_pk_hash}")
+        raise RuntimeError(f"Report generation metadata fetch failed for cluster {cluster_pk_hash}")
 
-    # call 1 to llm report planner
+    # step: initialize report generation LLM client
+    llm_client, step_status = await _initialize_report_generation_llm_client(cluster_pk_hash, cfg)
+    if step_status == StepTerminationStatus.error or llm_client is None:
+        logger.warning(f"Report generation LLM client initialization failed for cluster {cluster_pk_hash}")
+        raise RuntimeError(f"Report generation LLM client initialization failed for cluster {cluster_pk_hash}")
+
+    # step:  generate report plan
     plan, step_status = await _generate_report_plan(
         cluster_pk_hash, user_intent, new_topic_metadata, llm_client, cfg, planner_judge
     )
     if step_status == StepTerminationStatus.error or plan is None:
         logger.warning(f"Report planner call failed for cluster {cluster_pk_hash}")
-        # write to memo with error metadata
-        # need to update the report job status to error
-        raise
+        raise RuntimeError(f"Report planner call failed for cluster {cluster_pk_hash}")
 
+    # step: generate report body
     sections_result, step_status = await _generate_report_body(
         cluster_pk_hash, plan, new_topic_metadata, llm_client, cfg
     )
     if step_status == StepTerminationStatus.error or sections_result is None:
         logger.warning(f"Report body writing failed for cluster {cluster_pk_hash}")
-        # write to memo with error metadata
-        # need to update the report job status to error
-        # !!!! if sections_result is not none, save a writing checkpoint to local for manual retry
-        raise
+        raise RuntimeError(f"Report body writing failed for cluster {cluster_pk_hash}")
 
-    # generate report front matter
+    # step: generate report front matter
     front_matter, step_status = await _generate_report_front_matter(
         cluster_pk_hash, sections_result, llm_client, cfg
     )
     if step_status == StepTerminationStatus.error or front_matter is None:
         logger.warning(f"Report front matter generation failed for cluster {cluster_pk_hash}")
-        # write to memo with error metadata
-        # need to update the report job status to error
-        raise
+        raise RuntimeError(f"Report front matter generation failed for cluster {cluster_pk_hash}")
+
+    # step: save report to local fs
+    save_output, step_status = await _save_report_to_fs(
+        cluster_pk_hash, sections_result, front_matter, cfg
+    )
+    if step_status == StepTerminationStatus.error or save_output is None:
+        logger.warning(f"Save report to FS failed for cluster {cluster_pk_hash}")
+        raise RuntimeError(f"Save report to FS failed for cluster {cluster_pk_hash}")
+
 
 
 async def create_report_job(cluster_pk_hash: str, user_intent: UserIntent, cfg: ReportGenerationConfig) -> Optional[Tuple[str, str]]:

@@ -7,6 +7,22 @@ import yaml
 from pydantic import BaseModel, Field, PrivateAttr
 
 
+class CacheConfig(BaseModel):
+    """Cache directory configuration."""
+
+    dir: str = Field(..., description="Root cache directory")
+
+    @property
+    def report_generation_cache(self) -> Path:
+        """Directory for report generation workflow traces. Derived from cache.dir."""
+        return Path(self.dir) / "workflow_traces" / "report_generation"
+
+    @property
+    def history_reports(self) -> Path:
+        """Directory for saved report history. Derived from cache.dir."""
+        return Path(self.dir) / "history_reports"
+
+
 class RunConfig(BaseModel):
     """Run configuration"""
     source: str = Field(..., description="Data source identifier (e.g., hf_monthly)")
@@ -76,8 +92,10 @@ class ReportGenSectionConfig(BaseModel):
 
 class ReportGenerationConfig(BaseModel):
     """Main report generation configuration"""
+
     run: RunConfig
     memo: MemoConfig
+    cache: CacheConfig = Field(..., description="Cache directory configuration")
     report_generation: ReportGenSectionConfig = Field(..., description="Report generation configuration")
 
 

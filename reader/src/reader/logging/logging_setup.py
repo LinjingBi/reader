@@ -2,7 +2,16 @@ from __future__ import annotations
 
 import logging
 import logging.config
+from datetime import datetime
 from pathlib import Path
+
+
+class TzAwareFormatter(logging.Formatter):
+    """Formatter that uses local time with timezone offset (ISO 8601). Parse with datetime.fromisoformat() and convert to UTC via .astimezone(timezone.utc)."""
+
+    def formatTime(self, record, datefmt=None):
+        return datetime.now().astimezone().isoformat()
+
 
 def setup_logging(config_path: str | Path, log_file_path: str | Path) -> None:
     """

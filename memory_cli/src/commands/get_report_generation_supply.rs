@@ -2,7 +2,7 @@ use crate::contracts::{GetReportGenerationSupplyRequest, GetReportGenerationSupp
 use crate::commands::validation::{self, ValidationResult};
 use crate::db;
 use anyhow::{Context, Result};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::{self, Read, Write};
 
 /// Map semantic input selectors -> DB filters for paper chunks (chunk_selector.name).
@@ -38,23 +38,98 @@ fn report_selector_to_db_map() -> HashMap<&'static str, &'static str> {
 }
 
 /// Validate and convert semantic selectors to DB filters.
-/// Returns error if any selector is unknown.
+/// Conversion is case insensitive (input selectors are lowercased before lookup).
+/// Returns error if any selector is unknown; collects all unknowns and reports them together.
 fn convert_selectors(
     selectors: &[String],
     map: &HashMap<&'static str, &'static str>,
     kind: &str,
 ) -> Result<Vec<String>> {
     let mut out = Vec::with_capacity(selectors.len());
+    let mut unknown: Vec<String> = Vec::new();
     for s in selectors {
         let lower = s.to_lowercase();
         match map.get(lower.as_str()) {
             Some(&db_filter) => out.push(db_filter.to_string()),
-            None => {
-                return Err(anyhow::anyhow!("Unknown {} selector: '{}'", kind, s));
-            }
+            None => unknown.push(s.clone()),
         }
     }
-    Ok(out)
+    if unknown.is_empty() {
+        Ok(out)
+    } else {
+        Err(anyhow::anyhow!(
+            "Unknown {} selector(s): {}",
+            kind,
+            unknown.join(", ")
+        ))
+    }
+}
+
+/// Merge requests by id and convert selectors to DB filters.
+/// - Merges by paper_id/report_id with case-insensitive selector deduplication.
+/// - Converts semantic selectors to DB filters (case-insensitive lookup).
+/// - Logs before/after deduplication stats.
+fn to_db_selectors(
+    req: &GetReportGenerationSupplyRequest,
+) -> Result<(Vec<(String, Vec<String>)>, Vec<(i64, Vec<String>)>)> {
+    let paper_map = paper_selector_to_db_map();
+    let report_map = report_selector_to_db_map();
+
+    let before_paper_reqs = req.paper_requests.len();
+    let before_report_reqs = req.report_requests.len();
+    let before_paper_selectors: usize = req.paper_requests.iter().map(|pr| pr.selectors.len()).sum();
+    let before_report_selectors: usize = req.report_requests.iter().map(|rr| rr.selectors.len()).sum();
+
+    // Merge by id; selectors deduplicated case-insensitively (lowercase as key)
+    let mut paper_merge: HashMap<String, HashSet<String>> = HashMap::new();
+    for pr in &req.paper_requests {
+        let entry = paper_merge.entry(pr.paper_id.clone()).or_default();
+        for s in &pr.selectors {
+            entry.insert(s.to_lowercase());
+        }
+    }
+    let mut report_merge: HashMap<i64, HashSet<String>> = HashMap::new();
+    for rr in &req.report_requests {
+        let entry = report_merge.entry(rr.report_id).or_default();
+        for s in &rr.selectors {
+            entry.insert(s.to_lowercase());
+        }
+    }
+
+    // Convert to DB filters
+    let mut paper_requests: Vec<(String, Vec<String>)> = Vec::new();
+    for (paper_id, sels) in paper_merge {
+        let mut selectors: Vec<String> = sels.into_iter().collect();
+        selectors.sort();
+        let db_filters = convert_selectors(&selectors, &paper_map, "paper")?;
+        paper_requests.push((paper_id, db_filters));
+    }
+    let mut report_requests: Vec<(i64, Vec<String>)> = Vec::new();
+    for (report_id, sels) in report_merge {
+        let mut selectors: Vec<String> = sels.into_iter().collect();
+        selectors.sort();
+        let db_filters = convert_selectors(&selectors, &report_map, "report")?;
+        report_requests.push((report_id, db_filters));
+    }
+
+    let after_paper_reqs = paper_requests.len();
+    let after_report_reqs = report_requests.len();
+    let after_paper_selectors: usize = paper_requests.iter().map(|(_, f)| f.len()).sum();
+    let after_report_selectors: usize = report_requests.iter().map(|(_, f)| f.len()).sum();
+    eprintln!(
+        "Supply deduplication: paper_requests {}->{}, report_requests {}->{}, \
+         paper_selectors {}->{}, report_selectors {}->{}",
+        before_paper_reqs,
+        after_paper_reqs,
+        before_report_reqs,
+        after_report_reqs,
+        before_paper_selectors,
+        after_paper_selectors,
+        before_report_selectors,
+        after_report_selectors,
+    );
+
+    Ok((paper_requests, report_requests))
 }
 
 fn validate_request(req: &GetReportGenerationSupplyRequest) -> Result<()> {
@@ -135,28 +210,7 @@ pub fn handle(
         return Ok(());
     }
 
-    let paper_map = paper_selector_to_db_map();
-    let report_map = report_selector_to_db_map();
-
-    // Convert semantic selectors to DB filters
-    let paper_requests: Vec<(String, Vec<String>)> = req
-        .paper_requests
-        .iter()
-        .map(|pr| {
-            let db_filters = convert_selectors(&pr.selectors, &paper_map, "paper")
-                .expect("validated in validate_request");
-            (pr.paper_id.clone(), db_filters)
-        })
-        .collect();
-    let report_requests: Vec<(i64, Vec<String>)> = req
-        .report_requests
-        .iter()
-        .map(|rr| {
-            let db_filters = convert_selectors(&rr.selectors, &report_map, "report")
-                .expect("validated in validate_request");
-            (rr.report_id, db_filters)
-        })
-        .collect();
+    let (paper_requests, report_requests) = to_db_selectors(&req)?;
 
     let conn = db::open(db_path)?;
     if let Some(ref sp) = schema_path {

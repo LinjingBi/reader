@@ -288,3 +288,17 @@ class ReportWriterFrontMatterOutput(BaseModel):
         if self.keywords and len(self.keywords) != len({k.lower() for k in self.keywords}):
             raise ValueError("keywords must be case-insensitively unique")
         return self
+
+
+class ObservationReport(BaseModel):
+    """Report body and front matter for serialization to local FS."""
+
+    body: List[ReportWriterSectionOutput] = Field(..., description="Report sections.")
+    front_matter: ReportWriterFrontMatterOutput = Field(..., description="Title, summary, keywords.")
+
+
+class SaveReportToFsOutput(BaseModel):
+    """Output of save_report_to_fs step."""
+
+    report_dir: str = Field(..., description="Path to the history_reports directory.")
+    signature: str = Field(..., description="SHA256 hex digest of the written file.")
