@@ -7,7 +7,7 @@ mod get_report_generation_supply;
 mod get_topic_resolver_metadata;
 mod inject_clusters_observation;
 mod inject_papers_chunk;
-mod start_report_job;
+mod init_report_job;
 mod validation;
 
 use crate::cli::{Args, Command};
@@ -29,8 +29,8 @@ pub fn dispatch(args: Args) -> Result<()> {
         Command::InjectClustersObservation { input } => {
             inject_clusters_observation::handle(args.dry_run, &args.db, args.schema.as_deref(), &input)
         }
-        Command::StartReportJob { cluster_pk_hash } => {
-            start_report_job::handle(args.dry_run, &args.db, args.schema.as_deref(), &cluster_pk_hash)
+        Command::InitReportJob { cluster_pk_hash } => {
+            init_report_job::handle(args.dry_run, &args.db, args.schema.as_deref(), &cluster_pk_hash)
         }
         Command::GetTopicResolverMetadata { cluster_pk_hash } => {
             get_topic_resolver_metadata::handle(args.dry_run, &args.db, args.schema.as_deref(), &cluster_pk_hash)

@@ -1473,13 +1473,11 @@ async def create_report_job(cluster_pk_hash: str, user_intent: UserIntent, cfg: 
     Create a report generation job as the first step for any report generation request.
     Non-blocking: uses async LLM calls when executor is configured.
 
-    Calls memo.start_report_job and handles/logs the response. Processes different response cases:
-    - Case 1: Report already done (status='done') -> returns ('fetch_report_and_print_report_url', message)
-    - Case 2: Recent error occurred (status='error') -> returns ('wait_for_report_job_to_finish', message)
-    - Case 3: New job started (status='running', new_job=True, message doesn't contain 'errored expired') -> runs kick_off, returns ('kick_off_report_job', message)
-    - Case 4: Existing job already running (status='running', new_job=False) -> returns ('wait_for_report_job_to_finish', message)
-    - Case 5: Previous error expired, new job started (status='running', new_job=True, message contains 'errored expired') -> runs kick_off, returns ('kick_off_report_job', message)
-    - Unexpected status -> raises exception
+    Calls memo.init_report_job and handles/logs the response. Maps next_status:
+    - running: kick off new job, returns ('kick_off_report_job', message)
+    - resuming: kick off (error expired), returns ('kick_off_report_job', message)
+    - waiting: returns ('wait_for_report_job_to_finish', meta.message)
+    - done: returns ('fetch_report_and_print_report_url', message); meta has report_url, report_signature
 
     Args:
         cluster_pk_hash: Cluster pk_hash (primary key hash from cluster table)
@@ -1489,41 +1487,30 @@ async def create_report_job(cluster_pk_hash: str, user_intent: UserIntent, cfg: 
     Returns:
         Tuple of (function_name, descriptive_message), or None if memo is disabled
     """
-    start_report_job_response = await memo.start_report_job(cluster_pk_hash, cfg.memo)
+    resp = await memo.init_report_job(cluster_pk_hash, cfg.memo)
+    meta = resp.meta
 
-    # kick off a new report generation job
-    if start_report_job_response.status == 'running' and start_report_job_response.new_job:
-        # Check if it's error_expired or running_new by message content
-        if 'errored expired' in start_report_job_response.message.lower():
-            # Case 5: Error expired, job is running now
-            logger.info(f"Memo start-report-job: Previous error expired, new job started. message={start_report_job_response.message}")
-            await _kick_off_report_job(cluster_pk_hash, user_intent, cfg)
-            return ('kick_off_report_job', f"Previous error expired, new job started. {start_report_job_response.message}")
-        else:
-            # Case 3: New job is running
-            logger.info(f"Memo start-report-job: New job started. message={start_report_job_response.message}")
-            await _kick_off_report_job(cluster_pk_hash, user_intent, cfg)
-            return ('kick_off_report_job', f"New job started. {start_report_job_response.message}")
-    # wait for the existing job to finish
-    elif start_report_job_response.status == 'running' and not start_report_job_response.new_job:
-        # Case 4: Existing job already running
-        logger.info(f"Memo start-report-job: Existing job already running. message={start_report_job_response.message}")
-        return ('wait_for_report_job_to_finish', f"Existing job already running. {start_report_job_response.message}")
-    # report generation failed
-    elif start_report_job_response.status == 'error':
-        # Case 2: Recent error, need to wait
-        logger.warning(f"Memo start-report-job: Recent error occurred. message={start_report_job_response.message}")
-        return ('wait_for_report_job_to_recover', f"Recent error occurred, need to wait. {start_report_job_response.message}")
-    # move to fetch the report and print the report url
-    elif start_report_job_response.status == 'done':
-        # Case 1: Report already done
-        logger.info(f"Memo start-report-job: Report already generated. report_id={start_report_job_response.report_id}, message={start_report_job_response.message}")
-        return ('fetch_report_and_print_report_url', f"Report already generated. report_id={start_report_job_response.report_id}. {start_report_job_response.message}")
-
+    if resp.next_status == 'running':
+        logger.info(f"Memo init-report-job: New job is running. message={meta.message}")
+        await _kick_off_report_job(cluster_pk_hash, user_intent, cfg)
+        return ('kick_off_report_job', meta.message)
+    elif resp.next_status == 'resuming':
+        logger.info(f"Memo init-report-job: Previous error expired, job is resuming. message={meta.message}")
+        await _kick_off_report_job(cluster_pk_hash, user_intent, cfg)
+        return ('kick_off_report_job', meta.message)
+    elif resp.next_status == 'waiting':
+        message = meta.message_with_local_last_update()
+        logger.info(f"Memo init-report-job: Waiting. message={message}")
+        return ('wait_for_report_job_to_finish', message)
+    elif resp.next_status == 'done':
+        msg = meta.message
+        if meta.report_url:
+            msg = f"{meta.message} Report URL: {meta.report_url}"
+        logger.info(f"Memo init-report-job: Report already generated. message={meta.message}")
+        return ('fetch_report_and_print_report_url', msg)
     else:
-        # Unexpected status
-        logger.warning(f"Memo start-report-job: Unexpected response. status={start_report_job_response.status}, new_job={start_report_job_response.new_job}, message={start_report_job_response.message}")
-        raise ValueError(f"Unexpected response. status={start_report_job_response.status}, new_job={start_report_job_response.new_job}, message={start_report_job_response.message}")
+        logger.warning(f"Memo init-report-job: Unexpected next_status={resp.next_status}, message={meta.message}")
+        raise ValueError(f"Unexpected next_status: {resp.next_status}")
 
 
 # -------------------------

@@ -49,18 +49,20 @@ cat observations.json | ./target/release/memo-cli inject-clusters-observation --
 ./target/release/memo-cli get-clusters-observation --source hf_monthly --period-start 2025-01-01 --period-end 2025-01-31 --db memo.sqlite
 ```
 
-### 6) Start a report generation job for a cluster
+### 6) Initialize a report generation job for a cluster
 ```bash
-./target/release/memo-cli start-report-job --cluster-pk-hash abc123def456 --db memo.sqlite
+./target/release/memo-cli init-report-job --cluster-pk-hash abc123def456 --db memo.sqlite
 ```
 
-The command checks for existing jobs and handles different states:
-- **No job exists**: Creates a new job with status `running`
-- **Job exists with status `running`**: Returns existing job info
-- **Job exists with status `done`**: Returns the completed report_id
-- **Job exists with status `error`**: 
-  - If error occurred within 5 minutes: Returns remaining wait time
-  - If error occurred more than 5 minutes ago: Resets job to `running` status
+Returns `next_status` and `meta` (message, optional report_url/report_signature/last_update_utc). States:
+- **No job exists**: Creates job, `next_status=running`
+- **Job running**: `next_status=waiting`, message includes estimated time remaining
+- **Job done**: `next_status=done`, meta includes report_url and report_signature
+- **Job error**: 
+  - Within 5 minutes: `next_status=waiting`, message includes remaining cooldown
+  - Beyond 5 minutes: Updates job to running, `next_status=resuming`
+
+See `examples/init_report_job_output_*.json` for output formats.
 
 ### 7) Get topic resolver metadata
 ```bash

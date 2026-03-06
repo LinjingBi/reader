@@ -4,20 +4,19 @@ main(feature level)
 [ ] - add e2e test for reader and memo  
 [ ] - algo version control: move algo_libs to a new git repo  
 [ ] - [cursor] set minimum functional requirements to force coding agent follow them while refactoring.  
-[ ] - [eval] implement a llm request&response cache mechanism  
+[ ] - [eval] implement a llm request&response cache mechanism.comment.need more clear use case for what to cahe/not cache and why.  
 [ ] - [eval, reader] design a structure to share the llm evaluation logic between eval pipeline and reader. f.e use the llm heuristic rules and judge from reader.  
-[ ] - [reader] **consider kmeans++?**  
 [ ] - [memo] enforce machine-only design in logging system: diagnostic logs -> stderr, cmd output -> stdout  
-[ ] - now we have tokenbucket per pipeline execution time. consider adding a second layer of tokenbucket for per llm provider: pipeline token bucket -> llm provider token bucket. and also consider caching them in db.  
-[ ] - [memo] auto db migration. because the sqlite is designed to be a local db/memory system and is tighted to the memo cli. woould be interested to think of a way to handle local db migration after cli upgrade. a classical way just use a bunch of migration scripts. but since this is a machine-only/agent facing tool, maybe the migration can be some sort of prompt files and let agent drives/suggests the local db change vs new db schema.  
-[ ] - [memo,agent-friendly] refactor the error handling to a descriptive way, f.e. add error type for each cmd and raise them with more details of cmd runtime.  
-[ ] - [memo,agent-friendly] add sample use case for each subcmd in their help message.  
+
+
+
+[x] - [memo,agent-friendly] add sample use case for each subcmd in their help message.  
 [ ] - [reader] add paper metadata extraction to hf metadata processing step(fetch+embed+clustering) and also adjust the evidence provieded in report planner's specs.    
 [...] - [lab] consider make lab an independent repo so we can have version control over all its ingredients via git commit hash.  
-[ ] - [reader] make "selectors" used in call1/call2 load/generate dynamically from memo, this should be a prod-level feature.   
-[ ] - [?] a vibe-coding like structure to derive pydantic model from prompt spec, so no need to validate these two using validate.py. "spec" holds the high-level design, "prompt"(semantic meanings) and "structure"(code model) should be derived from it.  
-[ ] - [reader] add new pipe/workflow for re-run missing cluster observation due to llm call 429 RESOURCE_EXHAUSTED error.  
-[ ] - [memo] async version wrt db query  
+[ ] - [reader] make "selectors" used in call1/call2 load/generate dynamically from memo, this should be a prod-level feature. comment. the design is selectors in reader are semantic ones(agent-facing) and the selector in dbs are db fields. the current implementation is memo holds a simple one to one map(case insensitive exact match), we may consider lexical + embedding(retrival+ranking) when the relationship between these two layers cannot be captured fully by case insensitive exact match. or the agent interface requires a dedicate db search memo cmd.  
+[ ] - [?] a vibe-coding like structure to derive pydantic model from prompt spec, so no need to validate these two using validate.py. "spec" holds the high-level design, "prompt"(semantic meanings) and "structure"(code model) should be derived from it. reason for not having it and must have validate - when reader moves away from python to rust, and there is no pydantic-like rust?    
+[ ] - [reader] add new pipe/workflow for re-run missing cluster observation due to llm call 429 RESOURCE_EXHAUSTED error. comment. a code agent workflow using rerun helper in log.  
+[ ] - [memo] async version wrt db query.    
 
 sub(issue, bug level)  
 [x] - [chat] finalize the reader_algos package skeleton with chat.  
@@ -108,11 +107,19 @@ sub(issue, bug level)
 [x] - [reader] implement step 3.    
 [x] - [reader] design and implement a workflow register to cache each step's artifact and status to local fs(cache) for error runtime retry.  
 [x] - [reader,memo] design the report generation db update workflow.note. resolve the one cluster event has more than one reports, or report regeneration issue. [comment] once a cluster is consumed(tights to one report in db), it's done, no report regeneration for it.  
-[ ] - [reader] design resume failure job from cache.        
+[...] - [reader] design resume failure job from cache.        
 
 [ ] - [reader] test report generation in one.  
 
 [ ] - [ci/cd] add agent job to dymically update RULES.md and README like doc before each push.  
+
+[ ] - [reader] provide an agent interface.  
+
+
+[ ] - [reader] **consider kmeans++?**  
+[ ] - [memo] auto db migration. because the sqlite is designed to be a local db/memory system and is tighted to the memo cli. woould be interested to think of a way to handle local db migration after cli upgrade. a classical way just use a bunch of migration scripts. but since this is a machine-only/agent facing tool, maybe the migration can be some sort of prompt files and let agent drives/suggests the local db change vs new db schema.  
+[ ] - [reader] now we have tokenbucket per pipeline execution time. consider adding a second layer of tokenbucket for per llm provider: pipeline token bucket -> llm provider token bucket. and also consider caching them in db.  
+[ ] - [memo,agent-friendly] refactor the error handling to a descriptive way, f.e. add error type for each cmd and raise them with more details of cmd runtime.  
  
 
 [ ] - [paper-chunk] test training mode and remove duplicate code under paper_chunk dir.  
@@ -121,9 +128,6 @@ sub(issue, bug level)
 [ ] - [hf-data] collect pipeline events as jsonl for performance analysis.  
 [ ] - [report-generation] remove spec_baseline and its deps, f.e. NextStepInput.  
 
-
-[ ] - [reader,memo] generate the report writter prompt from llm call 2, memo supply metadata if necessary.  
-[ ] - [reader,memo] write the whole metadata from reader to memo db, and dump report to local fs.  
 
 random(spikes, explore)  
 [x] - [reader] use lite llm and lite metadata(name, title, keywords) for summarization and thinking llm and depth-aware metadata for report genereation. 
