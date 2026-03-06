@@ -36,11 +36,6 @@ class MemoGetClustersObservationError(Exception):
     pass
 
 
-class MemoInitReportJobError(Exception):
-    """Exception raised when init-report-job subcommand fails."""
-    pass
-
-
 class MemoGetTopicResolverMetadataError(Exception):
     """Exception raised when get-topic-resolver-metadata subcommand fails."""
     pass
@@ -121,47 +116,6 @@ class GetClusterObservationResponse(RootModel[Dict[str, ClusterObservationData]]
     Access the dictionary via .root attribute.
     """
     pass
-
-
-# ============================================================================
-# init-report-job command models
-# ============================================================================
-
-class InitReportJobResponseMeta(BaseModel):
-    """Metadata for init-report-job response."""
-    report_url: Optional[str] = None
-    report_signature: Optional[str] = None
-    last_update_utc: Optional[str] = None  # RFC3339; omitted when next_status=running
-    message: str
-
-    @field_validator("last_update_utc")
-    @classmethod
-    def validate_last_update_utc(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
-            return v
-        try:
-            datetime.fromisoformat(v.replace("Z", "+00:00"))
-            return v
-        except (ValueError, TypeError):
-            raise ValueError("last_update_utc must be RFC3339 format")
-
-    def message_with_local_last_update(self) -> str:
-        """Return message with 'last update time is xxx' appended when last_update_utc is present."""
-        if not self.last_update_utc:
-            return self.message
-        try:
-            dt = datetime.fromisoformat(self.last_update_utc.replace("Z", "+00:00"))
-            local_dt = dt.astimezone()
-            local_str = local_dt.strftime("%Y-%m-%d %H:%M:%S %Z")
-            return f"{self.message} Last update time is {local_str}."
-        except (ValueError, TypeError):
-            return self.message
-
-
-class InitReportJobResponse(BaseModel):
-    """Response from init-report-job command."""
-    next_status: str  # 'running' | 'resuming' | 'waiting' | 'done'
-    meta: InitReportJobResponseMeta
 
 
 # ============================================================================
@@ -662,75 +616,6 @@ async def get_clusters_observation(
     except Exception as e:
         logger.error(f"Unexpected error in memo get-clusters-observation: {e}", exc_info=True)
         raise MemoGetClustersObservationError(f"Unexpected error in memo get-clusters-observation: {e}") from e
-
-
-async def init_report_job(
-    cluster_pk_hash: str,
-    config: MemoConfig,
-) -> InitReportJobResponse:
-    """
-    Call memo CLI init-report-job command to initialize a report generation job for a cluster.
-
-    Args:
-        cluster_pk_hash: Cluster pk_hash (primary key hash from cluster table)
-        config: MemoConfig instance
-
-    Returns:
-        InitReportJobResponse instance
-
-    Raises:
-        MemoInitReportJobError: If the subcommand execution fails
-    """
-    try:
-        cmd = [
-            config.bin,
-        ]
-        if config.db_path:
-            cmd.append('--db')
-            cmd.append(config.db_path)
-        if config.db_schema_path:
-            cmd.append('--schema')
-            cmd.append(config.db_schema_path)
-        cmd.extend(['init-report-job', '--cluster-pk-hash', cluster_pk_hash])
-
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-
-        try:
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=config.timeout_sec
-            )
-        except asyncio.TimeoutError:
-            process.kill()
-            await process.wait()
-            logger.warning(f"memo init-report-job timed out after {config.timeout_sec}s")
-            raise MemoInitReportJobError(f"memo init-report-job timed out after {config.timeout_sec}s")
-        except asyncio.CancelledError:
-            process.kill()
-            await process.wait()
-            raise
-
-        stdout_text = stdout.decode('utf-8')
-        stderr_text = stderr.decode('utf-8')
-
-        if process.returncode != 0:
-            logger.error(f"Error calling memo init-report-job: {stderr_text}")
-            raise MemoInitReportJobError(f"Error calling memo init-report-job: {stderr_text}")
-
-        return InitReportJobResponse.model_validate_json(stdout_text)
-
-    except MemoInitReportJobError:
-        raise
-    except pydantic.ValidationError as e:
-        logger.error(f"Error validating memo output: {e}")
-        raise MemoInitReportJobError(f"Error validating memo output: {e}") from e
-    except Exception as e:
-        logger.error(f"Unexpected error in memo init-report-job: {e}", exc_info=True)
-        raise MemoInitReportJobError(f"Unexpected error in memo init-report-job: {e}") from e
 
 
 async def new_memory(

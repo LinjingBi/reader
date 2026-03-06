@@ -8,6 +8,7 @@ from functools import wraps
 from typing import Any, Callable, Optional
 
 from reader.pipelines.report_generation.workflow_register.register import WorkflowRegister
+from reader.pipelines.report_generation.workflow_register.models import WorkflowNodeDef
 
 _workflow_register_var: ContextVar[Optional[WorkflowRegister]] = ContextVar(
     "workflow_register", default=None
@@ -16,13 +17,17 @@ _workflow_register_var: ContextVar[Optional[WorkflowRegister]] = ContextVar(
 
 def with_workflow_register(
     workflow_id: str,
-    node_defs: list,
+    node_defs: Optional[list] = None,
     cfg_arg: str = "cfg",
     cluster_pk_arg: str = "cluster_pk_hash",
 ) -> Callable:
     """
     Decorator that sets up WorkflowRegister, runs the workflow, and ensures
     write_trace_to_cache is called on any error (or success).
+    
+    Node definitions are automatically registered via lazy registration when
+    @record_step/@record_loop decorators are called. Pass node_defs only for
+    backward compatibility (deprecated).
     """
 
     def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
@@ -41,7 +46,7 @@ def with_workflow_register(
             cache_path = cfg.cache.report_generation_cache / f"{cluster_pk_hash}.json"
             register = WorkflowRegister(
                 workflow_id=workflow_id,
-                node_defs=node_defs,
+                node_defs=node_defs or [],
                 cache_path=cache_path,
                 cluster_pk_hash=cluster_pk_hash,
             )
@@ -61,15 +66,37 @@ def with_workflow_register(
     return decorator
 
 
-def record_step(node_id: str):
+def record_step(
+    node_id: str,
+    display_name: Optional[str] = None,
+    contains: Optional[list[str]] = None,
+    must_rerun_status: Optional[list[str]] = None,
+):
     """Decorator that records step output and status to the workflow register."""
 
     def decorator(fn):
+        # Store metadata on function object during decoration
+        fn._workflow_node_id = node_id
+        fn._workflow_node_kind = "step"
+        fn._workflow_node_display_name = display_name or node_id.replace("_", " ").title()
+        fn._workflow_node_contains = contains
+        fn._workflow_node_must_rerun_status = must_rerun_status or ["error", "not_run"]
+
         @wraps(fn)
         async def wrapper(*args, **kwargs):
             from reader.pipelines.report_generation.blocks import StepTerminationStatus
 
             register = _workflow_register_var.get()
+            # Lazy registration: register node if not already registered
+            if register is not None and node_id not in register.node_defs:
+                node_def = WorkflowNodeDef(
+                    id=node_id,
+                    kind="step",
+                    display_name=getattr(fn, "_workflow_node_display_name", node_id.replace("_", " ").title()),
+                    contains=getattr(fn, "_workflow_node_contains", None),
+                    must_rerun_status=getattr(fn, "_workflow_node_must_rerun_status", ["error", "not_run"]),
+                )
+                register.add_node_def(node_def)
             try:
                 output, status = await fn(*args, **kwargs)
                 if register is not None:
@@ -85,15 +112,35 @@ def record_step(node_id: str):
     return decorator
 
 
-def record_loop(node_id: str):
+def record_loop(
+    node_id: str,
+    display_name: Optional[str] = None,
+    must_rerun_status: Optional[list[str]] = None,
+):
     """Decorator that records loop output and status to the workflow register."""
 
     def decorator(fn):
+        # Store metadata on function object during decoration
+        fn._workflow_node_id = node_id
+        fn._workflow_node_kind = "loop"
+        fn._workflow_node_display_name = display_name or node_id.replace("_", " ").title()
+        fn._workflow_node_must_rerun_status = must_rerun_status or ["not_run", "error"]
+
         @wraps(fn)
         async def wrapper(*args, **kwargs):
             from reader.pipelines.report_generation.workflow_register.models import LoopRunStatus
 
             register = _workflow_register_var.get()
+            # Lazy registration: register node if not already registered
+            if register is not None and node_id not in register.node_defs:
+                node_def = WorkflowNodeDef(
+                    id=node_id,
+                    kind="loop",
+                    display_name=getattr(fn, "_workflow_node_display_name", node_id.replace("_", " ").title()),
+                    contains=None,
+                    must_rerun_status=getattr(fn, "_workflow_node_must_rerun_status", ["not_run", "error"]),
+                )
+                register.add_node_def(node_def)
             try:
                 output, status = await fn(*args, **kwargs)
                 if register is not None:

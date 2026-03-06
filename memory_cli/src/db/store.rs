@@ -2,7 +2,6 @@ use crate::contracts::{
     FreshPaperRequest, GetBestRunResponse, ClusterCard, PaperCard,
     InjectClustersObservationInput,
     GetClusterObservationResponse, ClusterObservationData,
-    ReportJobStatus,
     GetTopicResolverMetadataResponse, TopicCentroid, ClusterMetadata,
     GetReportGenerationMetadataResponse, NewObservation, TopPaper, HistoryReport,
     NewMemoryRequest,
@@ -57,7 +56,6 @@ impl<'a> Store<'a> {
     ///    - cluster_member (paper-cluster relationships)
     ///    - cluster_observation (LLM enrichment results) - will be deleted even if pk_hash is reused
     ///    - topic_cluster_link (topic-cluster links)
-    ///    - report_job (report generation jobs)
     /// 3. Sets report.cluster_pk_hash to NULL (reports are preserved but lose cluster reference)
     /// 4. Recreates clusters and members with new data
     /// 
@@ -529,79 +527,6 @@ impl<'a> Store<'a> {
         Ok(count > 0)
     }
 
-    /// Get existing report job by cluster_pk_hash.
-    /// Returns (status, report_id, created_at, updated_at) if found, None otherwise.
-    /// Returns an error if the cluster does not exist.
-    pub fn get_report_job(&self, cluster_pk_hash: &str) -> Result<Option<(ReportJobStatus, Option<i64>, String, String)>> {
-        // First check if cluster exists
-        let cluster_exists: bool = self.conn.query_row(
-            "SELECT COUNT(*) > 0 FROM cluster WHERE pk_hash = ?1",
-            params![cluster_pk_hash],
-            |row| row.get(0),
-        )?;
-        
-        if !cluster_exists {
-            return Err(anyhow::anyhow!("Cluster with pk_hash '{}' does not exist", cluster_pk_hash));
-        }
-
-        match self.conn.query_row(
-            "SELECT status, report_id, created_at, updated_at FROM report_job WHERE cluster_pk_hash = ?1",
-            params![cluster_pk_hash],
-            |row| {
-                let status_str: String = row.get(0)?;
-                let status = ReportJobStatus::from_str(&status_str)
-                    .map_err(|e| rusqlite::Error::FromSqlConversionFailure(
-                        0,
-                        rusqlite::types::Type::Text,
-                        Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, e))
-                    ))?;
-                Ok((
-                    status,
-                    row.get::<_, Option<i64>>(1)?,
-                    row.get::<_, String>(2)?,
-                    row.get::<_, String>(3)?,
-                ))
-            },
-        ) {
-            Ok(result) => Ok(Some(result)),
-            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-            Err(e) => Err(anyhow::anyhow!("Database error: {}", e)),
-        }
-    }
-
-    /// Get average runtime of latest 3 done jobs (updated_at - created_at).
-    /// Returns None if fewer than 1 done job.
-    pub fn get_avg_runtime_of_latest_done_jobs(&self) -> Result<Option<Duration>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT created_at, updated_at FROM report_job
-             WHERE status = 'done'
-             ORDER BY updated_at DESC
-             LIMIT 3"
-        )?;
-        let rows = stmt.query_map([], |row| {
-            let created_at: String = row.get(0)?;
-            let updated_at: String = row.get(1)?;
-            Ok((created_at, updated_at))
-        })?;
-        let mut runtimes: Vec<Duration> = Vec::new();
-        for row in rows {
-            let (created_str, updated_str) = row?;
-            let created = DateTime::parse_from_rfc3339(&created_str)
-                .with_context(|| format!("Failed to parse created_at: {}", created_str))?
-                .with_timezone(&Utc);
-            let updated = DateTime::parse_from_rfc3339(&updated_str)
-                .with_context(|| format!("Failed to parse updated_at: {}", updated_str))?
-                .with_timezone(&Utc);
-            runtimes.push(updated.signed_duration_since(created));
-        }
-        if runtimes.is_empty() {
-            return Ok(None);
-        }
-        let total: Duration = runtimes.iter().fold(Duration::zero(), |acc, d| acc + *d);
-        let count = runtimes.len() as i32;
-        Ok(Some(total / count))
-    }
-
     /// Get report_url and signature for a report_id.
     pub fn get_report_url_and_signature(&self, report_id: i64) -> Result<Option<(String, String)>> {
         match self.conn.query_row(
@@ -615,37 +540,8 @@ impl<'a> Store<'a> {
         }
     }
 
-    /// Create a new report job.
-    pub fn create_report_job(&self, cluster_pk_hash: &str, status: ReportJobStatus, now: &str) -> Result<()> {
-        self.conn.execute(
-            "INSERT INTO report_job(cluster_pk_hash, status, created_at, updated_at, report_id)
-             VALUES(?1, ?2, ?3, ?3, NULL)",
-            params![cluster_pk_hash, status.as_str(), now],
-        )?;
-        Ok(())
-    }
-
-    /// Update report job status to running (for expired error jobs).
-    /// Also sets created_at and updated_at to now.
-    pub fn update_report_job_to_running(&self, cluster_pk_hash: &str, now: &str) -> Result<()> {
-        self.conn.execute(
-            "UPDATE report_job SET status=?1, report_id=NULL, created_at=?2, updated_at=?2 WHERE cluster_pk_hash=?3",
-            params![ReportJobStatus::Running.as_str(), now, cluster_pk_hash],
-        )?;
-        Ok(())
-    }
-
-    /// Update report job status to done and set report_id.
-    pub fn update_report_job_to_done(&self, cluster_pk_hash: &str, report_id: i64, now: &str) -> Result<()> {
-        self.conn.execute(
-            "UPDATE report_job SET status=?1, report_id=?2, updated_at=?3 WHERE cluster_pk_hash=?4",
-            params![ReportJobStatus::Done.as_str(), report_id, now, cluster_pk_hash],
-        )?;
-        Ok(())
-    }
-
     /// Persist report generation results in a single transaction.
-    /// Performs validations then updates cluster_observation, topic, topic_cluster_link, report, report_topic_link, report_job.
+    /// Performs validations then updates cluster_observation, topic, topic_cluster_link, report, report_topic_link.
     pub fn new_memory(&self, req: &NewMemoryRequest) -> Result<i64> {
         let now = Utc::now().to_rfc3339();
         let tx = self.conn.unchecked_transaction()?;
@@ -706,25 +602,6 @@ impl<'a> Store<'a> {
             if !topic_exists {
                 return Err(anyhow::anyhow!("topic with topic_id '{}' not found", topic_id));
             }
-        }
-
-        // Validation 5: Report job is running
-        let job_status: Option<String> = tx.query_row(
-            "SELECT status FROM report_job WHERE cluster_pk_hash = ?1",
-            params![cluster_pk_hash],
-            |row| row.get(0),
-        ).optional()?;
-        match job_status.as_deref() {
-            Some("running") => {}
-            Some(s) => return Err(anyhow::anyhow!(
-                "report_job for cluster '{}' is not running (status={})",
-                cluster_pk_hash,
-                s
-            )),
-            None => return Err(anyhow::anyhow!(
-                "report_job for cluster '{}' not found",
-                cluster_pk_hash
-            )),
         }
 
         // Update 1: cluster_observation.consumed = 1
@@ -849,12 +726,6 @@ impl<'a> Store<'a> {
             "INSERT INTO report_topic_link(report_id, topic_id, role, created_at)
              VALUES(?1, ?2, 'primary', ?3)",
             params![report_id, topic_id, &now],
-        )?;
-
-        // Update 7: report_job update
-        tx.execute(
-            "UPDATE report_job SET status='done', report_id=?1, updated_at=?2 WHERE cluster_pk_hash=?3",
-            params![report_id, &now, cluster_pk_hash],
         )?;
 
         tx.commit()?;

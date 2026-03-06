@@ -51,6 +51,7 @@ class WorkflowNodeDef(BaseModel):
     kind: Literal["step", "loop"]
     display_name: str
     contains: Optional[list[str]] = None  # IDs of child loop nodes (for steps that wrap loops)
+    must_rerun_status: Optional[list[str]] = None  # List of status strings that require rerun
 
 
 class WorkflowTraceNode(BaseModel):
@@ -62,6 +63,7 @@ class WorkflowTraceNode(BaseModel):
     contains: Optional[list[str]] = None
     status: str
     output: Optional[dict] = None
+    must_rerun_status: Optional[list[str]] = None  # List of status strings that require rerun
 
 
 class WorkflowTraceReport(BaseModel):

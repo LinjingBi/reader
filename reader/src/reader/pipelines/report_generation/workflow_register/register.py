@@ -23,7 +23,7 @@ def _serialize_output(output: Any) -> dict | None:
     """
     Serialize output for storage in trace.
     - Pydantic models: model_dump(mode="json")
-    - LLMClient: non-serializable, store placeholder
+    - LLMClientWrapper: serialize only llm_config
     - None: return None
     - List of models: serialize each element
     - dict: returned as-is
@@ -31,10 +31,6 @@ def _serialize_output(output: Any) -> dict | None:
     """
     if output is None:
         return None
-
-    # LLMClient is non-serializable
-    if type(output).__name__ == "LLMClient":
-        return {"_type": "LLMClient", "initialized": True}
 
     # Pydantic models
     if hasattr(output, "model_dump"):
@@ -53,7 +49,7 @@ def _serialize_output(output: Any) -> dict | None:
 
     raise TypeError(
         f"Unsupported output type for trace serialization: {type(output).__name__}. "
-        "Supported: None, Pydantic models, list of Pydantic models, dict, LLMClient."
+        "Supported: None, Pydantic models, list of Pydantic models, dict, LLMClientWrapper."
     )
 
 
@@ -73,6 +69,8 @@ class WorkflowRegister:
         self._node_defs_ordered = list(node_defs)
         self.cache_path = Path(cache_path)
         self.records: dict[str, Union[StepNodeRecord, LoopNodeRecord]] = {}
+        # Initialize records for pre-defined nodes (if any)
+        # Nodes will be dynamically added via add_node_def() during lazy registration
         for n in node_defs:
             if n.kind == "step":
                 self.records[n.id] = StepNodeRecord(node_id=n.id)
@@ -99,6 +97,17 @@ class WorkflowRegister:
         rec.status = LoopRunStatus(status.value) if hasattr(status, "value") else LoopRunStatus(status)
         rec.output = _serialize_output(output) if output is not None else None
 
+    def add_node_def(self, node_def: WorkflowNodeDef) -> None:
+        """Add node definition dynamically. Creates corresponding record if not exists."""
+        if node_def.id not in self.node_defs:
+            self.node_defs[node_def.id] = node_def
+            self._node_defs_ordered.append(node_def)
+        if node_def.id not in self.records:
+            if node_def.kind == "step":
+                self.records[node_def.id] = StepNodeRecord(node_id=node_def.id)
+            else:
+                self.records[node_def.id] = LoopNodeRecord(node_id=node_def.id)
+
     def get_trace_report(self, config: ReportGenerationConfig) -> WorkflowTraceReport:
         """Build full trace report including config."""
         nodes: list[WorkflowTraceNode] = []
@@ -114,6 +123,7 @@ class WorkflowRegister:
                     contains=node_def.contains,
                     status=rec.status.value,
                     output=rec.output,
+                    must_rerun_status=node_def.must_rerun_status,
                 )
             )
         return WorkflowTraceReport(

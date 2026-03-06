@@ -1,7 +1,0 @@
-{
-  "next_status": "waiting",
-  "meta": {
-    "last_update_utc": "2025-01-15T10:30:00Z",
-    "message": "An existing job is already running. Estimated time remaining: 3 minutes 45 seconds."
-  }
-}

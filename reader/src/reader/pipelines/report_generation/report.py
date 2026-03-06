@@ -292,6 +292,7 @@ class ReportWriterFrontMatterOutput(BaseModel):
 class ObservationReport(BaseModel):
     """Report body and front matter for serialization to local FS."""
 
+    cluster_pk_hash: str = Field(..., description="Cluster pk_hash for report lookup")
     body: List[ReportWriterSectionOutput] = Field(..., description="Report sections.")
     front_matter: ReportWriterFrontMatterOutput = Field(..., description="Title, summary, keywords.")
 
@@ -301,6 +302,31 @@ class SaveReportToFsOutput(BaseModel):
 
     report_path: str = Field(..., description="Full path to the written report JSON file.")
     signature: str = Field(..., description="SHA256 hex digest of the written file.")
+
+
+# ----------------------------
+# LLMClient wrapper for serialization
+# ----------------------------
+
+class LLMClientWrapper(BaseModel):
+    """Wrapper for LLMClient that only serializes config, keeps client in memory."""
+    
+    llm_config: Any = Field(..., description="LLM Gemini configuration (LLMGeminiConfig)")
+    llm_client: Optional[Any] = Field(default=None, exclude=True, description="LLMClient instance (not json serialized, None when loaded from JSON)")
+    
+    def model_dump(self, mode: str = "python", **kwargs) -> dict:
+        """Override to only serialize llm_config in JSON mode, return both in Python mode."""
+        if mode == "json":
+            # Only serialize config for JSON mode
+            if hasattr(self.llm_config, "model_dump"):
+                return {"llm_config": self.llm_config.model_dump(mode="json")}
+            return {"llm_config": self.llm_config}
+        # For python mode, return both llm_config and llm_client
+        # Override Field-level exclude=True by explicitly including llm_client
+        data = super().model_dump(mode=mode, exclude=None, **kwargs)
+        # Manually add llm_client since it's excluded at Field level
+        data["llm_client"] = self.llm_client
+        return data
 
 
 # ----------------------------

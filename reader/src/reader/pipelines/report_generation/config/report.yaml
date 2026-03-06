@@ -7,8 +7,8 @@ run:
 
 memo:
   bin: "/Users/bii/reader/memory_cli/target/debug/memo"
-  db_path: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/db/memo_report.sqlite"  # optional, if not provided, a temporary database will be created
-  db_schema_path: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/db/report.sql"  # optional, if not provided, no schema will be applied
+  db_path: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/memo/memo_report.sqlite"  # optional, if not provided, a temporary database will be created
+  db_schema_path: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/memo/report.sql"  # optional, if not provided, no schema will be applied
   timeout_sec: 60
 
 report_generation:

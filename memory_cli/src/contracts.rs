@@ -7,7 +7,6 @@ pub mod get_report_generation_supply;
 pub mod get_topic_resolver_metadata;
 pub mod inject_clusters_observation;
 pub mod inject_papers_chunk;
-pub mod init_report_job;
 
 pub use fresh_paper::{
     ClusterConfig,
@@ -29,7 +28,6 @@ pub use inject_clusters_observation::{
     InjectClustersObservationResponse,
     LLMConfigInput,
 };
-pub use init_report_job::{InitReportJobResponse, InitReportJobResponseMeta, ReportJobStatus};
 pub use get_topic_resolver_metadata::{TopicCentroid, ClusterMetadata, GetTopicResolverMetadataResponse};
 pub use get_report_generation_metadata::{GetReportGenerationMetadataResponse, NewObservation, TopPaper, HistoryReport};
 pub use inject_papers_chunk::{

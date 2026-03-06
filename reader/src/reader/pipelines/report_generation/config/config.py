@@ -27,6 +27,16 @@ class CacheConfig(BaseModel):
         """Directory for saved report history. Derived from abs_root."""
         return self.abs_root / "history_reports"
 
+    @property
+    def report_generation_db_path(self) -> Path:
+        """Path to report generation SQLite database. Derived from abs_root."""
+        return self.abs_root / "report_generation" / "cache_db" / "report_job.db"
+
+    @property
+    def report_generation_db_migrations_path(self) -> Path:
+        """Path to report generation database migrations directory. Derived from abs_root."""
+        return self.abs_root / "report_generation" / "cache_db" / "migrations"
+
 
 class RunConfig(BaseModel):
     """Run configuration"""

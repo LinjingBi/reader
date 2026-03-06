@@ -108,19 +108,6 @@ EXAMPLES:
         input: String,
     },
 
-    /// Initialize a report generation job for a cluster.
-    #[command(
-        long_about = "Initialize a report generation job for a cluster. Returns next status and metadata.
-
-EXAMPLES:
-  memo init-report-job --cluster-pk-hash abc123def456"
-    )]
-    InitReportJob {
-        /// Cluster pk_hash (primary key hash from cluster table).
-        #[arg(long)]
-        cluster_pk_hash: String,
-    },
-
     /// Get topic resolver metadata (topics and cluster data).
     #[command(
         long_about = "Get topic resolver metadata including all topics with their centroid data and cluster metadata.

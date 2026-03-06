@@ -107,7 +107,9 @@ sub(issue, bug level)
 [x] - [reader] implement step 3.    
 [x] - [reader] design and implement a workflow register to cache each step's artifact and status to local fs(cache) for error runtime retry.  
 [x] - [reader,memo] design the report generation db update workflow.note. resolve the one cluster event has more than one reports, or report regeneration issue. [comment] once a cluster is consumed(tights to one report in db), it's done, no report regeneration for it.  
-[...] - [reader] design resume failure job from cache.        
+[x] - [reader] design resume failure job from cache. comment. this will be handled by agent, out of the report generation workflow, the workflow only keeps the workflow register to save traces and outputs and return resume help message.  
+[x] - [reader,memo] move report_job from memo db to a reader owned sqlite db, the report job tracking is now controled by the report generation pipe.  
+
 
 [ ] - [reader] test report generation in one.  
 

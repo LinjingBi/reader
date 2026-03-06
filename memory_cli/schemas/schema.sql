@@ -239,16 +239,6 @@ CREATE TABLE IF NOT EXISTS topic_lineage (
 -- -----------------------------
 -- Reports and depth annotations
 -- -----------------------------
-CREATE TABLE IF NOT EXISTS report_job (
-  cluster_pk_hash TEXT PRIMARY KEY,          -- 1 job per cluster (also your lock)
-  status          TEXT NOT NULL,             -- 'running'|'done'|'error'
-  created_at      TEXT NOT NULL,
-  updated_at      TEXT NOT NULL,
-  report_id       INTEGER,                    -- set when done; NULL otherwise
-  FOREIGN KEY (cluster_pk_hash) REFERENCES cluster(pk_hash) ON DELETE CASCADE,
-  FOREIGN KEY (report_id) REFERENCES report(report_id) ON DELETE SET NULL
-);
-
 CREATE TABLE IF NOT EXISTS report (
   report_id        INTEGER PRIMARY KEY,   -- rowid-backed, auto assigns
   cluster_pk_hash  TEXT UNIQUE,                        -- nullable reference to cluster
