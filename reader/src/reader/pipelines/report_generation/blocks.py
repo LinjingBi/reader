@@ -45,6 +45,7 @@ from reader.pipelines.report_generation.report import (
     EvidenceCollectionTerminationSufficiency,
     EvidenceGap,
     ObservationReport,
+    ReportJobAction,
     ReportWriterFrontMatterOutput,
     ReportWriterSectionInput,
     ReportWriterSectionOutput,
@@ -1474,75 +1475,39 @@ async def _kick_off_report_job(cluster_pk_hash: str, user_intent: UserIntent, cf
         raise RuntimeError(f"Save report to DB failed for cluster {cluster_pk_hash}")
 
 
-async def create_report_job(cluster_pk_hash: str, user_intent: UserIntent, cfg: ReportGenerationConfig) -> Optional[Tuple[str, str]]:
+async def start_generation(cluster_pk_hash: str, user_intent: UserIntent, cfg: ReportGenerationConfig) -> None:
     """
-    Create a report generation job as the first step for any report generation request.
-    Non-blocking: uses async LLM calls when executor is configured.
-
-    Calls init_report_job (database) and handles/logs the response. Maps next_status:
-    - running: kick off new job, returns ('kick_off_report_job', message)
-    - resuming: job ready to resume (error expired), returns ('report_job_is_ready_to_resume', message)
-    - waiting: returns ('wait_for_report_job_to_finish', meta.message)
-    - done: returns ('fetch_report_and_print_report_url', message)
-
+    Start report generation for a new job.
+    
     Args:
         cluster_pk_hash: Cluster pk_hash (primary key hash from cluster table)
         user_intent: User intent enum
         cfg: ReportGenerationConfig instance
-
-    Returns:
-        Tuple of (function_name, descriptive_message), or None if memo is disabled
+        
+    Raises:
+        Exception: If report generation fails
     """
-    resp = init_report_job(cluster_pk_hash, cfg)
-    meta = resp.meta
-
-    if resp.next_status == 'running':
-        logger.info(f"Report job init: New job is running. message={meta.message}")
+    try:
+        await _kick_off_report_job(cluster_pk_hash, user_intent, cfg)
+        # Update job status to done
+        db_store = ReportJobStore(cfg.cache.report_generation_db_path, cfg.cache.report_generation_db_migrations_path)
         try:
-            await _kick_off_report_job(cluster_pk_hash, user_intent, cfg)
-            # Update job status to done
-            db_store = ReportJobStore(cfg.cache.report_generation_db_path, cfg.cache.report_generation_db_migrations_path)
-            try:
-                now_str = datetime.now(timezone.utc).isoformat()
-                db_store.update_report_job_status(cluster_pk_hash, ReportJobStatus.DONE, now_str)
-            finally:
-                db_store.close()
-            return ('kick_off_report_job', meta.message)
-        except Exception as e:
-            # Update job status to error
-            db_store = ReportJobStore(cfg.cache.report_generation_db_path, cfg.cache.report_generation_db_migrations_path)
-            try:
-                now_str = datetime.now(timezone.utc).isoformat()
-                db_store.update_report_job_status(cluster_pk_hash, ReportJobStatus.ERROR, now_str)
-            finally:
-                db_store.close()
-            logger.error(f"Report job failed: {e}", exc_info=True)
-            raise
-    elif resp.next_status == 'resuming':
-        cache_dir = cfg.cache.report_generation_cache
-        msg = f"{meta.message} Search under {cache_dir} using cluster_pk_hash: {cluster_pk_hash} for possible cache."
-        logger.info(f"Report job init: Previous error expired, job is resuming. {msg}")
-        return ('report_job_is_ready_to_resume', msg)
-    elif resp.next_status == 'waiting':
-        message = meta.message
-        if meta.last_update_utc:
-            try:
-                dt = datetime.fromisoformat(meta.last_update_utc.replace("Z", "+00:00"))
-                local_dt = dt.astimezone()
-                local_str = local_dt.strftime("%Y-%m-%d %H:%M:%S %Z")
-                message = f"{meta.message} Last update time is {local_str}."
-            except (ValueError, TypeError):
-                pass
-        logger.info(f"Report job init: Waiting. message={message}")
-        return ('wait_for_report_job_to_finish', message)
-    elif resp.next_status == 'done':
-        history_dir = cfg.cache.history_reports
-        msg = f"Report already generated. Search under {history_dir} using cluster_pk_hash: {cluster_pk_hash}"
-        logger.info(f"Report job init: Report already generated. {msg}")
-        return ('fetch_report_and_print_report_url', msg)
-    else:
-        logger.warning(f"Report job init: Unexpected next_status={resp.next_status}, message={meta.message}")
-        raise ValueError(f"Unexpected next_status: {resp.next_status}")
+            now_str = datetime.now(timezone.utc).isoformat()
+            db_store.update_report_job_status(cluster_pk_hash, ReportJobStatus.DONE, now_str)
+        finally:
+            db_store.close()
+    except Exception as e:
+        # Update job status to error
+        db_store = ReportJobStore(cfg.cache.report_generation_db_path, cfg.cache.report_generation_db_migrations_path)
+        try:
+            now_str = datetime.now(timezone.utc).isoformat()
+            db_store.update_report_job_status(cluster_pk_hash, ReportJobStatus.ERROR, now_str)
+        finally:
+            db_store.close()
+        logger.error(f"Report job failed: {e}", exc_info=True)
+        raise
+
+
 
 
 # -------------------------

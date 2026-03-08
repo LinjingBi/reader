@@ -69,7 +69,7 @@ def main():
             print(f"Error loading config: {e}", file=sys.stderr)
             sys.exit(1)
 
-        setup_logging(config.run.log_config_path, config.run.log_file_path)
+        setup_logging(config.run.log_config_path, config.cache.report_generation_log_path)
         logger = get_logger()
 
         try:

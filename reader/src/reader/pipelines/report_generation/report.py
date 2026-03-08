@@ -38,6 +38,14 @@ EvidenceCollectionTerminationSufficiency = [
 ]
 
 
+class ReportJobAction(str, Enum):
+    """Action status returned by triage_report_job function."""
+    FETCH_REPORT = "fetch_report"
+    RESUME_JOB = "resume_job"
+    WAIT_FOR_JOB_TO_FINISH = "wait_for_job_to_finish"
+    DEBUG_INTERNAL_ERROR = "debug_internal_error"
+
+
 # ---------- Output Models ----------
 class LLMReportPlannerSubthread(BaseModel):
     name: str = Field(description="A thematic bucket name grounded in evidence keywords/themes.")

@@ -37,6 +37,11 @@ class CacheConfig(BaseModel):
         """Path to report generation database migrations directory. Derived from abs_root."""
         return self.abs_root / "report_generation" / "cache_db" / "migrations"
 
+    @property
+    def report_generation_log_path(self) -> Path:
+        """Path to report generation log file. Derived from abs_root."""
+        return self.abs_root / "logs" / "report_generation.log"
+
 
 class RunConfig(BaseModel):
     """Run configuration"""
@@ -44,7 +49,6 @@ class RunConfig(BaseModel):
     period_start: str = Field(..., description="Period start date in YYYY-MM-DD format")
     period_end: str = Field(..., description="Period end date in YYYY-MM-DD format")
     log_config_path: str = Field(..., description="Path to logging configuration YAML file")
-    log_file_path: str = Field(..., description="Path to log file")
 
 
 class MemoConfig(BaseModel):
