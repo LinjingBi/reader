@@ -173,13 +173,13 @@ async def _call_llm_with_judge_retry(
                 )
 
         except LLMGenerationError as e:
-            logger.warning(
+            logger.error(
                 f"{loop_prefix} - attempt {attempt + 1}/{max_retries + 1}: llm call failed, breaking retry: {e}"
             )
             exit_reason = JudgeLoopExitCondition.LLM_ERROR
             break
         except Exception as e:
-            logger.warning(
+            logger.error(
                 f"{loop_prefix} - attempt {attempt + 1}/{max_retries + 1}: unexpected error, breaking retry: {e}",
                 exc_info=True,
             )
@@ -768,7 +768,7 @@ async def _run_evidence_completion_loop(
             loop_turn += 1
 
     except Exception as e:
-        logger.warning(
+        logger.error(
             f"{loop_prefix} - terminated due to an error: {e}",
             exc_info=True,
         )
@@ -838,7 +838,7 @@ async def _generate_report_plan(
             cluster_pk_hash, new_topic_metadata, plan_guidance, llm_client, cfg, planner_judge
         )
     except Exception as e:
-        logger.warning(
+        logger.error(
             f"{step_prefix} - supplement collection loop failed: {e}",
             exc_info=True,
         )
@@ -989,7 +989,7 @@ async def _run_writing_loop(
         else:
             exit_condition = StepWritingExitCondition.COMPLETE
     except Exception as e:
-        logger.warning(
+        logger.error(
             f"{loop_prefix} - terminated due to an error: {e}",
             exc_info=True,
         )
@@ -1051,7 +1051,7 @@ async def _generate_report_body(
             cluster_pk_hash, plan, materials, llm_client, cfg
         )
     except Exception as e:
-        logger.warning(
+        logger.error(
             f"{step_prefix} - per-outline writing loop failed: {e}",
             exc_info=True,
         )
@@ -1193,7 +1193,7 @@ async def _save_report_to_fs(
         )
         return (output, StepTerminationStatus.done)
     except Exception as e:
-        logger.warning(
+        logger.error(
             f"{step_prefix} - save report to FS failed: {e}",
             exc_info=True,
         )
@@ -1259,11 +1259,11 @@ async def _save_report_to_db(
         logger.info(f"{step_prefix} - finished, report_id={response.report_id}, status: {StepTerminationStatus.done.value}")
         return (response, StepTerminationStatus.done)
     except MemoNewMemoryError as e:
-        logger.warning(f"{step_prefix} - memo new-memory failed: {e}", exc_info=True)
+        logger.error(f"{step_prefix} - memo new-memory failed: {e}", exc_info=True)
         logger.info(f"{step_prefix} - finished, status: {StepTerminationStatus.error.value}")
         return (None, StepTerminationStatus.error)
     except Exception as e:
-        logger.warning(f"{step_prefix} - save report to DB failed: {e}", exc_info=True)
+        logger.error(f"{step_prefix} - save report to DB failed: {e}", exc_info=True)
         logger.info(f"{step_prefix} - finished, status: {StepTerminationStatus.error.value}")
         return (None, StepTerminationStatus.error)
 
@@ -1365,7 +1365,7 @@ async def _fetch_report_generation_metadata(
             add_top_papers=True,
         )
     except Exception as e:
-        logger.warning(
+        logger.error(
             f"Report generation metadata fetch failed for cluster {cluster_pk_hash}: {e}",
             exc_info=True,
         )
@@ -1394,7 +1394,7 @@ async def _initialize_report_generation_llm_client(
         llm_client = _initialize_llm_client(llm_cfg)
         llm_client_wrapper = LLMClientWrapper(llm_config=llm_cfg, llm_client=llm_client)
     except Exception as e:
-        logger.warning(
+        logger.error(
             f"LLM client initialization failed for cluster {cluster_pk_hash}: {e}",
             exc_info=True,
         )
@@ -1419,19 +1419,16 @@ async def _kick_off_report_job(cluster_pk_hash: str, user_intent: UserIntent, cf
     # step: resolve report topic
     resolved_topic, step_status = await _resolve_report_topic(cluster_pk_hash, cfg)
     if step_status == StepTerminationStatus.error or resolved_topic is None:
-        logger.warning(f"Report topic resolution failed for cluster {cluster_pk_hash}")
         raise RuntimeError(f"Report topic resolution failed for cluster {cluster_pk_hash}")
 
     # step: fetch report generation metadata
     new_topic_metadata, step_status = await _fetch_report_generation_metadata(cluster_pk_hash, resolved_topic, cfg)
     if step_status == StepTerminationStatus.error or new_topic_metadata is None:
-        logger.warning(f"Report generation metadata fetch failed for cluster {cluster_pk_hash}")
         raise RuntimeError(f"Report generation metadata fetch failed for cluster {cluster_pk_hash}")
 
     # step: initialize report generation LLM client
     llm_client_wrapper, step_status = await _initialize_report_generation_llm_client(cluster_pk_hash, cfg)
     if step_status == StepTerminationStatus.error or llm_client_wrapper is None:
-        logger.warning(f"Report generation LLM client initialization failed for cluster {cluster_pk_hash}")
         raise RuntimeError(f"Report generation LLM client initialization failed for cluster {cluster_pk_hash}")
 
     # step:  generate report plan
@@ -1439,7 +1436,6 @@ async def _kick_off_report_job(cluster_pk_hash: str, user_intent: UserIntent, cf
         cluster_pk_hash, user_intent, new_topic_metadata, llm_client_wrapper.llm_client, cfg, planner_judge
     )
     if step_status == StepTerminationStatus.error or plan is None:
-        logger.warning(f"Report planner call failed for cluster {cluster_pk_hash}")
         raise RuntimeError(f"Report planner call failed for cluster {cluster_pk_hash}")
 
     # step: generate report body
@@ -1447,7 +1443,6 @@ async def _kick_off_report_job(cluster_pk_hash: str, user_intent: UserIntent, cf
         cluster_pk_hash, plan, new_topic_metadata, llm_client_wrapper.llm_client, cfg
     )
     if step_status == StepTerminationStatus.error or sections_result is None:
-        logger.warning(f"Report body writing failed for cluster {cluster_pk_hash}")
         raise RuntimeError(f"Report body writing failed for cluster {cluster_pk_hash}")
 
     # step: generate report front matter
@@ -1455,7 +1450,6 @@ async def _kick_off_report_job(cluster_pk_hash: str, user_intent: UserIntent, cf
         cluster_pk_hash, sections_result, llm_client_wrapper.llm_client, cfg
     )
     if step_status == StepTerminationStatus.error or front_matter is None:
-        logger.warning(f"Report front matter generation failed for cluster {cluster_pk_hash}")
         raise RuntimeError(f"Report front matter generation failed for cluster {cluster_pk_hash}")
 
     # step: save report to local fs
@@ -1463,7 +1457,6 @@ async def _kick_off_report_job(cluster_pk_hash: str, user_intent: UserIntent, cf
         cluster_pk_hash, sections_result, front_matter, cfg
     )
     if step_status == StepTerminationStatus.error or save_output is None:
-        logger.warning(f"Save report to FS failed for cluster {cluster_pk_hash}")
         raise RuntimeError(f"Save report to FS failed for cluster {cluster_pk_hash}")
 
     # step: write to db
@@ -1471,7 +1464,6 @@ async def _kick_off_report_job(cluster_pk_hash: str, user_intent: UserIntent, cf
         cluster_pk_hash, user_intent, resolved_topic, plan, front_matter, save_output, cfg
     )
     if step_status == StepTerminationStatus.error:
-        logger.warning(f"Save report to DB failed for cluster {cluster_pk_hash}")
         raise RuntimeError(f"Save report to DB failed for cluster {cluster_pk_hash}")
 
 
@@ -1487,6 +1479,8 @@ async def start_generation(cluster_pk_hash: str, user_intent: UserIntent, cfg: R
     Raises:
         Exception: If report generation fails
     """
+    log_prefix = f"[start generation] - [cluster {cluster_pk_hash}]"
+    logger.info(f"{log_prefix} - start generating report")
     try:
         await _kick_off_report_job(cluster_pk_hash, user_intent, cfg)
         # Update job status to done
@@ -1496,6 +1490,7 @@ async def start_generation(cluster_pk_hash: str, user_intent: UserIntent, cfg: R
             db_store.update_report_job_status(cluster_pk_hash, ReportJobStatus.DONE, now_str)
         finally:
             db_store.close()
+        logger.info(f"{log_prefix} - finished.")
     except Exception as e:
         # Update job status to error
         db_store = ReportJobStore(cfg.cache.report_generation_db_path, cfg.cache.report_generation_db_migrations_path)
@@ -1504,12 +1499,5 @@ async def start_generation(cluster_pk_hash: str, user_intent: UserIntent, cfg: R
             db_store.update_report_job_status(cluster_pk_hash, ReportJobStatus.ERROR, now_str)
         finally:
             db_store.close()
-        logger.error(f"Report job failed: {e}", exc_info=True)
+        logger.error(f"{log_prefix} - failed: {e}", exc_info=True)
         raise
-
-
-
-
-# -------------------------
-
-# -------------------------

@@ -20,6 +20,7 @@ def with_workflow_register(
     node_defs: Optional[list] = None,
     cfg_arg: str = "cfg",
     cluster_pk_arg: str = "cluster_pk_hash",
+    user_intent_arg: str = "user_intent",
 ) -> Callable:
     """
     Decorator that sets up WorkflowRegister, runs the workflow, and ensures
@@ -38,6 +39,7 @@ def with_workflow_register(
             bound.apply_defaults()
             cfg = bound.arguments.get(cfg_arg)
             cluster_pk_hash = bound.arguments.get(cluster_pk_arg)
+            user_intent = bound.arguments.get(user_intent_arg)
             if cfg is None or cluster_pk_hash is None:
                 raise ValueError(
                     f"with_workflow_register requires {cfg_arg} and {cluster_pk_arg} in {fn.__name__} signature"
@@ -53,10 +55,10 @@ def with_workflow_register(
             token = _workflow_register_var.set(register)
             try:
                 result = await fn(*args, **kwargs)
-                register.write_trace_to_cache(cfg)
+                register.write_trace_to_cache(cfg, user_intent)
                 return result
             except Exception:
-                register.write_trace_to_cache(cfg)
+                register.write_trace_to_cache(cfg, user_intent)
                 raise
             finally:
                 _workflow_register_var.reset(token)

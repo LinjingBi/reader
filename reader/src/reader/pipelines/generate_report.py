@@ -1,11 +1,11 @@
 """Report generation pipeline orchestration"""
 
-from typing import Tuple
+from typing import Tuple, Optional
 
 from reader.pipelines.report_generation.config.config import ReportGenerationConfig
 from reader.adapters import memo
 from reader.pipelines.report_generation.blocks import start_generation, select_cluster_and_intent
-from reader.pipelines.report_generation.db.store import init_report_job
+from reader.pipelines.report_generation.db.store import init_report_job, InitReportJobResponseNextStatus
 from reader.pipelines.report_generation.report import ReportJobAction
 from reader.pipelines.report_generation.prompts.planner.build import UserIntent
 from reader.logging.logging_setup import get_logger
@@ -26,6 +26,7 @@ async def generate_report(cfg: ReportGenerationConfig) -> Tuple[ReportJobAction,
         on error, returns (ReportJobAction.DEBUG_INTERNAL_ERROR, error_message).
     """
     log_prefix = f"[generate report] - "
+    logger.info(f"{log_prefix}start")
     # Get period dates and source from config
     try:
         source = cfg.run.source
@@ -41,13 +42,19 @@ async def generate_report(cfg: ReportGenerationConfig) -> Tuple[ReportJobAction,
         logger.info(f"{log_prefix}Selected pk_hash: {selected_pk_hash}, Selected intent: {selected_intent_enum}")
 
         # start report generation
-        return await trigger_report_job(selected_pk_hash, selected_intent_enum, cfg)
+        resp = await trigger_report_job(selected_pk_hash, selected_intent_enum, cfg)
+        if resp is None:
+            return (ReportJobAction.DEBUG_INTERNAL_ERROR, f"unexpected error. check log under {cfg.cache.report_generation_log_path} for debugging.")
+        else:
+            logger.info(f"{log_prefix}finished")
+            print(f"resp: {resp}") # debug only
+            return resp
     except Exception as e:
         logger.error(f"{log_prefix}Internal error. {e}", exc_info=True)
         return (ReportJobAction.DEBUG_INTERNAL_ERROR, f"unexpected error. check log under {cfg.cache.report_generation_log_path} for debugging.")
 
 
-async def trigger_report_job(cluster_pk_hash: str, user_intent: UserIntent, cfg: ReportGenerationConfig) -> Tuple[ReportJobAction, str]:
+async def trigger_report_job(cluster_pk_hash: str, user_intent: UserIntent, cfg: ReportGenerationConfig) -> Optional[Tuple[ReportJobAction, str]]:
     """
     trigger a report generation job based on its current status.
     Non-blocking: uses async LLM calls when executor is configured.
@@ -67,41 +74,44 @@ async def trigger_report_job(cluster_pk_hash: str, user_intent: UserIntent, cfg:
         Tuple of (ReportJobAction, descriptive_message). Always returns a tuple;
         on error, returns (ReportJobAction.DEBUG_INTERNAL_ERROR, error_message).
     """
-    log_prefix = f"[report job trigger] - [{cluster_pk_hash}] - "
-    try:
-        resp = init_report_job(cluster_pk_hash, cfg)
-        meta = resp.meta
+    resp = init_report_job(cluster_pk_hash, cfg)
+    meta = resp.meta
 
-        if resp.next_status == 'running':
+    if resp.next_status == InitReportJobResponseNextStatus.RUNNING:
+        try:
             await start_generation(cluster_pk_hash, user_intent, cfg)
-            next_status = ReportJobAction.FETCH_REPORT
-            history_dir = cfg.cache.history_reports
-            msg = f"A new report is just generated, search for it under {history_dir} using cluster pk hash {cluster_pk_hash}"
-            logger.info(f"{log_prefix}next status {next_status}. {msg}")
-            return (next_status, msg)
-        elif resp.next_status == 'resuming':
-            next_status = ReportJobAction.RESUME_JOB
-            cache_dir = cfg.cache.report_generation_cache
-            msg = f"{meta.message} Search under {cache_dir} using cluster_pk_hash: {cluster_pk_hash} for possible cache for minimal-effort rerun."
-            logger.info(f"{log_prefix}next status {next_status}. {msg}")
-            return (next_status, msg)
-        elif resp.next_status == 'waiting':
-            next_status = ReportJobAction.WAIT_FOR_JOB_TO_FINISH
-            logger.info(f"{log_prefix}next status {next_status}. {meta.message}")
-            return (next_status, meta.message)
-        elif resp.next_status == 'done':
-            next_status = ReportJobAction.FETCH_REPORT
-            history_dir = cfg.cache.history_reports
-            msg = f"A report for this cluster has been generated before, search for it under {history_dir} using cluster pk hash {cluster_pk_hash}"
-            logger.info(f"{log_prefix}next status {next_status}. {msg}")
-            return (next_status, msg)
-        else:
-            next_status = ReportJobAction.DEBUG_INTERNAL_ERROR
-            msg = f"Unexpected next_status={resp.next_status} from init_report_job, message={meta.message}"
-            logger.error(f"{log_prefix}{msg}")
-            return (next_status, msg)
-    except Exception as e:
-        log_file_path = cfg.cache.report_generation_log_path
-        logger.error(f"{log_prefix}Internal error. {e}", exc_info=True)
-        error_msg = f"unexpected error. check log under {log_file_path} using cluster pk hash {cluster_pk_hash} for debugging."
-        return (ReportJobAction.DEBUG_INTERNAL_ERROR, error_msg)
+        except RuntimeError as e:
+            # logger.error(f"{log_prefix}Internal error. {e}", exc_info=True)
+            return (ReportJobAction.DEBUG_INTERNAL_ERROR, f"unexpected error. \n\
+            check log under {cfg.cache.report_generation_log_path} for debugging. \n\
+            check cache under {cfg.cache.report_generation_cache} for minimal-effort rerun.\n\
+            search filter: cluster_pk_hash={cluster_pk_hash}, user_intent={user_intent.value}")
+        next_status = ReportJobAction.FETCH_REPORT
+        history_dir = cfg.cache.history_reports
+        msg = f"A new report is just generated, search for it under {history_dir} using cluster pk hash {cluster_pk_hash}"
+        # logger.info(f"{log_prefix}{msg}")
+        return (next_status, msg)
+    elif resp.next_status == InitReportJobResponseNextStatus.RESUMING:
+        next_status = ReportJobAction.RESUME_JOB
+        cache_dir = cfg.cache.report_generation_cache
+        msg = f"{meta.message} Search under {cache_dir} using cluster_pk_hash: {cluster_pk_hash} for possible cache for minimal-effort rerun."
+        # logger.info(f"{log_prefix}{msg}")
+        return (next_status, msg)
+    elif resp.next_status == InitReportJobResponseNextStatus.WAITING:
+        next_status = ReportJobAction.WAIT_FOR_JOB_TO_FINISH
+        # logger.info(f"{log_prefix}{meta.message}")
+        return (next_status, meta.message)
+    elif resp.next_status == InitReportJobResponseNextStatus.DONE:
+        next_status = ReportJobAction.FETCH_REPORT
+        history_dir = cfg.cache.history_reports
+        msg = f"{meta.message} Search under {history_dir} using cluster pk hash {cluster_pk_hash}"
+        # logger.info(f"{log_prefix}{msg}")
+        return (next_status, msg)
+    else:
+        msg = f"Unexpected next_status={resp.next_status} from init_report_job, message={meta.message}"
+        raise ValueError(f"{msg}")
+    # except Exception as e:
+    #     log_file_path = cfg.cache.report_generation_log_path
+    #     logger.error(f"{log_prefix}Internal error. {e}", exc_info=True)
+    #     error_msg = f"unexpected error. check log under {log_file_path} using cluster pk hash {cluster_pk_hash} for debugging."
+    #     return (ReportJobAction.DEBUG_INTERNAL_ERROR, error_msg)

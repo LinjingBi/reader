@@ -10,7 +10,7 @@ use crate::contracts::{
     PaperSupplement, PaperChunk, ReportSupplement,
 };
 use anyhow::{Context, Result};
-use chrono::{DateTime, Duration, Utc};
+use chrono::{Utc};
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
 use sha2::{Sha256, Digest};
 use hex;

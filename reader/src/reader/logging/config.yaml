@@ -12,7 +12,7 @@ handlers:
     level: INFO
     rich_tracebacks: true
     tracebacks_show_locals: false
-    markup: true
+    markup: false # disable rich markup for console logging
     omit_repeated_times: true  # net to repeat the same message
 
   file:

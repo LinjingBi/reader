@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Literal, Optional, Union
 
@@ -32,7 +31,7 @@ class StepNodeRecord(BaseModel):
     node_id: str
     node_type: Literal["step"] = "step"
     status: StepRunStatus = StepRunStatus.not_run
-    output: Optional[dict] = None  # Serialized output; None if not_run or error with no output
+    output: Optional[Union[dict, list, str]] = None  # Serialized output; list for body sections
 
 
 class LoopNodeRecord(BaseModel):
@@ -41,7 +40,7 @@ class LoopNodeRecord(BaseModel):
     node_id: str
     node_type: Literal["loop"] = "loop"
     status: LoopRunStatus = LoopRunStatus.not_run
-    output: Optional[dict] = None  # Serialized output
+    output: Optional[Union[dict, list, str]] = None  # Serialized output
 
 
 class WorkflowNodeDef(BaseModel):
@@ -62,7 +61,7 @@ class WorkflowTraceNode(BaseModel):
     display_name: Optional[str] = None
     contains: Optional[list[str]] = None
     status: str
-    output: Optional[dict] = None
+    output: Optional[Union[dict, list, str]] = None
     must_rerun_status: Optional[list[str]] = None  # List of status strings that require rerun
 
 
@@ -73,4 +72,5 @@ class WorkflowTraceReport(BaseModel):
     cluster_pk_hash: str
     timestamp: str
     config: dict  # Serialized ReportGenerationConfig (model_dump(mode="json"))
+    user_intent: str
     nodes: list[WorkflowTraceNode]

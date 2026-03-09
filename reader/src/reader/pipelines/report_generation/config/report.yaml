@@ -1,19 +1,19 @@
 run:
   source: "hf_monthly"                      # Data source identifier
-  period_start: "2025-01-01"                 # Period start date in YYYY-MM-DD format
-  period_end: "2025-01-31"                  # Period end date in YYYY-MM-DD format
+  period_start: "2025-02-01"                 # Period start date in YYYY-MM-DD format
+  period_end: "2025-02-28"                  # Period end date in YYYY-MM-DD format
   log_config_path: "/Users/bii/reader/reader/src/reader/logging/config.yaml"  # Absolute path to logging config file
 
 memo:
   bin: "/Users/bii/reader/memory_cli/target/debug/memo"
-  db_path: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/memo/memo_report.sqlite"  # optional, if not provided, a temporary database will be created
+  db_path: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/artifacts/cache/memo/memo_report.sqlite"  # optional, if not provided, a temporary database will be created
   db_schema_path: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/memo/report.sql"  # optional, if not provided, no schema will be applied
   timeout_sec: 60
 
 report_generation:
   topic_resolver_threshold: 0.98
   # report planner config
-  max_planner_judge_retries: 3
+  max_planner_judge_retries: 1
   max_evidence_gaps_threshold: 3
   max_evidence_loop_iterations: 3
   planner_judge_retry_threshold: 0.0
@@ -21,27 +21,29 @@ report_generation:
   # report writer section writing config
   writer_supplement_prompt_template: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/prompts/writer/prompt_evidence_request.txt"   # Template in prompts/writer/ for supply step
   writer_section_writing_prompt_template: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/prompts/writer/prompt_writing.txt"       # Template in prompts/writer/ for write step
-  max_writer_supplement_judge_retries: 3
+  max_writer_supplement_judge_retries: 1
   writer_supplement_judge_retry_threshold: 0.0
   writer_supplement_output_log_path: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/artifacts/writing_supply_outputs.jsonl"                            # e.g. "/path/to/supply_outputs.jsonl" to enable
-  max_writer_writing_judge_retries: 3
+  max_writer_writing_judge_retries: 1
   writer_writing_judge_retry_threshold: 0.0
-  writer_writing_output_log_path: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/artifacts/writing_outputs.jsonl"                               # e.g. "/path/to/writing_outputs.jsonl" to enable
+  writer_writing_output_log_path: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/artifacts/writing_sections_outputs.jsonl"                               # e.g. "/path/to/writing_outputs.jsonl" to enable
   # report writer front matter writing config
   writer_summary_prompt_template: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/prompts/writer/prompt_summary.txt"
-  max_writer_summary_judge_retries: 3
+  max_writer_summary_judge_retries: 1
   writer_summary_judge_retry_threshold: 0.0
   writer_summary_output_log_path: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/artifacts/writing_front_matter_outputs.jsonl"   # e.g. "/path/to/summary_outputs.jsonl" to enable
 
   llm_gemini:
-    model: "models/gemini-2.5-pro"
+    # model: "models/gemini-2.5-pro"
+    # model: "models/gemini-2.5-flash-lite"
+    model: "gemma-3-2b-it"
     temperature: 0.2
     max_tokens: 2500
     api_key_env: "GEMINI_API_KEY"  # Environment variable name for API key
     gemini_rpm_limit: 5           # Requests per minute limit
     gemini_tpm_limit: 250000       # Tokens per minute limit
     gemini_call_max_workers: 2     # Optional: worker threads for non-blocking async LLM calls
-    max_retry: 5                   # Max retry attempts for LLM API calls
+    max_retry: 3                   # Max retry attempts for LLM API calls
 
 cache:
-  root: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/artifacts"
+  root: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/artifacts/cache"

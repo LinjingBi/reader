@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Dict, Generic, List, Tuple, TypeVar
@@ -16,6 +16,16 @@ from reader.pipelines.report_generation.judges.metrics.common import ValidationR
 
 T = TypeVar("T", bound=BaseModel)
 
+# helper to convert JudgeOutput (with tuples in reasons) to JSON-serializable dict
+def _judge_output_to_jsonable(judge_output: JudgeOutput) -> dict:
+    """Convert JudgeOutput to JSON-serializable dict (tuples -> lists)."""
+    return {
+        "sub_scores": judge_output.sub_scores,
+        "overall": judge_output.overall,
+        "reasons": {
+            k: [[a, b] for a, b in v] for k, v in judge_output.reasons.items()
+        },
+    }
 
 @dataclass
 class JudgeOutput:
@@ -89,8 +99,8 @@ class LLMJudge(Generic[T]):
         record = {
             "cluster_pk_hash": item_pk,
             "date": datetime.now(timezone.utc).isoformat(),
-            "judge_input": judge_input.model_dump() if judge_input is not None else None,
-            "judge_output": asdict(judge_output),
+            "judge_input": judge_input.model_dump(mode="json") if judge_input is not None else None,
+            "judge_output": _judge_output_to_jsonable(judge_output),
         }
         with open(log_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")

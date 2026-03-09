@@ -75,6 +75,7 @@ memory_cli/memo.sqlite-wal
 reader/artifacts/
 reader/src/artifacts/
 reader/src/reader/pipelines/hf_data/artifacts/
+reader/src/reader/pipelines/report_generation/artifacts/
 reader/papers_report.json
 reader/*best_clustering_*.json
 reader/*best_clustering_*.md

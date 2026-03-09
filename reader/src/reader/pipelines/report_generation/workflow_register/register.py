@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Union
 
 from reader.pipelines.report_generation.config.config import ReportGenerationConfig
+from reader.pipelines.report_generation.prompts.planner.build import UserIntent
 from reader.pipelines.report_generation.workflow_register.models import (
     LoopNodeRecord,
     LoopRunStatus,
@@ -108,7 +109,7 @@ class WorkflowRegister:
             else:
                 self.records[node_def.id] = LoopNodeRecord(node_id=node_def.id)
 
-    def get_trace_report(self, config: ReportGenerationConfig) -> WorkflowTraceReport:
+    def get_trace_report(self, config: ReportGenerationConfig, user_intent: UserIntent) -> WorkflowTraceReport:
         """Build full trace report including config."""
         nodes: list[WorkflowTraceNode] = []
         for node_def in self._node_defs_ordered:
@@ -132,11 +133,12 @@ class WorkflowRegister:
             timestamp=_local_iso_now(),
             config=config.model_dump(mode="json"),
             nodes=nodes,
+            user_intent=user_intent.value,
         )
 
-    def write_trace_to_cache(self, config: ReportGenerationConfig) -> Path:
+    def write_trace_to_cache(self, config: ReportGenerationConfig, user_intent: UserIntent) -> Path:
         """Write trace to cache path. Creates parent dirs. Returns path written."""
-        report = self.get_trace_report(config)
+        report = self.get_trace_report(config, user_intent)
         self.cache_path.parent.mkdir(parents=True, exist_ok=True)
         with open(self.cache_path, "w", encoding="utf-8") as f:
             json.dump(report.model_dump(mode="json"), f, indent=2, ensure_ascii=False)

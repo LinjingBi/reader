@@ -399,7 +399,7 @@ class LLMClient:
                 before_sleep=before_sleep_log(logger, logging.WARNING),
                 reraise=False,  # Only LLMGenerationError is raised (retried exceptions become RetryError, then wrapped)
             )
-            return retrying(self._call_structured_inner)(
+            return retrying(self._call_structured_inner,
                 prompt, response_model, temperature, max_tokens
             )
         except RetryError as e:
@@ -416,9 +416,9 @@ class LLMClient:
             logger.error("Gemini API retries exhausted: %s", error_message)
             raise LLMGenerationError(error_message, original_error) from e
         except Exception as e:
-            logger.error("Gemini API error: %s", str(e))
+            logger.error("LLMClient internal error: %s", str(e))
             # Wrap the exception in LLMGenerationError after retries are exhausted
-            error_message = f"LLM generation API error: {str(e)}"
+            error_message = f"LLMClient internal error: {str(e)}"
             raise LLMGenerationError(error_message, e) from e
     
     async def call_structured_async(self, prompt: str, response_model: Type[T], temperature: float, max_tokens: int) -> T:
