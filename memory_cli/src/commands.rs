@@ -2,11 +2,13 @@ mod fresh_paper;
 mod get_best_run;
 mod new_memory;
 mod get_cluster_observation;
+mod get_report;
 mod get_report_generation_metadata;
 mod get_report_generation_supply;
 mod get_topic_resolver_metadata;
 mod inject_clusters_observation;
 mod inject_papers_chunk;
+mod check_report_signature;
 mod validation;
 
 use crate::cli::{Args, Command};
@@ -42,6 +44,12 @@ pub fn dispatch(args: Args) -> Result<()> {
         }
         Command::NewMemory { input } => {
             new_memory::handle(args.dry_run, &args.db, args.schema.as_deref(), &input)
+        }
+        Command::GetReport { cluster_pk_hash } => {
+            get_report::handle(args.dry_run, &args.db, args.schema.as_deref(), &cluster_pk_hash)
+        }
+        Command::CheckReportSignature { input } => {
+            check_report_signature::handle(args.dry_run, &args.db, args.schema.as_deref(), &input)
         }
     }
 }

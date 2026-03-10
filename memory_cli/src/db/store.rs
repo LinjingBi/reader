@@ -8,6 +8,8 @@ use crate::contracts::{
     PaperOutput,
     InjectPapersChunkRequest,
     PaperSupplement, PaperChunk, ReportSupplement,
+    GetReportResponse, GetReportMeta,
+    CheckReportSignatureRequest, CheckReportSignatureResponse,
 };
 use anyhow::{Context, Result};
 use chrono::{Utc};
@@ -537,6 +539,94 @@ impl<'a> Store<'a> {
             Ok(result) => Ok(Some(result)),
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
             Err(e) => Err(anyhow::anyhow!("Database error: {}", e)),
+        }
+    }
+
+    /// Get report metadata by cluster_pk_hash.
+    /// Returns GetReportResponse with status ok/not_found/error.
+    pub fn get_report_by_cluster_pk_hash(&self, cluster_pk_hash: &str) -> Result<GetReportResponse> {
+        let mut stmt = self.conn.prepare(
+            "SELECT report_id, report_url, intent_mode FROM report WHERE cluster_pk_hash = ?1",
+        )?;
+
+        let rows: Vec<_> = stmt
+            .query_map(params![cluster_pk_hash], |row| {
+                Ok(GetReportMeta {
+                    report_id: row.get(0)?,
+                    report_url: row.get(1)?,
+                    intent_mode: row.get(2)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        match rows.len() {
+            0 => Ok(GetReportResponse {
+                status: "not_found".to_string(),
+                message: None,
+                meta: None,
+            }),
+            1 => Ok(GetReportResponse {
+                status: "ok".to_string(),
+                message: None,
+                meta: Some(rows.into_iter().next().unwrap()),
+            }),
+            _ => Ok(GetReportResponse {
+                status: "error".to_string(),
+                message: Some(
+                    "more than one report found".to_string()
+                ),
+                meta: None,
+            }),
+        }
+    }
+
+    /// Check report file signature.
+    /// Resolves report by report_id if given, else by cluster_pk_hash.
+    pub fn check_report_signature(
+        &self,
+        req: &CheckReportSignatureRequest,
+    ) -> Result<CheckReportSignatureResponse> {
+        let stored_signature: Option<String> = if let Some(report_id) = req.report_id {
+            self.conn
+                .query_row(
+                    "SELECT signature FROM report WHERE report_id = ?1",
+                    params![report_id],
+                    |row| row.get(0),
+                )
+                .optional()
+                .map_err(|e| anyhow::anyhow!("Database error: {}", e))?
+        } else if let Some(ref cluster_pk_hash) = req.cluster_pk_hash {
+            self.conn
+                .query_row(
+                    "SELECT signature FROM report WHERE cluster_pk_hash = ?1",
+                    params![cluster_pk_hash],
+                    |row| row.get(0),
+                )
+                .optional()
+                .map_err(|e| anyhow::anyhow!("Database error: {}", e))?
+        } else {
+            return Ok(CheckReportSignatureResponse {
+                status: "error".to_string(),
+                message: Some("At least one of report_id or cluster_pk_hash is required".to_string()),
+            });
+        };
+
+        match stored_signature {
+            None => Ok(CheckReportSignatureResponse {
+                status: "error".to_string(),
+                message: Some("Report not found".to_string()),
+            }),
+            Some(stored) => {
+                let status = if stored == req.signature {
+                    "match"
+                } else {
+                    "not_match"
+                };
+                Ok(CheckReportSignatureResponse {
+                    status: status.to_string(),
+                    message: None,
+                })
+            }
         }
     }
 

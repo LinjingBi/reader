@@ -133,7 +133,7 @@ class WorkflowRegister:
             timestamp=_local_iso_now(),
             config=config.model_dump(mode="json"),
             nodes=nodes,
-            user_intent=user_intent.value,
+            user_intent=user_intent.name.lower(),
         )
 
     def write_trace_to_cache(self, config: ReportGenerationConfig, user_intent: UserIntent) -> Path:

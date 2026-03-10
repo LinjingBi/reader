@@ -212,7 +212,7 @@ def init_report_job(cluster_pk_hash: str, cfg: ReportGenerationConfig) -> InitRe
             # No job exists, create new one
             store.create_report_job(cluster_pk_hash, ReportJobStatus.RUNNING, now_str)
             message = "A new job is created."
-            logger.info(f"{log_prefix}{message}")
+            logger.info(f"{log_prefix} created a new job.")
             return InitReportJobResponse(
                 next_status=InitReportJobResponseNextStatus.RUNNING,
                 meta=InitReportJobResponseMeta(
@@ -249,7 +249,7 @@ def init_report_job(cluster_pk_hash: str, cfg: ReportGenerationConfig) -> InitRe
                     message = f"{message} Last update time is {local_str}."
                 except (ValueError, TypeError):
                     pass
-            logger.info(f"{log_prefix}{message}")
+            logger.info(f"{log_prefix} found an running job.")
             return InitReportJobResponse(
                 next_status=InitReportJobResponseNextStatus.WAITING,
                 meta=InitReportJobResponseMeta(
@@ -269,7 +269,7 @@ def init_report_job(cluster_pk_hash: str, cfg: ReportGenerationConfig) -> InitRe
                     message = f"{message} Last update time is {local_str}."
                 except (ValueError, TypeError):
                     pass
-            logger.info(f"{log_prefix}{message}")
+            logger.info(f"{log_prefix} found a done job.")
             return InitReportJobResponse(
                 next_status=InitReportJobResponseNextStatus.DONE,
                 meta=InitReportJobResponseMeta(
@@ -283,6 +283,7 @@ def init_report_job(cluster_pk_hash: str, cfg: ReportGenerationConfig) -> InitRe
             updated_at = updated_at.replace(tzinfo=timezone.utc)
             elapsed = now - updated_at
             five_minutes = timedelta(minutes=5)
+            logger.warning(f"{log_prefix} found an error job. elapsed: {elapsed}.")
 
             if elapsed < five_minutes:
                 remaining = five_minutes - elapsed
@@ -297,9 +298,9 @@ def init_report_job(cluster_pk_hash: str, cfg: ReportGenerationConfig) -> InitRe
                         message = f"{message} Last update time is {local_str}."
                     except (ValueError, TypeError):
                         pass
-                logger.info(f"{log_prefix}{message}")
+                logger.info(f"{log_prefix} waiting for job to resume.")
                 return InitReportJobResponse(
-                    next_status=InitReportJobResponseNextStatus.WAITING,
+                    next_status=InitReportJobResponseNextStatus.RESUMING,
                     meta=InitReportJobResponseMeta(
                         message=message
                     )
@@ -307,10 +308,11 @@ def init_report_job(cluster_pk_hash: str, cfg: ReportGenerationConfig) -> InitRe
             else:
                 # Error expired, delete job so it can be resumed
                 store.delete_report_job(cluster_pk_hash)
-                message = "Previous error expired; job is ready for resume now."
-                logger.info(f"{log_prefix}{message}")
+                store.create_report_job(cluster_pk_hash, ReportJobStatus.RUNNING, now_str)
+                message = "Previous error expired; Previous job is deleted and a new job is created."
+                logger.info(f"{log_prefix} deleted the error job and created a new job.")
                 return InitReportJobResponse(
-                    next_status=InitReportJobResponseNextStatus.RESUMING,
+                    next_status=InitReportJobResponseNextStatus.RUNNING,
                     meta=InitReportJobResponseMeta(
                         message=message
                     )

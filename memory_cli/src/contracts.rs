@@ -2,11 +2,13 @@ pub mod fresh_paper;
 pub mod get_best_run;
 pub mod new_memory;
 pub mod get_cluster_observation;
+pub mod get_report;
 pub mod get_report_generation_metadata;
 pub mod get_report_generation_supply;
 pub mod get_topic_resolver_metadata;
 pub mod inject_clusters_observation;
 pub mod inject_papers_chunk;
+pub mod check_report_signature;
 
 pub use fresh_paper::{
     ClusterConfig,
@@ -48,3 +50,5 @@ pub use get_report_generation_supply::{
     PaperChunk,
     ReportSupplement,
 };
+pub use get_report::{GetReportResponse, GetReportMeta};
+pub use check_report_signature::{CheckReportSignatureRequest, CheckReportSignatureResponse};

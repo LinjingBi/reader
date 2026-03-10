@@ -37,15 +37,6 @@ EvidenceCollectionTerminationSufficiency = [
     LLMReportPlannerSufficiency.borderline,
 ]
 
-
-class ReportJobAction(str, Enum):
-    """Action status returned by triage_report_job function."""
-    FETCH_REPORT = "fetch_report"
-    RESUME_JOB = "resume_job"
-    WAIT_FOR_JOB_TO_FINISH = "wait_for_job_to_finish"
-    DEBUG_INTERNAL_ERROR = "debug_internal_error"
-
-
 # ---------- Output Models ----------
 class LLMReportPlannerSubthread(BaseModel):
     name: str = Field(description="A thematic bucket name grounded in evidence keywords/themes.")
@@ -359,3 +350,38 @@ class TopicResolverConfig(BaseModel):
             return f"algo_lib.topic_resolver|{topic_resolver_version}"
         except ImportError:
             raise ValueError("algo_lib.topic_resolver is not versioned")
+
+
+# -----------
+# report generation job output models
+# -------------
+class ReportJobAction(str, Enum):
+    """Action status returned by triage_report_job function."""
+    FETCH_REPORT = "fetch_report"
+    WAIT_FOR_JOB_TO_RESUME = "wait_for_job_to_resume"
+    WAIT_FOR_JOB_TO_FINISH = "wait_for_job_to_finish"
+    DEBUG_FOR_RERUN = "debug_for_rerun"
+    DEBUG_INTERNAL_ERROR = "debug_internal_error"
+
+
+class ReportJobOutputMeta(BaseModel):
+    """Metadata for report job output; only present when action is FETCH_REPORT."""
+    cluster_pk_hash: str
+    intent_mode: str  # UserIntent.name.lower()
+
+
+class ReportJobOutput(BaseModel):
+    """Return type for generate_report and _trigger_report_job."""
+    action: ReportJobAction
+    message: str
+    meta: Optional[ReportJobOutputMeta] = None
+
+    @model_validator(mode="after")
+    def _validate_meta_for_fetch_report(self) -> "ReportJobOutput":
+        if self.action == ReportJobAction.FETCH_REPORT:
+            if self.meta is None:
+                raise ValueError("meta must be set when action is FETCH_REPORT")
+        else:
+            if self.meta is not None:
+                raise ValueError("meta must be None when action is not FETCH_REPORT")
+        return self

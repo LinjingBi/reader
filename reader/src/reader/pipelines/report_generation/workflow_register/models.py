@@ -72,5 +72,5 @@ class WorkflowTraceReport(BaseModel):
     cluster_pk_hash: str
     timestamp: str
     config: dict  # Serialized ReportGenerationConfig (model_dump(mode="json"))
-    user_intent: str
+    user_intent: str # UserIntent.name.lower()
     nodes: list[WorkflowTraceNode]

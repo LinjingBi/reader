@@ -3,7 +3,7 @@
 import asyncio
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 import pydantic
 from pydantic import BaseModel, Field, RootModel, field_validator
@@ -58,6 +58,16 @@ class MemoInjectPapersChunkError(Exception):
 
 class MemoNewMemoryError(Exception):
     """Exception raised when new-memory subcommand fails."""
+    pass
+
+
+class MemoGetReportError(Exception):
+    """Exception raised when get-report subcommand fails."""
+    pass
+
+
+class MemoCheckReportSignatureError(Exception):
+    """Exception raised when check-report-signature subcommand fails."""
     pass
 
 
@@ -299,6 +309,41 @@ class InjectPapersChunkResponse(BaseModel):
     """Response from inject-papers-chunk command."""
     success: bool
     meta: InjectPapersChunkMeta
+
+
+# ============================================================================
+# get-report command models
+# ============================================================================
+
+class GetReportMeta(BaseModel):
+    """Metadata for a report when found."""
+    report_id: int
+    report_url: str
+    intent_mode: str
+
+
+class GetReportResponse(BaseModel):
+    """Response from get-report command."""
+    status: Literal["ok", "not_found", "error"]
+    message: Optional[str] = None
+    meta: Optional[GetReportMeta] = None
+
+
+# ============================================================================
+# check-report-signature command models
+# ============================================================================
+
+class CheckReportSignatureRequest(BaseModel):
+    """Request for check-report-signature command."""
+    report_id: Optional[int] = None
+    cluster_pk_hash: Optional[str] = None
+    signature: str
+
+
+class CheckReportSignatureResponse(BaseModel):
+    """Response from check-report-signature command."""
+    status: Literal["match", "not_match", "error"]
+    message: Optional[str] = None
 
 
 async def fresh_paper(payload: FreshPaperPayload, config: MemoConfig, no_details: bool = True) -> FreshPaperResponseWithDetails:
@@ -996,3 +1041,147 @@ async def inject_papers_chunk(
     except Exception as e:
         logger.error(f"Unexpected error in memo inject-papers-chunk: {e}", exc_info=True)
         raise MemoInjectPapersChunkError(f"Unexpected error in memo inject-papers-chunk: {e}") from e
+
+
+async def get_report(cluster_pk_hash: str, config: MemoConfig) -> GetReportResponse:
+    """
+    Call memo CLI get-report command to fetch report metadata by cluster pk_hash.
+
+    Args:
+        cluster_pk_hash: Cluster pk_hash (primary key hash from cluster table)
+        config: MemoConfig instance
+
+    Returns:
+        GetReportResponse instance with status (ok/not_found/error) and optional meta
+
+    Raises:
+        MemoGetReportError: If the subcommand execution fails
+    """
+    try:
+        cmd = [
+            config.bin,
+        ]
+        if config.db_path:
+            cmd.append('--db')
+            cmd.append(config.db_path)
+        if config.db_schema_path:
+            cmd.append('--schema')
+            cmd.append(config.db_schema_path)
+        cmd.extend(['get-report', '--cluster-pk-hash', cluster_pk_hash])
+
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(),
+                timeout=config.timeout_sec
+            )
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            logger.warning(f"memo get-report timed out after {config.timeout_sec}s")
+            raise MemoGetReportError(f"memo get-report timed out after {config.timeout_sec}s")
+        except asyncio.CancelledError:
+            process.kill()
+            await process.wait()
+            raise
+
+        stdout_text = stdout.decode('utf-8')
+        stderr_text = stderr.decode('utf-8')
+
+        if process.returncode != 0:
+            logger.error(f"Error calling memo get-report: {stderr_text}")
+            raise MemoGetReportError(f"Error calling memo get-report: {stderr_text}")
+
+        return GetReportResponse.model_validate_json(stdout_text)
+
+    except MemoGetReportError:
+        raise
+    except pydantic.ValidationError as e:
+        logger.error(f"Error validating memo output: {e}")
+        raise MemoGetReportError(f"Error validating memo output: {e}") from e
+    except Exception as e:
+        logger.error(f"Unexpected error in memo get-report: {e}", exc_info=True)
+        raise MemoGetReportError(f"Unexpected error in memo get-report: {e}") from e
+
+
+async def check_report_signature(
+    request: CheckReportSignatureRequest,
+    config: MemoConfig,
+) -> CheckReportSignatureResponse:
+    """
+    Call memo CLI check-report-signature command to verify report file signature.
+
+    Args:
+        request: CheckReportSignatureRequest with report_id or cluster_pk_hash, and signature
+        config: MemoConfig instance
+
+    Returns:
+        CheckReportSignatureResponse instance with status (match/not_match/error)
+
+    Raises:
+        MemoCheckReportSignatureError: If the subcommand execution fails
+    """
+    try:
+        payload_json = request.model_dump_json(exclude_none=True)
+
+        cmd = [
+            config.bin,
+        ]
+        if config.db_path:
+            cmd.append('--db')
+            cmd.append(config.db_path)
+        if config.db_schema_path:
+            cmd.append('--schema')
+            cmd.append(config.db_schema_path)
+        cmd.extend(['check-report-signature', '--input', '-'])
+
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(input=payload_json.encode('utf-8')),
+                timeout=config.timeout_sec
+            )
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            logger.warning(f"memo check-report-signature timed out after {config.timeout_sec}s")
+            raise MemoCheckReportSignatureError(
+                f"memo check-report-signature timed out after {config.timeout_sec}s"
+            )
+        except asyncio.CancelledError:
+            process.kill()
+            await process.wait()
+            raise
+
+        stdout_text = stdout.decode('utf-8')
+        stderr_text = stderr.decode('utf-8')
+
+        if process.returncode != 0:
+            logger.error(f"Error calling memo check-report-signature: {stderr_text}")
+            raise MemoCheckReportSignatureError(
+                f"Error calling memo check-report-signature: {stderr_text}"
+            )
+
+        return CheckReportSignatureResponse.model_validate_json(stdout_text)
+
+    except MemoCheckReportSignatureError:
+        raise
+    except pydantic.ValidationError as e:
+        logger.error(f"Error validating memo output: {e}")
+        raise MemoCheckReportSignatureError(f"Error validating memo output: {e}") from e
+    except Exception as e:
+        logger.error(f"Unexpected error in memo check-report-signature: {e}", exc_info=True)
+        raise MemoCheckReportSignatureError(
+            f"Unexpected error in memo check-report-signature: {e}"
+        ) from e

@@ -184,6 +184,33 @@ EXAMPLES:
         #[arg(long)]
         input: String,
     },
+
+    /// Fetch report metadata by cluster pk_hash.
+    #[command(
+        long_about = "Fetch report metadata (report_id, report_url, intent_mode) by cluster pk_hash.
+
+EXAMPLES:
+  memo get-report --cluster-pk-hash abc123def456"
+    )]
+    GetReport {
+        /// Cluster pk_hash (primary key hash from cluster table).
+        #[arg(long)]
+        cluster_pk_hash: String,
+    },
+
+    /// Verify report file signature.
+    #[command(
+        long_about = "Verify report file signature. Use report_id or cluster_pk_hash to identify the report.
+
+EXAMPLES:
+  memo check-report-signature --input payload.json
+  echo '{\"cluster_pk_hash\":\"abc123\",\"signature\":\"sha256hex\"}' | memo check-report-signature --input -"
+    )]
+    CheckReportSignature {
+        /// JSON payload path. Use '-' to read from stdin.
+        #[arg(long)]
+        input: String,
+    },
 }
 
 impl Args {

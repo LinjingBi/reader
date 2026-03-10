@@ -111,10 +111,15 @@ sub(issue, bug level)
 [x] - [reader,memo] move report_job from memo db to a reader owned sqlite db, the report job tracking is now controled by the report generation pipe.  
 [x] - [reader] finalize the report_generation pipe by wrapping it into a step function which return next action and msg.  
 
-[...] - [reader] test report generation in one.  
-[x] - [reader] fix logging display issue(disable markup)
-[x] - [reader] organize logging in report generation pipeline
-[x] - [reader] add user intent in workflow cache json
+[x] - [reader] test report generation in one.  
+[x] - [reader] fix logging display issue(disable markup)  
+[x] - [reader] organize logging in report generation pipeline  
+[x] - [reader] add user intent in workflow cache json  
+[x] - [memo] add new cmds get-report and check-report-signature  
+[x] - [reader] add new pip render-report for fetch+check signature+tui view the generated report.  
+
+[ ] - [reader] test new pip render-report  
+[ ] - [doc] add readme for whole repo  
 
 [ ] - [ci/cd] add agent job to dymically update RULES.md and README like doc before each push.  
 

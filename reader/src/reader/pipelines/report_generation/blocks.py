@@ -80,8 +80,12 @@ from reader.pipelines.report_generation.workflow_register import (
 
 logger = get_logger()
 
+class ReportGenerationRuntimeError(Exception):
+    """Exception for report generation runtime errors."""
+    pass
 
-# ---------- Judge retry helper (moved from llm adapter) ----------
+
+# ---------- Judge retry helper ----------
 
 
 def _should_exit_judge_loop(
@@ -1419,52 +1423,52 @@ async def _kick_off_report_job(cluster_pk_hash: str, user_intent: UserIntent, cf
     # step: resolve report topic
     resolved_topic, step_status = await _resolve_report_topic(cluster_pk_hash, cfg)
     if step_status == StepTerminationStatus.error or resolved_topic is None:
-        raise RuntimeError(f"Report topic resolution failed for cluster {cluster_pk_hash}")
+        raise ReportGenerationRuntimeError(f"Report topic resolution failed for cluster {cluster_pk_hash}")
 
     # step: fetch report generation metadata
     new_topic_metadata, step_status = await _fetch_report_generation_metadata(cluster_pk_hash, resolved_topic, cfg)
     if step_status == StepTerminationStatus.error or new_topic_metadata is None:
-        raise RuntimeError(f"Report generation metadata fetch failed for cluster {cluster_pk_hash}")
+        raise ReportGenerationRuntimeError(f"Report generation metadata fetch failed for cluster {cluster_pk_hash}")
 
     # step: initialize report generation LLM client
     llm_client_wrapper, step_status = await _initialize_report_generation_llm_client(cluster_pk_hash, cfg)
     if step_status == StepTerminationStatus.error or llm_client_wrapper is None:
-        raise RuntimeError(f"Report generation LLM client initialization failed for cluster {cluster_pk_hash}")
+        raise ReportGenerationRuntimeError(f"Report generation LLM client initialization failed for cluster {cluster_pk_hash}")
 
     # step:  generate report plan
     plan, step_status = await _generate_report_plan(
         cluster_pk_hash, user_intent, new_topic_metadata, llm_client_wrapper.llm_client, cfg, planner_judge
     )
     if step_status == StepTerminationStatus.error or plan is None:
-        raise RuntimeError(f"Report planner call failed for cluster {cluster_pk_hash}")
+        raise ReportGenerationRuntimeError(f"Report planner call failed for cluster {cluster_pk_hash}")
 
     # step: generate report body
     sections_result, step_status = await _generate_report_body(
         cluster_pk_hash, plan, new_topic_metadata, llm_client_wrapper.llm_client, cfg
     )
     if step_status == StepTerminationStatus.error or sections_result is None:
-        raise RuntimeError(f"Report body writing failed for cluster {cluster_pk_hash}")
+        raise ReportGenerationRuntimeError(f"Report body writing failed for cluster {cluster_pk_hash}")
 
     # step: generate report front matter
     front_matter, step_status = await _generate_report_front_matter(
         cluster_pk_hash, sections_result, llm_client_wrapper.llm_client, cfg
     )
     if step_status == StepTerminationStatus.error or front_matter is None:
-        raise RuntimeError(f"Report front matter generation failed for cluster {cluster_pk_hash}")
+        raise ReportGenerationRuntimeError(f"Report front matter generation failed for cluster {cluster_pk_hash}")
 
     # step: save report to local fs
     save_output, step_status = await _save_report_to_fs(
         cluster_pk_hash, sections_result, front_matter, cfg
     )
     if step_status == StepTerminationStatus.error or save_output is None:
-        raise RuntimeError(f"Save report to FS failed for cluster {cluster_pk_hash}")
+        raise ReportGenerationRuntimeError(f"Save report to local FS failed for cluster {cluster_pk_hash}")
 
     # step: write to db
     _, step_status = await _save_report_to_db(
         cluster_pk_hash, user_intent, resolved_topic, plan, front_matter, save_output, cfg
     )
     if step_status == StepTerminationStatus.error:
-        raise RuntimeError(f"Save report to DB failed for cluster {cluster_pk_hash}")
+        raise ReportGenerationRuntimeError(f"Save report to DB failed for cluster {cluster_pk_hash}")
 
 
 async def start_generation(cluster_pk_hash: str, user_intent: UserIntent, cfg: ReportGenerationConfig) -> None:

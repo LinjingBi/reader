@@ -1,0 +1,8 @@
+{
+  "status": "ok",
+  "meta": {
+    "report_id": 42,
+    "report_url": "https://example.com/reports/42",
+    "intent_mode": "read"
+  }
+}

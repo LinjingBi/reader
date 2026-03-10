@@ -1,0 +1,10 @@
+log_config_path: "/Users/bii/reader/reader/src/reader/logging/config.yaml"
+
+memo:
+  bin: "/Users/bii/reader/memory_cli/target/debug/memo"
+  db_path: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/artifacts/cache/memo/memo_report.sqlite"
+  db_schema_path: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/memo/report.sql"
+  timeout_sec: 60
+
+cache:
+  root: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/artifacts/cache"

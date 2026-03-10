@@ -1,19 +1,19 @@
 """Report generation pipeline orchestration"""
 
-from typing import Tuple, Optional
+from typing import Optional
 
 from reader.pipelines.report_generation.config.config import ReportGenerationConfig
 from reader.adapters import memo
-from reader.pipelines.report_generation.blocks import start_generation, select_cluster_and_intent
+from reader.pipelines.report_generation.blocks import start_generation, select_cluster_and_intent, ReportGenerationRuntimeError
 from reader.pipelines.report_generation.db.store import init_report_job, InitReportJobResponseNextStatus
-from reader.pipelines.report_generation.report import ReportJobAction
+from reader.pipelines.report_generation.report import ReportJobAction, ReportJobOutput, ReportJobOutputMeta
 from reader.pipelines.report_generation.prompts.planner.build import UserIntent
 from reader.logging.logging_setup import get_logger
 
 logger = get_logger()
 
 # contain potential mcp servers/tool calls/skills(?)
-async def generate_report(cfg: ReportGenerationConfig) -> Tuple[ReportJobAction, str]:
+async def generate_report(cfg: ReportGenerationConfig) -> ReportJobOutput:
     """
     Run the report generation pipeline for the configured period.
     Async and non-blocking for report generation LLM calls.
@@ -22,13 +22,14 @@ async def generate_report(cfg: ReportGenerationConfig) -> Tuple[ReportJobAction,
         cfg: ReportGenerationConfig instance
 
     Returns:
-        Tuple of (ReportJobAction, descriptive_message). Always returns a tuple;
-        on error, returns (ReportJobAction.DEBUG_INTERNAL_ERROR, error_message).
+        ReportJobOutput with action, message, and meta (only when action is FETCH_REPORT).
+        On error, returns ReportJobOutput with action DEBUG_INTERNAL_ERROR or DEBUG_FOR_RERUN.
     """
     log_prefix = f"[generate report] - "
     logger.info(f"{log_prefix}start")
-    # Get period dates and source from config
+    
     try:
+        # Get period dates and source from config
         source = cfg.run.source
         period_start = cfg.run.period_start
         period_end = cfg.run.period_end
@@ -37,33 +38,45 @@ async def generate_report(cfg: ReportGenerationConfig) -> Tuple[ReportJobAction,
         logger.info(f"{log_prefix}Memo get-clusters-observation started: snapshot_id={source}|{period_start}|{period_end}")
         clusters_observation = await memo.get_clusters_observation(source, period_start, period_end, cfg.memo)
         logger.info(f"{log_prefix}Memo get-clusters-observation successful: snapshot_id={source}|{period_start}|{period_end}")
-        # display cluster observations for user to select in tui
+        # display cluster observations for user to decide which cluster and intent to generate report for in tui
         selected_pk_hash, selected_intent_enum = await select_cluster_and_intent(clusters_observation)
         logger.info(f"{log_prefix}Selected pk_hash: {selected_pk_hash}, Selected intent: {selected_intent_enum}")
-
-        # start report generation
-        resp = await trigger_report_job(selected_pk_hash, selected_intent_enum, cfg)
-        if resp is None:
-            return (ReportJobAction.DEBUG_INTERNAL_ERROR, f"unexpected error. check log under {cfg.cache.report_generation_log_path} for debugging.")
-        else:
-            logger.info(f"{log_prefix}finished")
-            print(f"resp: {resp}") # debug only
-            return resp
     except Exception as e:
         logger.error(f"{log_prefix}Internal error. {e}", exc_info=True)
-        return (ReportJobAction.DEBUG_INTERNAL_ERROR, f"unexpected error. check log under {cfg.cache.report_generation_log_path} for debugging.")
+        return ReportJobOutput(action=ReportJobAction.DEBUG_INTERNAL_ERROR, message=f"unexpected error. check log under {cfg.cache.report_generation_log_path} for debugging.", meta=None)
+    try:
+        # start report generation
+        resp = await _trigger_report_job(selected_pk_hash, selected_intent_enum, cfg)
+        if resp is None:
+            return ReportJobOutput(action=ReportJobAction.DEBUG_INTERNAL_ERROR, message=f"unexpected empty response. check log under {cfg.cache.report_generation_log_path} for debugging.", meta=None)
+        else:
+            logger.info(f"{log_prefix}finished, message: {resp.message}")
+            print(f"resp: {resp}")  # debug only
+            return resp
+    except ReportGenerationRuntimeError as e:
+        logger.error(f"{log_prefix} report generation runtime error: {e}", exc_info=True)
+        return ReportJobOutput(
+            action=ReportJobAction.DEBUG_FOR_RERUN,
+            message=f"error happened during new report generation: {e}\n"
+            f"check log under {cfg.cache.report_generation_log_path} and cache under {cfg.cache.report_generation_cache} for minimal-effort rerun.\n"
+            f"search filter: cluster_pk_hash={selected_pk_hash}, user_intent={selected_intent_enum.value}",
+            meta=None,
+        )
+    except Exception as e:
+        logger.error(f"{log_prefix}Internal error: {e}", exc_info=True)
+        return ReportJobOutput(action=ReportJobAction.DEBUG_INTERNAL_ERROR, message=f"unexpected error. check log under {cfg.cache.report_generation_log_path} for debugging.", meta=None)
 
 
-async def trigger_report_job(cluster_pk_hash: str, user_intent: UserIntent, cfg: ReportGenerationConfig) -> Optional[Tuple[ReportJobAction, str]]:
+async def _trigger_report_job(cluster_pk_hash: str, user_intent: UserIntent, cfg: ReportGenerationConfig) -> Optional[ReportJobOutput]:
     """
     trigger a report generation job based on its current status.
     Non-blocking: uses async LLM calls when executor is configured.
 
     Calls init_report_job (database) and handles/logs the response. Maps next_status:
-    - running: kick off new job, returns ('kick_off_report_job', message)
-    - resuming: job ready to resume (error expired), returns ('report_job_is_ready_to_resume', message)
-    - waiting: returns ('wait_for_report_job_to_finish', meta.message)
-    - done: returns ('fetch_report_and_print_report_url', message)
+    - running: kick off new job, returns ReportJobOutput(FETCH_REPORT, message, meta)
+    - resuming: job ready to resume (error expired), returns ReportJobOutput(WAIT_FOR_JOB_TO_RESUME, message, None)
+    - waiting: returns ReportJobOutput(WAIT_FOR_JOB_TO_FINISH, meta.message, None)
+    - done: returns ReportJobOutput(FETCH_REPORT, message, meta)
 
     Args:
         cluster_pk_hash: Cluster pk_hash (primary key hash from cluster table)
@@ -71,47 +84,34 @@ async def trigger_report_job(cluster_pk_hash: str, user_intent: UserIntent, cfg:
         cfg: ReportGenerationConfig instance
 
     Returns:
-        Tuple of (ReportJobAction, descriptive_message). Always returns a tuple;
-        on error, returns (ReportJobAction.DEBUG_INTERNAL_ERROR, error_message).
+        ReportJobOutput with action, message, and meta (only when action is FETCH_REPORT).
     """
     resp = init_report_job(cluster_pk_hash, cfg)
     meta = resp.meta
 
     if resp.next_status == InitReportJobResponseNextStatus.RUNNING:
-        try:
-            await start_generation(cluster_pk_hash, user_intent, cfg)
-        except RuntimeError as e:
-            # logger.error(f"{log_prefix}Internal error. {e}", exc_info=True)
-            return (ReportJobAction.DEBUG_INTERNAL_ERROR, f"unexpected error. \n\
-            check log under {cfg.cache.report_generation_log_path} for debugging. \n\
-            check cache under {cfg.cache.report_generation_cache} for minimal-effort rerun.\n\
-            search filter: cluster_pk_hash={cluster_pk_hash}, user_intent={user_intent.value}")
+        await start_generation(cluster_pk_hash, user_intent, cfg)
         next_status = ReportJobAction.FETCH_REPORT
-        history_dir = cfg.cache.history_reports
-        msg = f"A new report is just generated, search for it under {history_dir} using cluster pk hash {cluster_pk_hash}"
-        # logger.info(f"{log_prefix}{msg}")
-        return (next_status, msg)
+        msg = f"A new report is just generated."
+        return ReportJobOutput(
+            action=next_status,
+            message=msg,
+            meta=ReportJobOutputMeta(cluster_pk_hash=cluster_pk_hash, intent_mode=user_intent.name.lower()),
+        )
     elif resp.next_status == InitReportJobResponseNextStatus.RESUMING:
-        next_status = ReportJobAction.RESUME_JOB
-        cache_dir = cfg.cache.report_generation_cache
-        msg = f"{meta.message} Search under {cache_dir} using cluster_pk_hash: {cluster_pk_hash} for possible cache for minimal-effort rerun."
-        # logger.info(f"{log_prefix}{msg}")
-        return (next_status, msg)
+        next_status = ReportJobAction.WAIT_FOR_JOB_TO_RESUME
+        return ReportJobOutput(action=next_status, message=meta.message, meta=None)
     elif resp.next_status == InitReportJobResponseNextStatus.WAITING:
         next_status = ReportJobAction.WAIT_FOR_JOB_TO_FINISH
-        # logger.info(f"{log_prefix}{meta.message}")
-        return (next_status, meta.message)
+        return ReportJobOutput(action=next_status, message=meta.message, meta=None)
     elif resp.next_status == InitReportJobResponseNextStatus.DONE:
         next_status = ReportJobAction.FETCH_REPORT
-        history_dir = cfg.cache.history_reports
-        msg = f"{meta.message} Search under {history_dir} using cluster pk hash {cluster_pk_hash}"
-        # logger.info(f"{log_prefix}{msg}")
-        return (next_status, msg)
+        msg = f"{meta.message}"
+        return ReportJobOutput(
+            action=next_status,
+            message=msg,
+            meta=ReportJobOutputMeta(cluster_pk_hash=cluster_pk_hash, intent_mode=user_intent.name.lower()),
+        )
     else:
         msg = f"Unexpected next_status={resp.next_status} from init_report_job, message={meta.message}"
         raise ValueError(f"{msg}")
-    # except Exception as e:
-    #     log_file_path = cfg.cache.report_generation_log_path
-    #     logger.error(f"{log_prefix}Internal error. {e}", exc_info=True)
-    #     error_msg = f"unexpected error. check log under {log_file_path} using cluster pk hash {cluster_pk_hash} for debugging."
-    #     return (ReportJobAction.DEBUG_INTERNAL_ERROR, error_msg)
