@@ -1067,7 +1067,7 @@ async def _generate_report_body(
         result_status = StepTerminationStatus.done
     elif status in (LoopRunStatus.partial, LoopRunStatus.error):
         logger.warning(
-            f"{step_prefix} - report body generation ended with status {status.value}, returning {len(sections)} sections."
+            f"{step_prefix} - report body generation ended with status {status.value}, returning {len(sections)}/{len(plan.plan.outline)} sections."
         )
         result_sections = sections
         result_status = StepTerminationStatus.error

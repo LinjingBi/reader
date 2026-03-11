@@ -1,1 +1,0 @@
-"""Report render pipeline configuration"""

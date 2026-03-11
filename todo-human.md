@@ -118,7 +118,8 @@ sub(issue, bug level)
 [x] - [memo] add new cmds get-report and check-report-signature  
 [x] - [reader] add new pip render-report for fetch+check signature+tui view the generated report.  
 
-[ ] - [reader] test new pip render-report  
+[x] - [reader] test new pip render-report
+[x] - [reader] split the render-report cmd into 3 cmds between 2 tools: memo get-report + reader check-report-signature + reader render-report.
 [ ] - [doc] add readme for whole repo  
 
 [ ] - [ci/cd] add agent job to dymically update RULES.md and README like doc before each push.  

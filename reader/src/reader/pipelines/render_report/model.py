@@ -1,4 +1,4 @@
-"""Output models for report render pipeline"""
+"""Output models for render report pipeline"""
 
 from typing import Literal
 

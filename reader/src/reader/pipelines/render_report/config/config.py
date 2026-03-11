@@ -1,14 +1,12 @@
-"""Configuration loader for report render pipeline"""
+"""Configuration loader for render report pipeline"""
 
 from pathlib import Path
 import yaml
 from pydantic import BaseModel, Field
 
-from reader.pipelines.report_generation.config.config import MemoConfig
-
 
 class CacheConfig(BaseModel):
-    """Cache directory configuration for report render."""
+    """Cache directory configuration for render report."""
 
     root: str = Field(..., description="Cache root directory (relative or absolute)")
 
@@ -24,10 +22,9 @@ class CacheConfig(BaseModel):
 
 
 class RenderReportConfig(BaseModel):
-    """Main report render configuration."""
+    """Main render report configuration."""
 
     log_config_path: str = Field(..., description="Path to logging configuration YAML file")
-    memo: MemoConfig = Field(..., description="Memo CLI configuration")
     cache: CacheConfig = Field(..., description="Cache directory configuration")
 
 

@@ -1,0 +1,4 @@
+log_config_path: "/Users/bii/reader/reader/src/reader/logging/config.yaml"
+
+cache:
+  root: "/Users/bii/reader/reader/src/reader/pipelines/report_generation/artifacts/cache"
