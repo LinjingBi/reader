@@ -1,10 +1,12 @@
-# Memo: 3‑Stage Design (RDB → RAG/Ranking → CLI/Receipts) and Extension to Tool Calls
+# Memo: 3‑Stage Design (RDB → RAG/Ranking → CLI/Receipts) and Extension to Tool Calls 
 
 This memo summarizes a **three-stage design** for a local-first paper reader / report system, based on our discussion about:
 - **RDB as the source of truth**
 - **RAG-like retrieval without polluting evidence**
 - **memo CLI as the operational “front door”**
 …and how the same pattern naturally extends to **LLM tool calling**.
+
+[human] this memo is summarized by ChatGPT Thinking from our conversation wrt memo future design and a discussion wrt RAG for AI.
 
 ---
 
@@ -47,7 +49,7 @@ As your plans get more complex, a fixed enumeration like “Top-3 papers + intro
 - the writer may need very specific details (“datasets”, “limitations”, “failure modes”)
 - the set of needed evidence varies by intent and by the plan
 
-So you want the planner to express needs as **queries**, not rigid slots.
+So you want the planner to express needs as **queries**, not rigid slots/selectors.
 
 ### Hybrid approach (recommended)
 1. **Deterministic filtering via SQL**

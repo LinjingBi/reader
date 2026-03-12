@@ -125,6 +125,7 @@ sub(issue, bug level)
 [ ] - [ci/cd] add agent job to dymically update RULES.md and README like doc before each push.  
 
 [ ] - [reader] provide an agent interface.  
+[ ] - [reader] implement a light weight db migration for report generation workflow's db.  
 
 
 [ ] - [reader] **consider kmeans++?**  

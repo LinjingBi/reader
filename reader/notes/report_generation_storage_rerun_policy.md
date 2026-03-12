@@ -66,6 +66,7 @@ flowchart TD
 
 To make this policy safe and enforceable, a **DB table** tracks job status:
 
+- **DB:** a sqlite db owned by report generation workflow.[code](../src/reader/pipelines/report_generation/db)
 - **Table:** `report_job`
 - **PK:** `cluster_pk_hash` (1 job per cluster; also serves as lock)
 - **Status:** `running` | `done` | `error`
@@ -82,5 +83,3 @@ CREATE TABLE IF NOT EXISTS report_job (
   FOREIGN KEY (report_id) REFERENCES report(report_id) ON DELETE SET NULL
 );
 ```
-
-**Reference:** [db/report.sql](../src/reader/pipelines/report_generation/db/report.sql) (lines 241–249)

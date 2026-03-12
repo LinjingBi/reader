@@ -1,6 +1,10 @@
 # Reader
 
-Reader is a research-style self-evolution reading tool. For now it helps provide pre-reading short reports to bridge the knowledge gap before reading academic papers. A side-project for a better academic paper reading experience — it can be more than that with time and personal interests.
+Reader is an experimental research-reading system that helps bridge the knowledge gap before reading academic papers.
+
+It automatically collects new research papers, clusters them into topics, and generates structured short reports using LLM-assisted workflows. The system also maintains a persistent “memory” of research topics to enable long-term evolution of knowledge.
+
+The project explores how LLM agents and traditional data pipelines can work together to support a better academic reading workflow.
 
 ## Design
 
@@ -33,7 +37,7 @@ flowchart TB
 
 ---
 
-## How
+## Core Components
 
 ### TUI
 
@@ -49,59 +53,67 @@ The workflow is orchestrated by [`run_hf_data`](reader/src/reader/pipelines/coll
 
 **Phase 1 (sequential)**
 
-- `fetch_hf_data`: `_ingest_fresh_papers` — fetch HF monthly papers, embed, cluster, write to memo via `memo.fresh_paper`
+— fetch HF monthly papers, embed, cluster, write to memo db.  
 
-**Phase 2 (parallel, after `get_best_clustering`)**
+**Phase 2 (parallel)**
 
-- `cluster_summarization`: `_enrich_clusters` — LLM summarization of clusters, write via `memo.inject_clusters_observation`
-- `paper_chunk`: `_process_paper_chunks` — chunk papers via paperchunk lib, write via `memo.inject_papers_chunk`
-
-See [hf_data/blocks.py](reader/src/reader/pipelines/hf_data/blocks.py) for `get_hf_paper_metadata`, `generate_clustering_reports`, `summarize_clusters_parallel`, `process_paper_chunks`.
+- `cluster summarization/enrichment`: LLM summarization of clusters and then write to memo db.
+- `paper chunk`:  chunk papers via paperchunk lib and then write to memo db.
 
 ### Core Workflows
+
+| Workflow                 | Purpose                                                   |
+| ------------------------ | --------------------------------------------------------- |
+| `generate-report`        | Run report generation workflow                            |
+| `check-report-signature` | Load report, validate, compute signature, verify via memo |
+| `render-report`          | Load report and display in TUI                            |
+| `self-evolution`         | Run periodically to review topics, suggest merge/archive/split (memory health advisor) — *to be added* |
 
 Workflows are exposed in two ways:
 
 - **Subcommands** (development): CLI entry points for manual runs during development — see [cli.py](reader/src/reader/cli.py)
 - **Function calls** (integration): callable tools for the orchestrator/agent; the agent invokes these workflows via function/tool calls, not CLI
 
-| Workflow                 | Purpose                                                   |
-| ------------------------ | --------------------------------------------------------- |
-| `hf-data`                | Run HF data pipeline (fetch, cluster, chunk)              |
-| `generate-report`        | Run report generation pipeline                            |
-| `check-report-signature` | Load report, validate, compute signature, verify via memo |
-| `render-report`          | Load report and display in TUI                            |
-| `self-evolution`         | Review topics, suggest merge/archive/split (memory health advisor) — *to be added* |
+Fun Fact :)    
+During implementation, the report-generation workflow gradually evolved into a **state-machine style workflow** rather than a linear script.
+
+Heavy LLM stages (analysis → planning → writing) behave naturally as explicit states, with controlled transitions and retries between them. This structure helps:
+
+- keep LLM calls deterministic and inspectable
+- isolate retry logic for each stage, f.e. 3 layers of retry:
+   - HTTP error–based retry (base layer)
+   - Simple, lightweight heuristic rules (first retry layer). see [RULES.md](reader/src/reader/pipelines/report_generation/judges/metircs/RULES.md).
+   - Workflow node/loop–specific retry: ensure LLM responses are in right format, pass basic semantic requirements, and meet specific workflow acceptance criteria
+- ensure intermediate failures do not corrupt finalized results.
+- return clear status for agent to continue downstream tasks.
+- (experimental) minimum-effort and clear boundary rerun implemented by a code agent — see [doc](reader/notes/report_generation_storage_rerun_policy.md).
+
 
 ### Local FS
 
-Local filesystem caches the complete report in JSON format. Memo DB does not store the full report; it stores only high-quality signals (metadata, signatures, etc.). Full content lives on disk; memo indexes and links to it.
+Local filesystem caches the complete reports in JSON format. Memo DB does not store the full report; it stores only high-quality signals (covered bullets, outlines, etc.). Full content lives on disk; memo indexes and links to it.
 
 ### Memo DB
 
-SQLite-based memory service. Semantic layer between agent and raw data. Stable DB query performance and monitoring for workflows. Semantic selectors for agent queries. See [memory_cli/README.md](memory_cli/README.md) and [memory_cli/docs/design.md](memory_cli/docs/design.md). Key commands: `fresh-paper`, `get-best-run`, `inject-papers-chunk`, `inject-clusters-observation`, `get-clusters-observation`, `get-topic-resolver-metadata`, `get-report-generation-metadata`, `new-memory`, etc.
+SQLite-based memory service wrapped by a Rust CLI. The Rust CLI provides a semantic layer between agent and raw data, stable DB query performance and monitoring for workflows, and semantic selectors for agent queries. See [memory_cli/README.md](memory_cli/README.md) and [more docs](memory_cli/docs/).
 
 ---
 
 ## Current Status
 
-- **Report generation workflow**: ~90% done
-- **Core design**: state machine–style flow for heavy LLM calls (analysis, planning, writing), plus layered llm call retry:
-  - HTTP error–based retry (base layer)
-  - Simple, lightweight heuristic rules (first retry layer)
-  - Workflow node–specific retry: ensure LLM responses are in right format, pass basic semantic requirements, and meet specific workflow acceptance criteria
-- **Workflow register**: failure/rerun support for report generation
-- **Data pipeline**: implemented; algo needs tuning
-- **Agent interface**: to be planned
-- **TUI**: to be planned
+- **Report generation workflow**: ~90% implemented
+- **Data pipeline**: implemented; algorithms need further tuning
+- **Backend tools/workflows**: ready to be invoked by an agent
+- **Agent runtime**: not yet implemented — current workflows are callable tools intended to be orchestrated by a future agent layer
+- **TUI interface**: planned
 
 ---
 
-## Why
+## Architecture Decisions (Why)
 
 ### Why TUI?
 
-Avoid heavy or "fancy" frontends — or a bet that the heavy user intent once embedded in fancy frontends can now be handled by **chat** for document OS–like products. Plan: tumex with side windows for chat (main), graph (document system, navigation), artifact (single report reading). More details as development progresses.
+Avoid heavy frontend — or a bet that the heavy user intent once embedded in fancy frontends can now be handled by **chat** for document OS–like products. More details as exploration/development progresses.
 
 ### Why Data Pipeline Like That?
 
@@ -114,9 +126,13 @@ Avoid heavy or "fancy" frontends — or a bet that the heavy user intent once em
 
 1. **Cost** — LLM grouping is expensive
 2. **Speed** — geometric clustering is faster
-3. **Bias balance** — LLM is a semantic advisor; geometric clustering adds a geometric bias; semantic and geometric views work together
-4. **Topic resolver**: merge/create is purely geometric (cosine similarity on centroids) — see [topic_resolver/resolver.py](reader/src/algo_lib/topic_resolver/resolver.py)
-5. **Self-evolution pipeline**: LLM (semantic side) reviews and suggests on geometric decisions
+3. **Task fit** — Grouping topics is a clustering job, not a generation/completion job; using a clustering algorithm suits the task best
+4. **Bias balance** — LLM is a semantic advisor; geometric clustering adds a geometric bias; semantic and geometric views work together from long term, f.e. **Topic resolver**: merge/create is purely geometric (cosine similarity on centroids) — see [topic_resolver/resolver.py](reader/src/algo_lib/topic_resolver/resolver.py) and **Self-evolution pipeline**: LLM (semantic side) reviews and suggests on geometric decisions.  
+
+### Why RDB + File System for Storage?
+
+1. **RDB as cognition** — A relational DB acts like "cognition"; it is closer to human memory. We don't store complete articles we read, but only abstractions or compressed high-quality signals. That's why reports are not full text in the DB, but only distilled features (e.g. depth, covered bullets, subthreads). The "cognition" play the main role in providing a history perspective for generating the next depth-aware report.
+2. **Local FS as cache** — Local FS saves/caches the complete report/knowledge to answer questions like "what is the report from last month", etc., and can be used as references when the self-evolution pipeline reviews the topics.
 
 ---
 
@@ -136,10 +152,10 @@ reader/                      # repo root
 
 ### Few words for what A Development Day looks like ;)
 
-1. Iterate ideas/designs with or without ChatGPT thinking
-2. Implement through Cursor (Composer 1 at first, now gradually Composer 1.5)
-3. Human (me) mainly: design, code review (intent-focused, not line-by-line), handwritten commit messages to stay in the loop for every commit
-4. Minimal unit tests — personal preference; rely on a reliable code agent and manual tests the human(me) preferred.
+1. Iterate ideas/designs with or without ChatGPT thinking.
+2. Implement through Cursor (Composer 1 at first, now gradually Composer 1.5).
+3. Human (me) mainly: architecture design, code review (intent-focused, not line-by-line), handwritten commit messages to stay in the loop for every commit.
+4. Minimal unit tests for now; development relies heavily on manual validation and iterative experimentation due to the research-oriented nature of the project.
 
 ---
 
