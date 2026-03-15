@@ -121,6 +121,7 @@ sub(issue, bug level)
 [x] - [reader] test new pip render-report
 [x] - [reader] split the render-report cmd into 3 cmds between 2 tools: memo get-report + reader check-report-signature + reader render-report.
 [x] - [doc] add readme for whole repo  
+[x] - [reader] refactor run.sh to provide a development version entrypoint.  
 
 [ ] - [ci/cd] add agent job to dymically update RULES.md and README like doc before each push.  
 
